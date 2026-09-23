@@ -417,3 +417,31 @@ pub fn gate(constats: &[Finding]) -> ynp_core::gate::GateOutcome {
         ynp_core::gate::GateOutcome::fail(bloquants)
     }
 }
+
+#[cfg(test)]
+mod schema_incorpore {
+    /// Les deux `expect` du controle de manifest ne sont justifies que si le
+    /// schema incorpore est reellement valide et compilable. C'est ce test qui
+    /// le garantit : sans lui, une resynchronisation malheureuse du schema
+    /// ferait paniquer `verify` chez l'utilisateur.
+    #[test]
+    fn le_schema_incorpore_est_valide_et_compilable() {
+        let schema: serde_json::Value =
+            serde_json::from_str(super::SCHEMA_MANIFEST).expect("le schema doit etre du JSON");
+        assert!(
+            jsonschema::validator_for(&schema).is_ok(),
+            "le schema doit compiler"
+        );
+
+        // Et il doit bien decrire un manifest : sans quoi on validerait contre
+        // n'importe quoi sans s'en apercevoir.
+        let requis = schema
+            .get("required")
+            .and_then(|r| r.as_array())
+            .expect("le schema declare des champs obligatoires");
+        let noms: Vec<&str> = requis.iter().filter_map(|v| v.as_str()).collect();
+        for champ in ["packaging_format", "id", "version", "resources"] {
+            assert!(noms.contains(&champ), "{champ} devrait etre obligatoire");
+        }
+    }
+}

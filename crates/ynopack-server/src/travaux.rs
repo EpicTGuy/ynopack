@@ -45,6 +45,18 @@ pub struct Registre {
     canaux: Arc<Mutex<HashMap<String, broadcast::Sender<Evenement>>>>,
 }
 
+/// Prend un verrou en se remettant d'un eventuel empoisonnement.
+///
+/// Un `unwrap()` sur `lock()` suffirait, mais il transforme la panique d'une
+/// seule tache en panne definitive du serveur : une fois le mutex empoisonne,
+/// tout appel ulterieur panique a son tour. Or les donnees protegees ici sont
+/// une table de travaux ; elles restent structurellement valides meme si une
+/// tache s'est interrompue au milieu. Recuperer est donc correct, et bien
+/// preferable a l'arret du service.
+fn verrou<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
 impl Registre {
     pub fn new() -> Self {
         Self::default()
@@ -61,23 +73,23 @@ impl Registre {
         // La capacite du canal absorbe le journal complet d'un pipeline : un
         // abonne lent ne doit pas perdre d'etapes.
         let (envoi, _) = broadcast::channel(64);
-        self.travaux.lock().unwrap().insert(id.clone(), travail);
-        self.canaux.lock().unwrap().insert(id.clone(), envoi);
+        verrou(&self.travaux).insert(id.clone(), travail);
+        verrou(&self.canaux).insert(id.clone(), envoi);
         id
     }
 
     pub fn lire(&self, id: &str) -> Option<Travail> {
-        self.travaux.lock().unwrap().get(id).cloned()
+        verrou(&self.travaux).get(id).cloned()
     }
 
     pub fn liste(&self) -> Vec<Travail> {
-        let mut v: Vec<Travail> = self.travaux.lock().unwrap().values().cloned().collect();
+        let mut v: Vec<Travail> = verrou(&self.travaux).values().cloned().collect();
         v.sort_by(|a, b| b.id.cmp(&a.id));
         v
     }
 
     pub fn s_abonner(&self, id: &str) -> Option<broadcast::Receiver<Evenement>> {
-        self.canaux.lock().unwrap().get(id).map(|c| c.subscribe())
+        verrou(&self.canaux).get(id).map(|c| c.subscribe())
     }
 
     pub fn avancer(&self, id: &str, etape: &str, message: &str) {
@@ -90,7 +102,7 @@ impl Registre {
                 succes: true,
             },
         );
-        if let Some(t) = self.travaux.lock().unwrap().get_mut(id) {
+        if let Some(t) = verrou(&self.travaux).get_mut(id) {
             t.etat = Etat::EnCours;
         }
     }
@@ -105,16 +117,16 @@ impl Registre {
                 succes,
             },
         );
-        if let Some(t) = self.travaux.lock().unwrap().get_mut(id) {
+        if let Some(t) = verrou(&self.travaux).get_mut(id) {
             t.etat = if succes { Etat::Termine } else { Etat::Echoue };
         }
     }
 
     fn emettre(&self, id: &str, evenement: Evenement) {
-        if let Some(t) = self.travaux.lock().unwrap().get_mut(id) {
+        if let Some(t) = verrou(&self.travaux).get_mut(id) {
             t.journal.push(evenement.clone());
         }
-        if let Some(canal) = self.canaux.lock().unwrap().get(id) {
+        if let Some(canal) = verrou(&self.canaux).get(id) {
             // Aucun abonne : l'evenement reste dans le journal, qu'un client
             // arrivant en retard peut relire.
             let _ = canal.send(evenement);
@@ -204,5 +216,31 @@ mod tests {
         let liste = r.liste();
         assert_eq!(liste[0].id, b);
         assert_eq!(liste[1].id, a);
+    }
+}
+
+#[cfg(test)]
+mod robustesse {
+    use super::*;
+
+    #[test]
+    fn un_verrou_empoisonne_n_arrete_pas_le_serveur() {
+        // Si une tache panique en tenant le verrou, `lock().unwrap()` ferait
+        // paniquer toutes les requetes suivantes. Le registre doit survivre.
+        let registre = Registre::new();
+        let id = registre.creer("https://github.com/x/y");
+
+        let empoisonneur = registre.clone();
+        let _ = std::thread::spawn(move || {
+            let _garde = verrou(&empoisonneur.travaux);
+            panic!("tache interrompue au milieu");
+        })
+        .join();
+
+        // Le registre reste utilisable, et le travail est intact.
+        let t = registre.lire(&id).expect("le travail doit survivre");
+        assert_eq!(t.url, "https://github.com/x/y");
+        registre.avancer(&id, "analyse", "toujours vivant");
+        assert_eq!(registre.lire(&id).unwrap().journal.len(), 1);
     }
 }
