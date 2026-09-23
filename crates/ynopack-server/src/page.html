@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ynopack</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --fond: #fbfaf8; --texte: #1c1b19; --doux: #6b6862;
+    --trait: #e0ddd6; --accent: #2b6b4f; --alerte: #a33; --carte: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --fond:#16171a; --texte:#e8e6e1; --doux:#9a968e;
+            --trait:#2c2e33; --accent:#6fbf95; --alerte:#e4756b; --carte:#1d1f23; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:2rem 1rem 4rem; background:var(--fond); color:var(--texte);
+         font:15px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+  main { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size:1.6rem; margin:0 0 .3rem; letter-spacing:-.02em; }
+  .sous { color:var(--doux); margin:0 0 2rem; }
+  form { display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:2rem; }
+  input { flex:1 1 20rem; padding:.7rem .9rem; border:1px solid var(--trait);
+          border-radius:.45rem; background:var(--carte); color:var(--texte); font:inherit; }
+  input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+  button { padding:.7rem 1.3rem; border:0; border-radius:.45rem; background:var(--accent);
+           color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  .carte { background:var(--carte); border:1px solid var(--trait); border-radius:.6rem;
+           padding:1.1rem 1.3rem; margin-bottom:1rem; }
+  .carte h2 { font-size:.95rem; margin:0 0 .8rem; font-weight:600; }
+  .carte h2 span { color:var(--doux); font-weight:400; }
+  .etape { display:flex; gap:.7rem; padding:.3rem 0; align-items:baseline; }
+  .etape b { flex:0 0 7.5rem; font-weight:600; font-size:.82rem; color:var(--doux);
+             text-transform:uppercase; letter-spacing:.04em; }
+  .etape span { flex:1; }
+  .ok b { color:var(--accent); }
+  .ko { color:var(--alerte); } .ko b { color:var(--alerte); }
+  .vide { color:var(--doux); font-style:italic; }
+  footer { margin-top:3rem; color:var(--doux); font-size:.85rem; }
+  code { background:var(--trait); padding:.1rem .35rem; border-radius:.25rem; font-size:.9em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ynopack</h1>
+  <p class="sous">Collez l'adresse d'un dépôt. L'outil dit s'il est packageable pour YunoHost —
+     et pourquoi, quand il ne l'est pas.</p>
+
+  <form id="f">
+    <input id="url" type="url" required placeholder="https://github.com/miniflux/v2"
+           autocomplete="off" spellcheck="false">
+    <button id="b" type="submit">Analyser</button>
+  </form>
+
+  <div id="sortie"></div>
+
+  <footer>
+    Aucun modèle de langage n'intervient : les décisions viennent de règles et de
+    tables versionnées. Ce que l'outil ne sait pas déduire, il le signale au lieu
+    de l'inventer.
+  </footer>
+</main>
+
+<script>
+const f = document.getElementById('f'), b = document.getElementById('b'),
+      sortie = document.getElementById('sortie');
+
+f.onsubmit = async (e) => {
+  e.preventDefault();
+  b.disabled = true; b.textContent = 'En cours…';
+
+  const url = document.getElementById('url').value;
+  const carte = document.createElement('div');
+  carte.className = 'carte';
+  carte.innerHTML = `<h2>${echapper(url)} <span id="etat">— en attente</span></h2>`;
+  sortie.prepend(carte);
+
+  let reponse;
+  try {
+    reponse = await (await fetch('/jobs', {
+      method: 'POST', headers: {'content-type':'application/json'},
+      body: JSON.stringify({url})
+    })).json();
+  } catch (err) {
+    ajouter(carte, 'erreur', String(err), false);
+    b.disabled = false; b.textContent = 'Analyser';
+    return;
+  }
+
+  const flux = new EventSource(`/jobs/${reponse.id}/events`);
+  flux.onmessage = (ev) => {
+    const d = JSON.parse(ev.data);
+    ajouter(carte, d.etape, d.message, d.succes);
+    if (d.termine) {
+      flux.close();
+      carte.querySelector('#etat').textContent = d.succes ? '— terminé' : '— arrêté';
+      b.disabled = false; b.textContent = 'Analyser';
+    }
+  };
+  flux.onerror = () => {
+    flux.close();
+    b.disabled = false; b.textContent = 'Analyser';
+  };
+};
+
+function ajouter(carte, etape, message, succes) {
+  const l = document.createElement('div');
+  l.className = 'etape ' + (succes ? 'ok' : 'ko');
+  l.innerHTML = `<b>${echapper(etape)}</b><span>${echapper(message)}</span>`;
+  carte.appendChild(l);
+}
+
+function echapper(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>

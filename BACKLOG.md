@@ -100,11 +100,11 @@ pure sur un arbre de fichiers, testable seule.
 - [ ] **L6-4** *(optionnel)* · Préparation de PR vers le catalogue officiel, sous condition de G4 → EXG-F-42
 - [x] **L6-5** · `ynopack run` : pipeline complet, arrêt à la première gate en échec → EXG-F-50, EXG-F-51
 
-## L7 — Interface web
+## L7 — Interface web · **livré**
 
-- [ ] **L7-1** · `ynopack-server` : `POST /jobs`, file d'attente, état persistant
-- [ ] **L7-2** · Progression en SSE
-- [ ] **L7-3** · Page « coller un lien » → rapport → paquet → lien du dépôt → EXG-F-52
+- [x] **L7-1** · `ynopack-server` : `POST /jobs`, file d'attente, état persistant
+- [x] **L7-2** · Progression en SSE
+- [x] **L7-3** · Page « coller un lien » → rapport → paquet → lien du dépôt → EXG-F-52
 
 ## Transverse
 
