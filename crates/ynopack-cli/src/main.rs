@@ -99,6 +99,10 @@ enum Command {
         /// Ne rien envoyer : montrer ce qui serait fait.
         #[arg(long)]
         simuler: bool,
+
+        /// Preparer aussi une contribution au catalogue officiel de YunoHost.
+        #[arg(long)]
+        officiel: bool,
     },
 
     /// Enchaine tout le pipeline, de l'URL au paquet publie.
@@ -162,7 +166,8 @@ async fn run() -> anyhow::Result<()> {
             forge,
             catalogue,
             simuler,
-        } => publish(forge, catalogue, *simuler, &cli).await,
+            officiel,
+        } => publish(forge, catalogue, *simuler, *officiel, &cli).await,
         Command::Run { url, host, force } => run_pipeline(url, host.as_deref(), *force, &cli).await,
         Command::Eval { corpus, seulement } => evaluer(corpus, seulement.as_deref(), &cli).await,
     }
@@ -465,6 +470,7 @@ async fn publish(
     alias_forge: &str,
     catalogue: &std::path::Path,
     simuler: bool,
+    officiel: bool,
     cli: &Cli,
 ) -> anyhow::Result<()> {
     let spec: ynp_core::AppSpec =
@@ -551,6 +557,11 @@ async fn publish(
         "\n  Pour l'installer :  yunohost app install {}",
         forge.url_https(&depot)
     );
+
+    if officiel {
+        preparer_contribution(&spec, &forge.url_https(&depot), niveau, cli)?;
+    }
+
     Ok(())
 }
 
@@ -698,4 +709,32 @@ async fn evaluer_une(entree: &eval::Entree, cli: &Cli) -> eval::Resultat {
         erreur: None,
         ecarts: eval::comparer(&notre, &officiel),
     }
+}
+
+/// Prepare la contribution au catalogue officiel — sans rien envoyer.
+///
+/// Une pull request vers un projet tiers engage l'utilisateur, pas l'outil.
+fn preparer_contribution(
+    spec: &ynp_core::AppSpec,
+    url: &str,
+    niveau: Option<u8>,
+    cli: &Cli,
+) -> anyhow::Result<()> {
+    match ynp_publish::officiel::preparer(spec, url, niveau) {
+        Err(e) => println!("\n  Contribution officielle impossible :\n    {e}"),
+        Ok(c) => {
+            let dossier = cli.out.join("officiel");
+            std::fs::create_dir_all(&dossier)?;
+            std::fs::write(dossier.join("apps.toml.fragment"), &c.entree)?;
+            std::fs::write(dossier.join("pull-request.md"), &c.message)?;
+
+            println!(
+                "\n  Contribution officielle preparee dans {}",
+                dossier.display()
+            );
+            println!("  Rien n'a ete envoye : ouvrir la pull request sur");
+            println!("  https://github.com/YunoHost/apps est une decision qui vous revient.");
+        }
+    }
+    Ok(())
 }

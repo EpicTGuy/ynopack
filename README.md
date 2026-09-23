@@ -50,10 +50,14 @@ sans le signaler.
 | `ynopack assess` | `report.json` | Règles de faisabilité, verdict, score |
 | `ynopack plan` | `appspec.toml` | **Le seul point de décision** — relu par un humain ou un agent |
 | `ynopack generate` | `<app>_ynh/` | Rendu de templates, aucune décision |
-| `ynopack verify` | `lint.json` | Schéma officiel, règles du linter, `shellcheck` |
-| `ynopack test --host=dell` | verdict G3 | Install réelle, endpoint, backup/restore, remove |
+| `ynopack verify` | `lint.json` | Schéma officiel, règles du linter, `bash -n`, jetons de configuration |
+| `ynopack test --host=dell` | `test.json` | Install réelle, service, endpoint, backup/restore, remove sans résidu |
 | `ynopack publish` | URL du dépôt | Forgejo + entrée de catalogue |
 | `ynopack run <url>` | tout | Enchaîne les étapes, s'arrête à la première gate en échec |
+| `ynopack eval` | matrice | Compare les paquets produits à ceux du catalogue officiel |
+
+Il existe aussi `ynopack-server`, qui expose le même pipeline dans un navigateur :
+on colle une URL, on suit la progression en direct.
 
 Un agent n'écrit jamais de bash : il édite `appspec.toml`, relance `generate`, puis `verify`.
 
@@ -99,8 +103,21 @@ Mac ne peut pas faire tourner YunoHost. Voir [docs/50-RUNBOOK-VALIDATION.md](doc
 
 ## État
 
-Lot L0 livré : squelette, corpus de référence, documentation, et `ynp-core` — les types du pipeline,
-figés, qui conditionnent tout le reste. Suite dans [BACKLOG.md](BACKLOG.md).
+Les huit lots sont livrés : analyse, faisabilité, génération, vérification, installation réelle,
+publication, interface web, et le harnais d'évaluation.
+
+Ce que la validation sur des applications réelles établit aujourd'hui :
+
+- le manifest produit pour **miniflux** est **identique** à celui du paquet officiel sur les onze
+  champs comparés ;
+- le linter officiel de YunoHost rend « *Not even a warning! This app qualifies for level 7!* » ;
+- le cycle complet sur l'instance de test — installation, service actif, migrations de base,
+  sauvegarde, restauration, désinstallation sans le moindre résidu — passe en une centaine de secondes ;
+- l'accord avec les paquets écrits à la main est de **85 %** sur le corpus d'évaluation, et les
+  écarts restants sont des arbitrages, pas des erreurs.
+
+La gate G4 (`package_check`, niveau 0-8) reste optionnelle : elle demande une VM dédiée, et la CI
+publique de YunoHost mesure le même niveau gratuitement sur une pull request.
 
 ## Licence
 

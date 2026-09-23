@@ -14,8 +14,8 @@ Tâches dimensionnées pour un agent : un crate, un détecteur ou une règle cha
 - [x] `scripts/refresh-docs.sh` — corpus YunoHost + schémas + `example_ynh` + templates YoloGen
 - [x] `ynp-core` : `Known<T>`, `RepoFacts`, `AppSpec`, `Finding`, `GateReport` — **types figés**
 - [x] Cahier des charges, README, AGENTS.md, ADR
-- [ ] **L0-1** · Intégration continue GitHub Actions : fmt, clippy, test
-- [ ] **L0-2** · `docs/adr/ADR-005` sur le format de sortie du CLI (humain vs `--json`)
+- [x] **L0-1** · Intégration continue GitHub Actions : fmt, clippy, test
+- [x] **L0-2** · `docs/adr/ADR-005` sur le format de sortie du CLI (humain vs `--json`)
 
 ---
 
@@ -41,7 +41,7 @@ pure sur un arbre de fichiers, testable seule.
 - [x] **L1-9** · Tables `assets/knowledge/` : `apk-to-deb.toml`, `env-vars.toml`,
       `runtime-versions.toml`, `unsupported-services.toml`
 - [x] **L1-10** · `ynopack analyze <url>` → `facts.json`
-- [ ] **L1-11** · **Sélection des binaires préconstruits par architecture.** Constaté en comparant
+- [x] **L1-11** · **Sélection des binaires préconstruits par architecture.** Constaté en comparant
       aux paquets officiels : `gotify_ynh`, `memos_ynh` et `miniflux_ynh` téléchargent tous des
       assets de release (`amd64.url`, `arm64.url`, …) plutôt que l'archive des sources, ce qui
       évite de compiler sur la machine cible. Notre sélection ne prend que le tarball source.
@@ -89,7 +89,8 @@ pure sur un arbre de fichiers, testable seule.
 - [x] **L5-3** · Contrôle des résidus après remove : utilisateur système, `$install_dir`, conf
       nginx, base → EXG-F-34
 - [x] **L5-4** · `ynopack test --host=<alias>`, gate G3
-- [ ] **L5-5** *(optionnel)* · `scripts/provision-runner.sh` : VM Debian + Incus sur `hom-e`
+- [x] **L5-5** *(optionnel)* · `scripts/provision-runner.sh` : VM Debian + Incus sur `hom-e`.
+      **Écrit mais jamais exécuté** — à relire avant de s'y fier.
 - [ ] **L5-6** *(optionnel)* · Pilotage de `package_check`, analyse du niveau 0-8, gate G4 → EXG-F-35
 
 ## L6 — Publication · **livré**
@@ -97,7 +98,7 @@ pure sur un arbre de fichiers, testable seule.
 - [x] **L6-1** · `ynp-publish` : création du dépôt Forgejo et push → EXG-F-40
 - [x] **L6-2** · Catalogue custom : `apps.toml` → `apps.json`, inspiré de `apps_tools/list_builder.py` → EXG-F-41
 - [x] **L6-3** · Gate G5, `ynopack publish`
-- [ ] **L6-4** *(optionnel)* · Préparation de PR vers le catalogue officiel, sous condition de G4 → EXG-F-42
+- [x] **L6-4** *(optionnel)* · Préparation de PR vers le catalogue officiel, sous condition de G4 → EXG-F-42
 - [x] **L6-5** · `ynopack run` : pipeline complet, arrêt à la première gate en échec → EXG-F-50, EXG-F-51
 
 ## L7 — Interface web · **livré**
@@ -118,4 +119,4 @@ pure sur un arbre de fichiers, testable seule.
       `miniflux` (PostgreSQL + `sso = true`) →
       `whoogle` (Python, cf. `PY001`) →
       `buzz` (cas dur : Rust + frontal pnpm, absent du catalogue)
-- [ ] **T-3** · Corpus de Dockerfiles réels avec la `BuildRecipe` attendue, pour L1-2
+- [x] **T-3** · Corpus de Dockerfiles réels avec la `BuildRecipe` attendue, pour L1-2
