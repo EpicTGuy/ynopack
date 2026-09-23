@@ -435,3 +435,93 @@ pub fn find_dockerfile(tree: &[String]) -> Option<String> {
                 .cloned()
         })
 }
+
+/// Choisit le Dockerfile qui decrit reellement l'application.
+///
+/// Un depot en contient souvent plusieurs : celui du produit, mais aussi ceux
+/// qui construisent un paquet `.deb` ou `.rpm`, ou qui montent un environnement
+/// de developpement. Constate sur miniflux, qui en compte quatre : retenir
+/// `packaging/debian/Dockerfile` faisait passer `devscripts` et `dh-make` pour
+/// des dependances de l'application, et `golang:1` pour sa version de runtime.
+///
+/// On note donc chaque candidat sur ce qui distingue un Dockerfile de runtime :
+/// il expose un port, part d'une image de langage, et demarre l'application
+/// plutot qu'un script de construction.
+pub fn choose(tree: &ynp_core::tree::RepoTree) -> Option<String> {
+    let candidates = tree.find_by_name(|f| f.to_lowercase().starts_with("dockerfile"));
+    if candidates.is_empty() {
+        return None;
+    }
+
+    candidates
+        .into_iter()
+        .map(|path| {
+            let score = tree
+                .text(&path)
+                .map_or(0, |c| runtime_score(&path, &parse(&path, c)));
+            (score, path)
+        })
+        // A egalite, le moins profond gagne, puis l'ordre alphabetique : le
+        // choix doit etre reproductible d'une execution a l'autre.
+        .max_by_key(|(score, path)| (*score, -(path.matches('/').count() as i32), path.clone()))
+        .map(|(_, path)| path)
+}
+
+fn runtime_score(path: &str, recipe: &BuildRecipe) -> i32 {
+    let mut score = 0;
+
+    if path == "Dockerfile" {
+        score += 3;
+    }
+    // Un Dockerfile de conditionnement ne sert pas a faire tourner l'app.
+    const CONDITIONNEMENT: &[&str] = &["packaging", "debian", "rpm", "deb", "release", "snap"];
+    let lower = path.to_lowercase();
+    if CONDITIONNEMENT.iter().any(|k| lower.contains(k)) {
+        score -= 4;
+    }
+    score -= path.matches('/').count() as i32;
+
+    if !recipe.expose.is_empty() {
+        score += 4;
+    }
+    if recipe
+        .runtime_stage()
+        .is_some_and(|s| is_runtime_image(&s.image))
+    {
+        score += 3;
+    }
+    if let Some(cmd) = recipe.start_command() {
+        // `CMD ["/src/packaging/debian/build.sh"]` demarre une construction,
+        // pas l'application.
+        let looks_like_build = cmd.contains("build") || cmd.ends_with(".sh");
+        score += if looks_like_build { -2 } else { 2 };
+    }
+    score
+}
+
+/// Vrai pour les images de base qui portent un runtime applicatif.
+fn is_runtime_image(image: &str) -> bool {
+    const RUNTIMES: &[&str] = &[
+        "node",
+        "nodejs",
+        "python",
+        "php",
+        "golang",
+        "go",
+        "ruby",
+        "rust",
+        "openjdk",
+        "eclipse-temurin",
+        "nginx",
+        "httpd",
+        "caddy",
+        "alpine",
+        "debian",
+        "ubuntu",
+        "distroless",
+        "scratch",
+        "busybox",
+    ];
+    let short = image.rsplit('/').next().unwrap_or(image).to_lowercase();
+    RUNTIMES.contains(&short.as_str())
+}

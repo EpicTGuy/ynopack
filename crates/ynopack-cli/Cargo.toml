@@ -1,9 +1,21 @@
 [package]
 name = "ynopack-cli"
+description = "Interface en ligne de commande du packager"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "ynopack"
+path = "src/main.rs"
+
 [dependencies]
 ynp-core.workspace = true
+ynp-analyze.workspace = true
+ynp-forge.workspace = true
+ynp-dockerfile.workspace = true
+clap.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true

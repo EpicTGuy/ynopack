@@ -27,15 +27,33 @@ pub fn detect(tree: &RepoTree, build: Option<&BuildRecipe>) -> StackFacts {
     if facts.primary == Technology::Unknown {
         facts.primary = from_files.primary;
     }
-    if facts.runtime_version.is_none() {
-        facts.runtime_version = from_files.runtime_version;
-    }
+    // Un tag d'image peut etre plus vague que le fichier de projet : `golang:1`
+    // face a `go 1.26.0`. On garde la version la plus precise des deux.
+    facts.runtime_version = more_precise(facts.runtime_version.take(), from_files.runtime_version);
     facts.package_managers = from_files.package_managers;
     facts.has_lockfile = from_files.has_lockfile;
     facts.build_script = from_files.build_script;
     facts.native_deps = native_deps(tree);
 
     facts
+}
+
+/// Retient la version la plus precise, c'est-a-dire celle qui porte le plus de
+/// composantes. A precision egale, celle de l'image de base fait foi : c'est un
+/// fait, quand le fichier de projet n'exprime qu'une contrainte.
+fn more_precise(from_image: Option<String>, from_files: Option<String>) -> Option<String> {
+    match (from_image, from_files) {
+        (Some(image), Some(files)) => {
+            let parts = |v: &str| v.matches('.').count();
+            if parts(&files) > parts(&image) {
+                Some(files)
+            } else {
+                Some(image)
+            }
+        }
+        (Some(v), None) | (None, Some(v)) => Some(v),
+        (None, None) => None,
+    }
 }
 
 /// Technologie et version deduites d'une image de base Docker.
@@ -331,5 +349,33 @@ mod tests {
         let f = detect(&RepoTree::from_pairs([("README.md", "# projet")]), None);
         assert_eq!(f.primary, Technology::Unknown);
         assert_eq!(f.runtime_version, None);
+    }
+}
+
+#[cfg(test)]
+mod precision {
+    use super::*;
+
+    #[test]
+    fn la_version_la_plus_precise_l_emporte() {
+        // Cas reel de miniflux : `golang:1` dans le Dockerfile de
+        // conditionnement, `go 1.26.0` dans go.mod.
+        assert_eq!(
+            more_precise(Some("1".into()), Some("1.26".into())).as_deref(),
+            Some("1.26")
+        );
+        // A precision egale, l'image de base fait foi.
+        assert_eq!(
+            more_precise(Some("20".into()), Some("18".into())).as_deref(),
+            Some("20")
+        );
+        assert_eq!(
+            more_precise(None, Some("3.11".into())).as_deref(),
+            Some("3.11")
+        );
+        assert_eq!(
+            more_precise(Some("8.2".into()), None).as_deref(),
+            Some("8.2")
+        );
     }
 }

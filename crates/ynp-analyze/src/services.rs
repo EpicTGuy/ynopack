@@ -95,6 +95,30 @@ fn from_drivers(tree: &RepoTree) -> Option<(Database, String)> {
             }
         }
     }
+    from_go_modules(tree)
+}
+
+/// Pilotes Go, reconnus a leur chemin de module.
+///
+/// `go.mod` n'entoure pas ses dependances de guillemets : la detection
+/// generique passait a cote. Constate sur miniflux, dont la base PostgreSQL
+/// n'etait pas vue faute de lire `github.com/lib/pq`.
+fn from_go_modules(tree: &RepoTree) -> Option<(Database, String)> {
+    const GO_DRIVERS: &[(&str, Database)] = &[
+        ("github.com/lib/pq", Database::PostgreSql),
+        ("github.com/jackc/pgx", Database::PostgreSql),
+        ("github.com/go-sql-driver/mysql", Database::MySql),
+        ("go.mongodb.org/mongo-driver", Database::MongoDb),
+        ("github.com/mattn/go-sqlite3", Database::Sqlite),
+        ("modernc.org/sqlite", Database::Sqlite),
+    ];
+
+    let content = tree.text("go.mod")?;
+    for (module, db) in GO_DRIVERS {
+        if content.contains(module) {
+            return Some((*db, format!("go.mod : {module}")));
+        }
+    }
     None
 }
 
@@ -263,6 +287,47 @@ mod tests {
         assert!(
             !is_kubernetes_only(&tree, true),
             "un Dockerfile ouvre un chemin natif"
+        );
+    }
+}
+
+#[cfg(test)]
+mod pilotes_go {
+    use super::*;
+    use ynp_core::facts::Technology;
+
+    #[test]
+    fn un_pilote_declare_dans_go_mod_est_reconnu() {
+        // Cas reel de miniflux : go.mod n'entoure pas ses dependances de
+        // guillemets, la detection generique passait a cote.
+        let tree = RepoTree::from_pairs([(
+            "go.mod",
+            "module miniflux.app/v2\n\ngo 1.26.0\n\nrequire (\n\tgithub.com/lib/pq v1.10.9\n)\n",
+        )]);
+        let stack = StackFacts {
+            primary: Technology::Go,
+            ..Default::default()
+        };
+        let f = detect(&tree, None, &ConfigFacts::default(), &stack, true);
+
+        assert_eq!(f.database, Database::PostgreSql);
+        assert!(f
+            .database_evidence
+            .as_deref()
+            .unwrap()
+            .contains("github.com/lib/pq"));
+    }
+
+    #[test]
+    fn un_go_mod_sans_pilote_ne_declare_aucune_base() {
+        let tree = RepoTree::from_pairs([("go.mod", "module x\n\ngo 1.22\n")]);
+        let stack = StackFacts {
+            primary: Technology::Go,
+            ..Default::default()
+        };
+        assert_eq!(
+            detect(&tree, None, &ConfigFacts::default(), &stack, true).database,
+            Database::None
         );
     }
 }

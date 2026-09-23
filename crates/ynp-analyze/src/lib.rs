@@ -41,7 +41,7 @@ pub fn analyze(forge: ForgeData, tree: &RepoTree) -> RepoFacts {
     facts.tags = forge.tags;
     facts.tree = tree.paths();
 
-    let dockerfile = ynp_dockerfile::find_dockerfile(&facts.tree);
+    let dockerfile = ynp_dockerfile::choose_dockerfile(tree);
     facts.build = dockerfile.as_ref().and_then(|path| {
         tree.text(path)
             .map(|content| ynp_dockerfile::parse_dockerfile(path, content))

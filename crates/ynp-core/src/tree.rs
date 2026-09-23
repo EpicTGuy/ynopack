@@ -5,11 +5,15 @@
 //! par un sur des arborescences fabriquees, et de repartir le travail entre
 //! plusieurs agents sans qu'ils se genent.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
+/// Le contenu n'est conserve que pour les fichiers utiles aux detecteurs ; les
+/// autres chemins sont memorises sans leur contenu. Un depot de 50 000 fichiers
+/// tient ainsi en memoire sans qu'on perde l'information « ce fichier existe ».
 #[derive(Debug, Clone, Default)]
 pub struct RepoTree {
     files: BTreeMap<String, String>,
+    paths: BTreeSet<String>,
 }
 
 impl RepoTree {
@@ -18,7 +22,14 @@ impl RepoTree {
     }
 
     pub fn insert(&mut self, path: impl Into<String>, content: impl Into<String>) {
-        self.files.insert(path.into(), content.into());
+        let path = path.into();
+        self.paths.insert(path.clone());
+        self.files.insert(path, content.into());
+    }
+
+    /// Memorise l'existence d'un fichier sans conserver son contenu.
+    pub fn add_path(&mut self, path: impl Into<String>) {
+        self.paths.insert(path.into());
     }
 
     /// Construit un arbre a partir de paires (chemin, contenu).
@@ -35,7 +46,7 @@ impl RepoTree {
     }
 
     pub fn paths(&self) -> Vec<String> {
-        self.files.keys().cloned().collect()
+        self.paths.iter().cloned().collect()
     }
 
     pub fn text(&self, path: &str) -> Option<&str> {
@@ -43,7 +54,7 @@ impl RepoTree {
     }
 
     pub fn has(&self, path: &str) -> bool {
-        self.files.contains_key(path)
+        self.paths.contains(path)
     }
 
     /// Premier chemin existant parmi les candidats, dans l'ordre de preference.
@@ -63,19 +74,19 @@ impl RepoTree {
 
     /// Chemins dont le nom de fichier satisfait le predicat.
     pub fn find_by_name(&self, pred: impl Fn(&str) -> bool) -> Vec<String> {
-        self.files
-            .keys()
+        self.paths
+            .iter()
             .filter(|p| p.rsplit('/').next().is_some_and(&pred))
             .cloned()
             .collect()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.files.is_empty()
+        self.paths.is_empty()
     }
 
     pub fn len(&self) -> usize {
-        self.files.len()
+        self.paths.len()
     }
 }
 
@@ -110,6 +121,17 @@ mod tests {
         );
         assert_eq!(t.first_of(&["absent"]), None);
         assert_eq!(t.first_text(&["package.json"]).unwrap().1, "{}");
+    }
+
+    #[test]
+    fn un_chemin_peut_exister_sans_que_son_contenu_soit_conserve() {
+        // Cas des fichiers binaires ou volumineux : le detecteur doit pouvoir
+        // repondre « ce fichier existe » sans qu'on ait garde ses octets.
+        let mut t = tree();
+        t.add_path("assets/logo.png");
+        assert!(t.has("assets/logo.png"));
+        assert_eq!(t.text("assets/logo.png"), None);
+        assert_eq!(t.len(), 4);
     }
 
     #[test]

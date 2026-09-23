@@ -17,4 +17,6 @@ pub mod lexer;
 pub mod shell;
 
 pub use compose::{find_compose, parse as parse_compose, services_from_compose, COMPOSE_NAMES};
-pub use dockerfile::{find_dockerfile, parse as parse_dockerfile, DOCKERFILE_NAMES};
+pub use dockerfile::{
+    choose as choose_dockerfile, find_dockerfile, parse as parse_dockerfile, DOCKERFILE_NAMES,
+};

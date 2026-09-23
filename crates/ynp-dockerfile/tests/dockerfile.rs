@@ -354,3 +354,65 @@ fn une_variable_dont_le_nom_en_prefixe_une_autre_est_substituee_correctement() {
     let r = parse_dockerfile("Dockerfile", df);
     assert_eq!(r.stages[0].tag.as_deref(), Some("1.2"));
 }
+
+#[test]
+fn le_dockerfile_de_conditionnement_n_est_pas_pris_pour_celui_du_produit() {
+    // Cas reel de miniflux, qui en compte quatre. Retenir celui de Debian
+    // faisait passer devscripts et dh-make pour des dependances de l'app.
+    use ynp_core::tree::RepoTree;
+    use ynp_dockerfile::choose_dockerfile;
+
+    let tree = RepoTree::from_pairs([
+        (
+            "packaging/debian/Dockerfile",
+            "FROM golang:1\nRUN apt-get install -y devscripts dh-make debhelper\n\
+             CMD [\"/src/packaging/debian/build.sh\"]\n",
+        ),
+        (
+            "packaging/docker/alpine/Dockerfile",
+            "FROM golang:1.26 AS build\nRUN make miniflux\n\
+             FROM alpine:3.24\nEXPOSE 8080\nCMD [\"/usr/bin/miniflux\"]\n",
+        ),
+        (
+            "packaging/rpm/Dockerfile",
+            "FROM fedora\nRUN dnf install -y rpm-build\nCMD [\"/build.sh\"]\n",
+        ),
+    ]);
+
+    assert_eq!(
+        choose_dockerfile(&tree).as_deref(),
+        Some("packaging/docker/alpine/Dockerfile")
+    );
+}
+
+#[test]
+fn le_dockerfile_racine_est_prefere_quand_il_existe() {
+    use ynp_core::tree::RepoTree;
+    use ynp_dockerfile::choose_dockerfile;
+
+    let tree = RepoTree::from_pairs([
+        (
+            "Dockerfile",
+            "FROM node:20\nEXPOSE 3000\nCMD [\"node\",\"s.js\"]\n",
+        ),
+        (
+            "docker/Dockerfile",
+            "FROM node:20\nEXPOSE 3000\nCMD [\"node\",\"s.js\"]\n",
+        ),
+    ]);
+    assert_eq!(choose_dockerfile(&tree).as_deref(), Some("Dockerfile"));
+}
+
+#[test]
+fn le_choix_est_reproductible_a_egalite_de_score() {
+    use ynp_core::tree::RepoTree;
+    use ynp_dockerfile::choose_dockerfile;
+
+    let tree = RepoTree::from_pairs([
+        ("b/Dockerfile", "FROM node:20\nEXPOSE 3000\n"),
+        ("a/Dockerfile", "FROM node:20\nEXPOSE 3000\n"),
+    ]);
+    // Deux executions doivent rendre le meme resultat.
+    assert_eq!(choose_dockerfile(&tree), choose_dockerfile(&tree));
+    assert_eq!(choose_dockerfile(&tree).as_deref(), Some("b/Dockerfile"));
+}
