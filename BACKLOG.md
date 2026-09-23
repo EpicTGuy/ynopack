@@ -41,6 +41,12 @@ pure sur un arbre de fichiers, testable seule.
 - [x] **L1-9** · Tables `assets/knowledge/` : `apk-to-deb.toml`, `env-vars.toml`,
       `runtime-versions.toml`, `unsupported-services.toml`
 - [x] **L1-10** · `ynopack analyze <url>` → `facts.json`
+- [ ] **L1-11** · **Sélection des binaires préconstruits par architecture.** Constaté en comparant
+      aux paquets officiels : `gotify_ynh`, `memos_ynh` et `miniflux_ynh` téléchargent tous des
+      assets de release (`amd64.url`, `arm64.url`, …) plutôt que l'archive des sources, ce qui
+      évite de compiler sur la machine cible. Notre sélection ne prend que le tarball source.
+      Implique `autoupdate.asset.$arch` et le rapprochement asset ↔ architecture. **C'est ce qui
+      désamorce `BUILD001` dans la majorité des cas.** → EXG-F-06
 
 ## L2 — Faisabilité · **livré**
 
@@ -105,6 +111,11 @@ pure sur un arbre de fichiers, testable seule.
 - [ ] **T-1** · `ynopack eval --corpus` : comparaison aux paquets YunoHost existants, matrice de
       précision par champ. **À démarrer dès L1** — sans cette mesure, on ne sait pas si les
       détecteurs progressent. → EXG-F-53
-- [ ] **T-2** · `tests/corpus.toml` : cinq apps de difficulté croissante, de l'app statique à
-      l'app Python + PostgreSQL
+- [ ] **T-2** · `tests/corpus.toml` : échelle de canaris, une difficulté nouvelle à chaque barreau.
+      Tous déjà au catalogue officiel sauf le dernier, donc avec une vérité terrain à comparer :
+      `gotify` (binaire préconstruit, `architectures = "all"`, pas de base) →
+      `memos` (binaires par architecture) →
+      `miniflux` (PostgreSQL + `sso = true`) →
+      `whoogle` (Python, cf. `PY001`) →
+      `buzz` (cas dur : Rust + frontal pnpm, absent du catalogue)
 - [ ] **T-3** · Corpus de Dockerfiles réels avec la `BuildRecipe` attendue, pour L1-2
