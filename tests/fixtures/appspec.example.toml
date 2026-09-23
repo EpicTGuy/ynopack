@@ -1,0 +1,77 @@
+# appspec.toml — le seul point de decision du pipeline.
+#
+# Produit par `ynopack plan`, relu et corrige a la main ou par un agent, puis
+# consomme par `ynopack generate`. Tout champ que l'analyse n'a pas pu deduire
+# apparait sous la forme { unknown = "...", look_in = [...] } : il faut le
+# remplacer par une valeur avant que `verify` accepte le paquet.
+
+schema_version = 1
+
+[app]
+id = "grist"
+name = "Grist"
+description_en = "Spreadsheet-database hybrid for structured collaborative data"
+description_fr = "Hybride tableur-base de donnees pour donnees structurees collaboratives"
+version = "1.1.15"
+maintainers = ["etg"]
+
+[upstream]
+license = "Apache-2.0"
+website = "https://www.getgrist.com"
+code = "https://github.com/gristlabs/grist-core"
+
+[integration]
+yunohost_min = ">= 12.1.17"
+helpers_version = "2.1"
+architectures = "all"
+multi_instance = false
+ldap = "no"
+sso = "no"
+disk = "500M"
+ram_build = "2G"
+ram_runtime = "512M"
+
+[install]
+url_scheme = "domain_and_path"
+init_main_permission = "all_users"
+
+[resources]
+system_user = true
+install_dir = true
+data_dir = true
+main_permission_url = "/"
+ports = true
+apt_packages = ["python3-venv", "libpython3-dev"]
+database = "postgresql"
+nodejs_version = "20"
+
+[resources.sources]
+url = "https://github.com/gristlabs/grist-core/archive/refs/tags/v1.1.15.tar.gz"
+sha256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+autoupdate_strategy = "latest_github_release"
+in_subdir = true
+
+[runtime]
+technology = "nodejs"
+build_steps = ["yarn install --frozen-lockfile", "yarn run build:prod"]
+# Deduit de CMD ["node", "sandbox/supervisor.js"] dans le Dockerfile.
+execstart = "__NODEJS_DIR__/node __INSTALL_DIR__/sandbox/supervisor.js"
+port_env_var = "PORT"
+config_file = ".env"
+
+[runtime.env]
+GRIST_SANDBOX_FLAVOR = "gvisor"
+GRIST_SESSION_SECRET = "__SECRET__"
+
+[features]
+nginx = true
+systemd = true
+phpfpm = false
+logrotate = true
+fail2ban = false
+cron = false
+change_url = true
+service_integration = true
+
+[docs]
+description = "Grist est un hybride entre un tableur et une base de donnees."

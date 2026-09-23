@@ -1,0 +1,54 @@
+#!/bin/bash
+### App file generated with YoloGen, the YunoHost app generator, version {{ data['GENERATOR_VERSION'] }}.
+
+{% if data.generator_mode == 'tutorial' -%}
+# This is the tutorial version of the app.
+# It contains extra commands to explain what should be done in case you want to adjust some part of the script.
+# Once you are done, you may remove them.
+
+## this script is only run if actual change to domain/path is detected, if you're here either $domain or $path changed
+## new location is available via $domain and $path (or $new_domain and $new_path variables if you want to be explicit)
+## old values are available via, you guessed it, $old_domain and $old_path
+{% endif %}
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+{% if data.main_technology not in ["php", "none"] -%}
+#=================================================
+# STOP SYSTEMD SERVICE
+#=================================================
+ynh_script_progression "Stopping a systemd service..."
+
+ynh_systemctl --service="$app" --action="stop"
+{% endif %}
+
+#=================================================
+# MODIFY URL IN NGINX CONF
+#=================================================
+ynh_script_progression "Updating NGINX web server configuration..."
+
+ynh_config_change_url_nginx
+
+#=================================================
+# SPECIFIC MODIFICATIONS
+#=================================================
+
+{% if data.generator_mode == 'tutorial' -%}
+## do any changes to files that reference specific installation domain/path, i.e. regenerate configs etc.
+{% endif %}
+
+{% if data.main_technology not in ["php", "none"] -%}
+#=================================================
+# START SYSTEMD SERVICE
+#=================================================
+ynh_script_progression "Starting a systemd service..."
+
+ynh_systemctl --service="$app" --action="start"
+{% endif %}
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_script_progression "Change of URL completed for $app"

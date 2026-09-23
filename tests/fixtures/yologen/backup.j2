@@ -1,0 +1,99 @@
+#!/bin/bash
+#### App file generated with YoloGen, the YunoHost app generator, version {{ data['GENERATOR_VERSION'] }}.
+
+{% if data.generator_mode == 'tutorial' -%} # This is the tutorial version of the app.
+# It contains extra commands to explain what should be done in case you want to adjust some part of the script.
+# Once you are done, you may remove them.
+{% endif %}
+
+source ../settings/scripts/_common.sh
+source /usr/share/yunohost/helpers
+
+ynh_print_info "Declaring files to be backed up..."
+
+{% if data.generator_mode == 'tutorial' -%}
+### N.B. : the following 'ynh_backup' calls are only a *declaration* of what needs
+### to be backuped and not an actual copy of any file. The actual backup that
+### creates and fill the archive with the files happens in the core after this
+### script is called. Hence ynh_backups calls takes basically 0 seconds to run.
+{% endif %}
+
+#=================================================
+# BACKUP THE APP MAIN DIR
+#=================================================
+
+ynh_backup "$install_dir"
+
+{% if data.data_dir -%}
+#=================================================
+# BACKUP THE DATA DIR
+#=================================================
+{% if data.generator_mode == 'tutorial' -%}
+# NB: $data_dir is not backuped during safety-backup-before-upgrades,
+# because the data dir may be huge and we don't want to just yolo-create a 10+ GB archive just for upgrades.
+# On the other hand, $data_dir is also *not* removed by default in the "app remove" step unless --purge is used
+# This means that even if the upgrade fails and the backup is restored, the data are still there.
+{% endif %}
+ynh_backup "$data_dir"
+{% endif %}
+
+#=================================================
+# SYSTEM CONFIGURATION
+#=================================================
+
+{% if data.main_technology == "php" -%}
+ynh_backup "/etc/php/$php_version/fpm/pool.d/$app.conf"
+{% endif %}
+
+ynh_backup "/etc/nginx/conf.d/$domain.d/$app.conf"
+
+{% if data.main_technology not in ["php", "none"] -%}
+ynh_backup "/etc/systemd/system/$app.service"
+{% endif %}
+
+{% if data.use_logrotate -%}
+ynh_backup "/etc/logrotate.d/$app"
+{% endif %}
+
+{% if data.use_fail2ban -%}
+ynh_backup "/etc/fail2ban/jail.d/$app.conf"
+ynh_backup "/etc/fail2ban/filter.d/$app.conf"
+{% endif %}
+
+#=================================================
+# BACKUP VARIOUS FILES
+#=================================================
+
+{% if data.use_cron -%}
+ynh_backup "/etc/cron.d/$app"
+{% endif %}
+
+{% if data.generator_mode == 'tutorial' -%}
+### For apps with huge logs, you might want to pass --is_big,
+### and in restore script, mkdir and pass --not_mandatory to ynh_restore_file.
+{% endif %}
+ynh_backup "/var/log/$app/" # TODO: add an option to specify log file
+
+{% if data.database != 'false' -%}
+#=================================================
+# BACKUP THE DATABASE
+#=================================================
+ynh_print_info "Backing up the {{ data.database }} database..."
+
+{% if data.generator_mode == 'tutorial' -%}
+### (However, things like MySQL dumps *do* take some time to run, though the
+### copy of the generated dump to the archive still happens later)
+{% endif %}
+
+{% if data.database == 'mysql' -%}
+ynh_mysql_dump_db > db.sql
+{% elif data.database == 'postgresql' -%}
+ynh_psql_dump_db > db.sql
+{% endif %}
+{% endif %}
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_print_info "Backup script completed for $app. (YunoHost will then actually copy those files to the archive)."

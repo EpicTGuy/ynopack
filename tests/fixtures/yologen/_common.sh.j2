@@ -1,0 +1,13 @@
+#!/bin/bash
+
+#=================================================
+# COMMON VARIABLES AND CUSTOM HELPERS
+#=================================================
+
+{% if data.main_technology == "nodejs" -%}
+nodejs_version={{ data.nodejs_version }}
+{% endif %}
+
+{% if data.main_technology == "go" -%}
+go_version={{ data.go_version }}
+{% endif %}
