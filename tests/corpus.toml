@@ -1,0 +1,37 @@
+# Corpus d'evaluation : des applications dont le paquet YunoHost existe deja.
+#
+# Ces paquets sont une verite terrain gratuite. Comparer ce que produit
+# ynopack a ce qu'un humain a ecrit, champ par champ, est la seule mesure
+# honnete du progres des detecteurs — sans elle, on avance a l'aveugle.
+#
+# L'echelle est ordonnee par difficulte croissante, une nouveaute par barreau.
+
+[[app]]
+nom = "gotify"
+amont = "https://github.com/gotify/server"
+paquet = "https://github.com/YunoHost-Apps/gotify_ynh"
+difficulte = "binaire publie, pas de base"
+
+[[app]]
+nom = "memos"
+amont = "https://github.com/usememos/memos"
+paquet = "https://github.com/YunoHost-Apps/memos_ynh"
+difficulte = "binaires par architecture"
+
+[[app]]
+nom = "miniflux"
+amont = "https://github.com/miniflux/v2"
+paquet = "https://github.com/YunoHost-Apps/miniflux_ynh"
+difficulte = "PostgreSQL, binaires nus, SSO"
+
+[[app]]
+nom = "whoogle"
+amont = "https://github.com/benbusby/whoogle-search"
+paquet = "https://github.com/YunoHost-Apps/whoogle_ynh"
+difficulte = "Python hors bookworm"
+
+[[app]]
+nom = "linkwarden"
+amont = "https://github.com/linkwarden/linkwarden"
+paquet = "https://github.com/YunoHost-Apps/linkwarden_ynh"
+difficulte = "monorepo Node, build lourd, service non supporte"

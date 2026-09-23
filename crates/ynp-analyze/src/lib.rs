@@ -69,6 +69,12 @@ pub fn analyze(forge: ForgeData, tree: &RepoTree) -> RepoFacts {
         }
     }
 
+    // GitHub rend encore des identifiants SPDX retires : on les remet dans
+    // leur forme actuelle, celle qu'emploient les paquets officiels.
+    if let Some(spdx) = facts.meta.license_spdx.take() {
+        facts.meta.license_spdx = Some(knowledge::get().spdx_actuel(&spdx).to_string());
+    }
+
     facts.stack = stack::detect(tree, facts.build.as_ref());
     facts.config = config::detect(tree, facts.compose.as_ref());
     facts.services = services::detect(

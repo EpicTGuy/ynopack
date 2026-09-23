@@ -107,7 +107,9 @@ ram.runtime = "{{ integration.ram_runtime }}"
 
     autoupdate.strategy = "{{ sources.autoupdate }}"
 {%- for a in sources.per_arch %}
-    autoupdate.asset.{{ a.arch }} = "{{ a.pattern }}"
+    # Chaine litterale : le motif est une expression reguliere, ses
+    # contre-obliques ne doivent pas etre interpretees comme des echappements.
+    autoupdate.asset.{{ a.arch }} = '{{ a.pattern }}'
 {%- endfor %}
 {%- endif %}
 {%- if resources.system_user %}

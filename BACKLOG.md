@@ -108,10 +108,10 @@ pure sur un arbre de fichiers, testable seule.
 
 ## Transverse
 
-- [ ] **T-1** · `ynopack eval --corpus` : comparaison aux paquets YunoHost existants, matrice de
+- [x] **T-1** · `ynopack eval --corpus` : comparaison aux paquets YunoHost existants, matrice de
       précision par champ. **À démarrer dès L1** — sans cette mesure, on ne sait pas si les
       détecteurs progressent. → EXG-F-53
-- [ ] **T-2** · `tests/corpus.toml` : échelle de canaris, une difficulté nouvelle à chaque barreau.
+- [x] **T-2** · `tests/corpus.toml` : échelle de canaris, une difficulté nouvelle à chaque barreau.
       Tous déjà au catalogue officiel sauf le dernier, donc avec une vérité terrain à comparer :
       `gotify` (binaire préconstruit, `architectures = "all"`, pas de base) →
       `memos` (binaires par architecture) →

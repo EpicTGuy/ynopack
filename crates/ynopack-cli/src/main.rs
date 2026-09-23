@@ -4,6 +4,7 @@
 //! ce qui permet de reprendre le travail en cours de route ou de corriger la
 //! main a l'etage de decision.
 
+mod eval;
 mod report;
 
 use clap::{Parser, Subcommand};
@@ -113,6 +114,17 @@ enum Command {
         #[arg(long)]
         force: bool,
     },
+
+    /// Compare les paquets produits a ceux du catalogue officiel.
+    Eval {
+        /// Fichier decrivant le corpus d'evaluation.
+        #[arg(long, default_value = "tests/corpus.toml")]
+        corpus: PathBuf,
+
+        /// N'evaluer qu'une application du corpus.
+        #[arg(long)]
+        seulement: Option<String>,
+    },
 }
 
 #[tokio::main]
@@ -152,6 +164,7 @@ async fn run() -> anyhow::Result<()> {
             simuler,
         } => publish(forge, catalogue, *simuler, &cli).await,
         Command::Run { url, host, force } => run_pipeline(url, host.as_deref(), *force, &cli).await,
+        Command::Eval { corpus, seulement } => evaluer(corpus, seulement.as_deref(), &cli).await,
     }
 }
 
@@ -566,4 +579,123 @@ async fn run_pipeline(url: &str, host: Option<&str>, force: bool, cli: &Cli) -> 
         }
     }
     Ok(())
+}
+
+/// Mesure la precision des detecteurs contre les paquets officiels.
+async fn evaluer(
+    corpus: &std::path::Path,
+    seulement: Option<&str>,
+    cli: &Cli,
+) -> anyhow::Result<()> {
+    let texte = std::fs::read_to_string(corpus)
+        .map_err(|e| anyhow::anyhow!("{} illisible : {e}", corpus.display()))?;
+    let corpus: eval::Corpus = toml::from_str(&texte)?;
+
+    let entrees: Vec<_> = corpus
+        .app
+        .into_iter()
+        .filter(|a| match seulement {
+            None => true,
+            Some(s) => a.nom == s,
+        })
+        .collect();
+    if entrees.is_empty() {
+        anyhow::bail!("aucune application ne correspond");
+    }
+
+    let mut resultats = Vec::new();
+    for entree in &entrees {
+        eprintln!("  {} …", entree.nom);
+        resultats.push(evaluer_une(entree, cli).await);
+    }
+
+    if cli.json {
+        println!("{}", serde_json::to_string_pretty(&resultats)?);
+        return Ok(());
+    }
+
+    for r in &resultats {
+        println!("\n  ── {} ── {}", r.app, r.difficulte);
+        if let Some(e) = &r.erreur {
+            println!("     non evaluee : {e}");
+            continue;
+        }
+        for ecart in r.ecarts.iter().filter(|e| !e.accord) {
+            println!(
+                "     {:<26} nous « {} »  officiel « {} »",
+                ecart.champ, ecart.nous, ecart.officiel
+            );
+        }
+        println!("     {}/{} champs en accord", r.accords(), r.total());
+    }
+    print!("{}", eval::matrice(&resultats));
+    Ok(())
+}
+
+async fn evaluer_une(entree: &eval::Entree, cli: &Cli) -> eval::Resultat {
+    let echec = |e: String| eval::Resultat {
+        app: entree.nom.clone(),
+        difficulte: entree.difficulte.clone(),
+        erreur: Some(e),
+        ecarts: Vec::new(),
+    };
+
+    // Notre paquet, produit par le pipeline complet jusqu'a la generation.
+    let travail = cli.out.join("eval").join(&entree.nom);
+    if let Err(e) = std::fs::create_dir_all(&travail) {
+        return echec(e.to_string());
+    }
+
+    let recupere = match ynp_forge::fetch(&entree.amont).await {
+        Ok(r) => r,
+        Err(e) => return echec(e.to_string()),
+    };
+    let mut faits = ynp_analyze::analyze(recupere.forge, &recupere.tree);
+    faits.selection = Some(recupere.selection);
+
+    let spec = match ynp_spec::build(&faits) {
+        Ok(s) => s,
+        Err(e) => return echec(e.to_string()),
+    };
+    // Un champ non resolu n'empeche pas la comparaison : on veut justement
+    // savoir ce que l'outil deduit, y compris quand il s'arrete.
+    let genere = match ynp_gen::generate(&spec, &travail) {
+        Ok(g) => g,
+        Err(e) => return echec(e.to_string()),
+    };
+
+    let notre = match std::fs::read_to_string(genere.racine.join("manifest.toml"))
+        .ok()
+        .and_then(|t| toml::from_str::<toml::Value>(&t).ok())
+    {
+        Some(v) => v,
+        None => return echec("manifest genere illisible".into()),
+    };
+
+    // Le manifest officiel, tel qu'il est publie.
+    let brut = entree
+        .paquet
+        .replace("https://github.com/", "https://raw.githubusercontent.com/");
+    let mut officiel = None;
+    for branche in ["master", "main"] {
+        let url = format!("{brut}/{branche}/manifest.toml");
+        if let Ok(r) = reqwest::get(&url).await {
+            if r.status().is_success() {
+                if let Ok(t) = r.text().await {
+                    officiel = toml::from_str::<toml::Value>(&t).ok();
+                    break;
+                }
+            }
+        }
+    }
+    let Some(officiel) = officiel else {
+        return echec("manifest officiel introuvable".into());
+    };
+
+    eval::Resultat {
+        app: entree.nom.clone(),
+        difficulte: entree.difficulte.clone(),
+        erreur: None,
+        ecarts: eval::comparer(&notre, &officiel),
+    }
 }

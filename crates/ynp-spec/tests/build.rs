@@ -279,3 +279,55 @@ fn chaque_architecture_porte_son_url_et_sa_somme() {
     assert_eq!(s.per_arch[0].sha256.len(), 64);
     assert!(s.per_arch[0].pattern.starts_with('^'));
 }
+
+#[test]
+fn un_demon_servi_par_nginx_obtient_un_port_meme_sans_expose() {
+    // Cas reel de gotify : son Dockerfile ne declare aucun port, mais le
+    // reverse-proxy doit bien savoir ou joindre l'application.
+    let mut facts = depot_complet();
+    facts.build.as_mut().unwrap().expose.clear();
+    facts
+        .config
+        .variables
+        .retain(|v| v.role != ConfigRole::Port);
+    facts.compose = None;
+
+    let spec = ynp_spec::build(&facts).unwrap();
+    assert!(
+        spec.resources.ports,
+        "un demon derriere nginx a besoin d'un port"
+    );
+}
+
+#[test]
+fn une_application_php_ne_reserve_pas_de_port() {
+    // php-fpm s'en charge : reserver un port serait du gaspillage.
+    let mut facts = depot_complet();
+    facts.build.as_mut().unwrap().expose.clear();
+    facts
+        .config
+        .variables
+        .retain(|v| v.role != ConfigRole::Port);
+    facts.stack = StackFacts {
+        primary: Technology::Php,
+        ..Default::default()
+    };
+
+    assert!(!ynp_spec::build(&facts).unwrap().resources.ports);
+}
+
+#[test]
+fn un_site_statique_non_plus() {
+    let mut facts = depot_complet();
+    facts.build.as_mut().unwrap().expose.clear();
+    facts
+        .config
+        .variables
+        .retain(|v| v.role != ConfigRole::Port);
+    facts.stack = StackFacts {
+        primary: Technology::Static,
+        ..Default::default()
+    };
+
+    assert!(!ynp_spec::build(&facts).unwrap().resources.ports);
+}

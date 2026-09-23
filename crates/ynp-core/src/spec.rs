@@ -188,7 +188,9 @@ impl Default for Integration {
             yunohost_min: DEFAULT_YUNOHOST_MIN.to_string(),
             helpers_version: DEFAULT_HELPERS_VERSION.to_string(),
             architectures: Architectures::All,
-            multi_instance: false,
+            // Les paquets officiels l'autorisent par defaut ; rien ne justifie
+            // d'interdire une seconde installation sans raison.
+            multi_instance: true,
             ldap: Triple::NotRelevant,
             sso: Triple::NotRelevant,
             disk: "50M".into(),

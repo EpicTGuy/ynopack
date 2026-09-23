@@ -53,6 +53,8 @@ struct ResourcesTable {
 #[derive(Debug, Deserialize)]
 struct LicenseTable {
     licence: Vec<LicenseHeader>,
+    #[serde(default)]
+    obsoletes: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -82,6 +84,7 @@ pub struct Knowledge {
     unsupported: Vec<String>,
     replaced: Vec<String>,
     licenses: Vec<LicenseHeader>,
+    spdx_obsoletes: BTreeMap<String, String>,
 }
 
 static KNOWLEDGE: OnceLock<Knowledge> = OnceLock::new();
@@ -111,6 +114,7 @@ pub fn get() -> &'static Knowledge {
             unsupported: un.services.blocking,
             replaced: un.services.replaced,
             licenses: lic.licence,
+            spdx_obsoletes: lic.obsoletes,
         }
     })
 }
@@ -193,6 +197,15 @@ impl Knowledge {
             .iter()
             .find(|l| l.marqueurs.iter().all(|m| entete.contains(m.as_str())))
             .map(|l| l.spdx.as_str())
+    }
+
+    /// Forme actuelle d'un identifiant SPDX que GitHub rend encore sous sa
+    /// graphie retiree.
+    pub fn spdx_actuel<'a>(&'a self, spdx: &'a str) -> &'a str {
+        self.spdx_obsoletes
+            .get(spdx)
+            .map(String::as_str)
+            .unwrap_or(spdx)
     }
 
     pub fn is_replaced_service(&self, image: &str) -> bool {
@@ -343,5 +356,26 @@ mod licences {
         let k = get();
         let faux = "Mon super projet\n".repeat(20) + "MIT License";
         assert_eq!(k.license_from_text(&faux), None);
+    }
+}
+
+#[cfg(test)]
+mod spdx {
+    use super::*;
+
+    #[test]
+    fn un_identifiant_retire_est_remplace_par_sa_forme_actuelle() {
+        // GitHub rend encore « AGPL-3.0 », que SPDX a scinde en -only et
+        // -or-later. Les paquets officiels emploient la forme moderne.
+        let k = get();
+        assert_eq!(k.spdx_actuel("AGPL-3.0"), "AGPL-3.0-only");
+        assert_eq!(k.spdx_actuel("GPL-2.0+"), "GPL-2.0-or-later");
+    }
+
+    #[test]
+    fn un_identifiant_deja_valide_est_rendu_tel_quel() {
+        let k = get();
+        assert_eq!(k.spdx_actuel("MIT"), "MIT");
+        assert_eq!(k.spdx_actuel("AGPL-3.0-or-later"), "AGPL-3.0-or-later");
     }
 }

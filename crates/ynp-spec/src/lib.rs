@@ -168,7 +168,7 @@ fn resources(facts: &RepoFacts, app_id: &str) -> Resources {
                 .as_ref()
                 .is_some_and(|c| c.services.iter().any(|s| s.is_app && !s.volumes.is_empty())),
         main_permission_url: Some("/".into()),
-        ports: expose_un_port(facts),
+        ports: a_besoin_d_un_port(facts),
         apt_packages: apt::packages(facts),
         database: facts.services.database,
         nodejs_version: version_de_resource(facts, Technology::NodeJs),
@@ -248,7 +248,7 @@ fn runtime(facts: &RepoFacts, app_id: &str) -> Runtime {
 
 /// Ligne de configuration transmettant le port reserve par le coeur.
 fn liaison_port(facts: &RepoFacts) -> Known<String> {
-    if !expose_un_port(facts) {
+    if !a_besoin_d_un_port(facts) {
         return Known::resolved(String::new());
     }
     match facts.config.get(ConfigRole::Port) {
@@ -357,6 +357,24 @@ fn docs(facts: &RepoFacts) -> Docs {
         admin: None,
         license_text: facts.meta.license_text.clone(),
     }
+}
+
+/// Vrai si l'application a besoin d'un port reserve par le coeur.
+///
+/// Un `EXPOSE` ou un port dans le compose suffit a le dire. Mais un demon
+/// servi par nginx en a besoin de toute facon : c'est par la que passe le
+/// reverse-proxy. Constate sur gotify, dont le Dockerfile ne declare aucun
+/// port alors que le paquet officiel en reserve un.
+fn a_besoin_d_un_port(facts: &RepoFacts) -> bool {
+    if expose_un_port(facts) {
+        return true;
+    }
+    // Un demon a servir : ni du PHP (pris en charge par php-fpm), ni des
+    // fichiers statiques (servis directement par nginx).
+    !matches!(
+        facts.stack.primary,
+        Technology::Php | Technology::Static | Technology::Unknown
+    )
 }
 
 fn expose_un_port(facts: &RepoFacts) -> bool {
