@@ -18,3 +18,5 @@ sha2.workspace = true
 hex.workspace = true
 flate2.workspace = true
 tar.workspace = true
+toml.workspace = true
+serde_yaml.workspace = true

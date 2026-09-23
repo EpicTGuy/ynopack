@@ -4,11 +4,13 @@
 //! forges. C'est ce qui permet a la garantie de l'ADR-002 — aucun appel a un
 //! modele de langage — d'etre verifiable en lisant un seul crate.
 
+pub mod alternatives;
 pub mod archive;
 pub mod github;
 pub mod prebuilt;
 pub mod sources;
 pub mod url;
+pub mod wishlist;
 
 use ynp_analyze::ForgeData;
 use ynp_core::tree::RepoTree;
@@ -16,6 +18,7 @@ use ynp_core::tree::RepoTree;
 pub use github::{ForgeError, GitHub};
 pub use sources::{SourceChoice, SourceKind};
 pub use url::UrlError;
+pub use wishlist::Souhait;
 
 #[derive(Debug, thiserror::Error)]
 pub enum FetchError {

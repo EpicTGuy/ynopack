@@ -129,6 +129,35 @@ enum Command {
         #[arg(long)]
         seulement: Option<String>,
     },
+
+    /// Liste ce que la communaute YunoHost aimerait voir package.
+    Wishlist {
+        /// Ne montrer que ce que l'outil sait analyser aujourd'hui.
+        #[arg(long)]
+        analysables: bool,
+
+        /// Filtrer sur un terme, dans le nom ou la description.
+        #[arg(long)]
+        cherche: Option<String>,
+
+        /// Nombre d'entrees affichees.
+        #[arg(long, default_value_t = 30)]
+        limite: usize,
+    },
+
+    /// Cherche des alternatives auto-hebergeables, et dit lesquelles restent a packager.
+    Alternatives {
+        /// Nom du logiciel dont on cherche des alternatives.
+        terme: String,
+
+        /// Inclure celles qui sont deja au catalogue YunoHost.
+        #[arg(long)]
+        tout: bool,
+
+        /// Nombre d'entrees affichees.
+        #[arg(long, default_value_t = 20)]
+        limite: usize,
+    },
 }
 
 #[tokio::main]
@@ -170,6 +199,16 @@ async fn run() -> anyhow::Result<()> {
         } => publish(forge, catalogue, *simuler, *officiel, &cli).await,
         Command::Run { url, host, force } => run_pipeline(url, host.as_deref(), *force, &cli).await,
         Command::Eval { corpus, seulement } => evaluer(corpus, seulement.as_deref(), &cli).await,
+        Command::Wishlist {
+            analysables,
+            cherche,
+            limite,
+        } => wishlist(*analysables, cherche.as_deref(), *limite).await,
+        Command::Alternatives {
+            terme,
+            tout,
+            limite,
+        } => alternatives(terme, *tout, *limite).await,
     }
 }
 
@@ -737,4 +776,133 @@ fn preparer_contribution(
         }
     }
     Ok(())
+}
+
+/// Ce que la communaute aimerait voir packager.
+///
+/// Partir de la liste de souhaits evite la question « que packager ? » : cinq
+/// cents demandes y sont deja formulees, avec leur depot amont.
+async fn wishlist(analysables: bool, cherche: Option<&str>, limite: usize) -> anyhow::Result<()> {
+    eprintln!("Recuperation de la liste de souhaits…");
+    let souhaits = ynp_forge::wishlist::recuperer().await?;
+    let total = souhaits.len();
+
+    let retenus: Vec<_> = souhaits
+        .iter()
+        // Un paquet deja en preparation ailleurs ferait doublon.
+        .filter(|s| !s.en_cours())
+        .filter(|s| !analysables || s.analysable())
+        .filter(|s| match cherche {
+            None => true,
+            Some(t) => {
+                let t = t.to_lowercase();
+                s.name.to_lowercase().contains(&t) || s.description.to_lowercase().contains(&t)
+            }
+        })
+        .collect();
+
+    println!(
+        "\n  {total} demandes en attente, dont {} retenues ici\n",
+        retenus.len()
+    );
+    for s in retenus.iter().take(limite) {
+        let marque = if s.analysable() { " " } else { "·" };
+        println!(
+            "  {marque} {:<26} {}",
+            tronquer(&s.name, 26),
+            tronquer(&s.description, 60)
+        );
+        println!("    {:<26} {}", "", s.upstream);
+    }
+    if retenus.len() > limite {
+        println!(
+            "\n  … et {} autres (--limite pour en voir plus)",
+            retenus.len() - limite
+        );
+    }
+
+    let non_github = retenus.iter().filter(|s| !s.analysable()).count();
+    if non_github > 0 && !analysables {
+        println!(
+            "\n  · {non_github} sont hors GitHub : l'outil ne sait pas encore les analyser.\n    \
+             `--analysables` les masque."
+        );
+    }
+    println!("\n  Pour en traiter une :  ynopack run <depot amont>");
+    Ok(())
+}
+
+/// Alternatives auto-hebergeables a un logiciel, et ce qui reste a packager.
+async fn alternatives(terme: &str, tout: bool, limite: usize) -> anyhow::Result<()> {
+    eprintln!("Recuperation du catalogue auto-heberge…");
+    let catalogue = ynp_forge::alternatives::Catalogue::charger().await?;
+
+    let trouvees = catalogue.alternatives(terme);
+    if trouvees.is_empty() {
+        // Le terme ne designe peut-etre aucun logiciel connu : on le cherche
+        // alors comme un mot-cle, plutot que de rendre la main sans rien.
+        let correspondances = catalogue.chercher(terme);
+        if correspondances.is_empty() {
+            println!(
+                "\n  Rien ne correspond a « {terme} » parmi {} logiciels.",
+                catalogue.nombre()
+            );
+            return Ok(());
+        }
+        println!("\n  « {terme} » ne designe aucun logiciel connu. Correspondances :\n");
+        for l in correspondances.iter().take(limite) {
+            println!(
+                "  {:<26} {}",
+                tronquer(&l.name, 26),
+                tronquer(&l.description, 60)
+            );
+        }
+        return Ok(());
+    }
+
+    let liste = if tout {
+        trouvees.clone()
+    } else {
+        catalogue.a_packager(&trouvees)
+    };
+    println!(
+        "\n  {} alternative(s) a « {terme} »{}\n",
+        liste.len(),
+        if tout { "" } else { ", restant a packager" }
+    );
+
+    for l in liste.iter().take(limite) {
+        let licence = l.licenses.first().map(String::as_str).unwrap_or("?");
+        let marque = if l.deja_package {
+            "✓"
+        } else if !l.analysable() {
+            "·"
+        } else if !l.licence_libre() {
+            "!"
+        } else {
+            " "
+        };
+        println!(
+            "  {marque} {:<22} {:>6}★  {:<14} {}",
+            tronquer(&l.name, 22),
+            l.stargazers_count,
+            tronquer(licence, 14),
+            tronquer(&l.description, 46)
+        );
+        println!("    {:<22} {}", "", l.source_code_url);
+    }
+
+    println!(
+        "\n  ✓ deja au catalogue   · forge non prise en charge   ! licence a verifier\n\n  \
+         Pour en packager une :  ynopack run <depot source>"
+    );
+    Ok(())
+}
+
+/// Tronque proprement, en signalant la coupe.
+fn tronquer(s: &str, max: usize) -> String {
+    if s.chars().count() <= max {
+        return s.to_string();
+    }
+    format!("{}…", s.chars().take(max - 1).collect::<String>())
 }
