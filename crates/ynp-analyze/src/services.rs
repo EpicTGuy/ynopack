@@ -76,13 +76,27 @@ fn from_drivers(tree: &RepoTree) -> Option<(Database, String)> {
         ("sqlite3", Database::Sqlite),
     ];
 
-    for file in [
+    // Un monorepo range ses dependances dans des sous-paquets : AFFiNE declare
+    // @prisma/client et ioredis dans packages/backend/server/package.json, que
+    // la lecture du seul package.json racine manquait entierement.
+    let mut fichiers: Vec<String> = [
         "package.json",
         "composer.json",
         "requirements.txt",
         "pyproject.toml",
         "Gemfile",
-    ] {
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+    fichiers.extend(
+        tree.find_by_name(|f| f == "package.json" || f == "requirements.txt")
+            .into_iter()
+            .filter(|p| p.contains('/')),
+    );
+
+    for file in &fichiers {
+        let file = file.as_str();
         let Some(content) = tree.text(file) else {
             continue;
         };

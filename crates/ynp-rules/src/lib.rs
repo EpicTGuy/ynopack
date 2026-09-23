@@ -37,6 +37,7 @@ pub fn catalog() -> Vec<Box<dyn Rule>> {
         Box::new(runtime::BaseNonSupportee),
         Box::new(runtime::PythonHorsBookworm),
         Box::new(runtime::BuildGourmand),
+        Box::new(runtime::RecetteIntrouvable),
         Box::new(runtime::PortPrivilegie),
         Box::new(runtime::StackInconnue),
         Box::new(runtime::BaseDetectee),
@@ -114,6 +115,9 @@ mod tests {
             build: Some(BuildRecipe {
                 dockerfile_path: "Dockerfile".into(),
                 expose: vec![3000],
+                // Une recette de construction reelle : sans elle, BUILD002 se
+                // declenche a juste titre.
+                build_steps: vec!["npm ci --omit=dev".into()],
                 ..Default::default()
             }),
             ..Default::default()

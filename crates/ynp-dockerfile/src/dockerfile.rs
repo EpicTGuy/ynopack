@@ -499,6 +499,20 @@ fn runtime_score(path: &str, recipe: &BuildRecipe) -> i32 {
     if CONDITIONNEMENT.iter().any(|k| lower.contains(k)) {
         score -= 4;
     }
+    // Configuration d'integration continue, d'hebergeur ou de poste de
+    // developpement : ces Dockerfiles assemblent un artefact deja construit
+    // ailleurs. Constate sur AFFiNE, dont `.github/deployment/node/Dockerfile`
+    // se contente de recopier un `dist/` et ne revele donc aucune recette.
+    const HORS_PRODUIT: &[&str] = &[
+        ".github",
+        ".render",
+        ".devcontainer",
+        ".gitlab",
+        ".circleci",
+    ];
+    if HORS_PRODUIT.iter().any(|k| lower.contains(k)) {
+        score -= 5;
+    }
     score -= path.matches('/').count() as i32;
 
     if !recipe.expose.is_empty() {

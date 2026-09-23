@@ -22,11 +22,48 @@ pub const COMPOSE_NAMES: &[&str] = &[
     "docker/docker-compose.yml",
 ];
 
+/// Retrouve le compose le plus pertinent.
+///
+/// Les emplacements canoniques d'abord, puis n'importe ou dans l'arborescence :
+/// AFFiNE range le sien dans `.docker/selfhost/compose.yml`, et s'en tenir a la
+/// racine revenait a ignorer ses dependances — PostgreSQL et Redis n'etaient
+/// pas vus, et l'application paraissait n'en avoir aucune.
 pub fn find_compose(tree: &[String]) -> Option<String> {
-    COMPOSE_NAMES
-        .iter()
-        .find(|n| tree.iter().any(|p| p == *n))
-        .map(|n| n.to_string())
+    if let Some(n) = COMPOSE_NAMES.iter().find(|n| tree.iter().any(|p| p == *n)) {
+        return Some(n.to_string());
+    }
+
+    tree.iter()
+        .filter(|p| {
+            let f = p.rsplit('/').next().unwrap_or(p).to_lowercase();
+            f.contains("compose") && (f.ends_with(".yml") || f.ends_with(".yaml"))
+        })
+        .max_by_key(|p| pertinence_compose(p))
+        .cloned()
+}
+
+/// Un compose d'auto-hebergement decrit le deploiement reel ; celui d'un
+/// conteneur de developpement decrit un poste de travail.
+fn pertinence_compose(path: &str) -> (i32, i32) {
+    let lower = path.to_lowercase();
+    let mut score = 0;
+    for (motif, poids) in [
+        ("selfhost", 6),
+        ("self-host", 6),
+        ("production", 5),
+        ("prod", 4),
+        ("deploy", 3),
+        ("devcontainer", -6),
+        ("/dev", -4),
+        ("test", -4),
+        ("example", -2),
+    ] {
+        if lower.contains(motif) {
+            score += poids;
+        }
+    }
+    // A egalite, le moins profond ; l'ordre reste reproductible.
+    (score, -(path.matches('/').count() as i32))
 }
 
 /// Analyse un fichier compose. Rend `None` si le YAML est illisible : un

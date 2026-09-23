@@ -215,6 +215,91 @@ impl Rule for BuildGourmand {
     }
 }
 
+pub struct RecetteIntrouvable;
+
+impl Rule for RecetteIntrouvable {
+    fn id(&self) -> &'static str {
+        "BUILD002"
+    }
+
+    fn check(&self, facts: &RepoFacts) -> Option<Finding> {
+        let build = facts.build.as_ref()?;
+
+        // L'application a manifestement besoin d'etre construite...
+        let a_besoin_d_un_build = facts.stack.build_script.is_some()
+            || matches!(
+                facts.stack.primary,
+                Technology::NodeJs | Technology::Rust | Technology::Java
+            );
+        if !a_besoin_d_un_build {
+            return None;
+        }
+
+        let motif = if build.build_steps.is_empty() {
+            "le Dockerfile retenu n'execute aucune etape de construction"
+        } else if tous_les_dockerfiles_sont_hors_produit(&facts.tree) {
+            // Cas d'AFFiNE : ses trois Dockerfiles vivent dans .github et
+            // .render. Ils assemblent ce que la chaine d'integration a bati
+            // ailleurs ; aucun ne dit comment construire depuis les sources.
+            "tous les Dockerfiles du depot appartiennent a la chaine \
+             d'integration continue, aucun ne construit depuis les sources"
+        } else {
+            return None;
+        };
+
+        Some(
+            Finding::new(
+                self.id(),
+                Severity::Blocker,
+                "Recette de construction introuvable",
+            )
+            .detail(format!(
+                "Le packager ne sait pas produire l'application a partir des sources, car \
+                     {motif} — et il ne l'inventera pas. C'est typiquement le cas d'un projet \
+                     dont le seul chemin d'auto-hebergement documente est une image publiee."
+            ))
+            .remediation(
+                "Chercher la recette ailleurs : instructions de construction de l'amont, \
+                     definition de la chaine d'integration, ou Dockerfile de developpement. \
+                     Renseigner ensuite `runtime.build_steps` a la main dans appspec.toml. Si \
+                     l'amont ne publie aucune procedure native, l'application sort du modele \
+                     YunoHost.",
+            )
+            .evidence(Evidence::file(build.dockerfile_path.clone())),
+        )
+    }
+}
+
+/// Vrai si le depot ne contient aucun Dockerfile hors des repertoires
+/// d'integration continue, d'hebergeur ou de poste de developpement.
+fn tous_les_dockerfiles_sont_hors_produit(tree: &[String]) -> bool {
+    const HORS_PRODUIT: &[&str] = &[
+        ".github",
+        ".render",
+        ".devcontainer",
+        ".gitlab",
+        ".circleci",
+        ".woodpecker",
+    ];
+
+    let dockerfiles: Vec<&String> = tree
+        .iter()
+        .filter(|p| {
+            p.rsplit('/')
+                .next()
+                .unwrap_or(p)
+                .to_lowercase()
+                .starts_with("dockerfile")
+        })
+        .collect();
+
+    !dockerfiles.is_empty()
+        && dockerfiles.iter().all(|p| {
+            let lower = p.to_lowercase();
+            HORS_PRODUIT.iter().any(|k| lower.contains(k))
+        })
+}
+
 pub struct PortPrivilegie;
 
 impl Rule for PortPrivilegie {
@@ -658,5 +743,126 @@ mod compose_de_developpement {
             BaseNonSupportee.check(&f).unwrap().severity,
             Severity::Blocker
         );
+    }
+}
+
+#[cfg(test)]
+mod recette_de_build {
+    use super::*;
+    use crate::tests::depot_sain;
+    use ynp_core::facts::{BuildRecipe, StackFacts};
+
+    fn depot_node(build_steps: Vec<String>) -> RepoFacts {
+        let mut f = depot_sain();
+        f.stack = StackFacts {
+            primary: Technology::NodeJs,
+            build_script: Some("npm run build".into()),
+            ..Default::default()
+        };
+        f.build = Some(BuildRecipe {
+            dockerfile_path: ".github/deployment/node/Dockerfile".into(),
+            build_steps,
+            ..Default::default()
+        });
+        f
+    }
+
+    #[test]
+    fn un_dockerfile_qui_assemble_un_artefact_preconstruit_est_refuse() {
+        // Cas reel d'AFFiNE : le Dockerfile de deploiement recopie un `dist/`
+        // bati ailleurs. L'outil annoncait « faisable, 100/100 » alors qu'il ne
+        // savait pas du tout construire l'application.
+        let finding = RecetteIntrouvable.check(&depot_node(vec![])).unwrap();
+
+        assert_eq!(finding.severity, Severity::Blocker);
+        assert!(finding.detail.contains("il ne l'inventera pas"));
+        assert!(finding
+            .remediation
+            .as_deref()
+            .unwrap()
+            .contains("appspec.toml"));
+    }
+
+    #[test]
+    fn un_dockerfile_qui_construit_vraiment_ne_declenche_rien() {
+        let f = depot_node(vec!["npm ci".into(), "npm run build".into()]);
+        assert!(RecetteIntrouvable.check(&f).is_none());
+    }
+
+    #[test]
+    fn une_application_qui_n_a_rien_a_construire_n_est_pas_concernee() {
+        // Un binaire Go preconstruit n'a pas d'etape de build, et c'est normal.
+        let mut f = depot_sain();
+        f.stack = StackFacts {
+            primary: Technology::Go,
+            ..Default::default()
+        };
+        f.build = Some(BuildRecipe {
+            dockerfile_path: "Dockerfile".into(),
+            build_steps: vec![],
+            ..Default::default()
+        });
+        assert!(RecetteIntrouvable.check(&f).is_none());
+    }
+}
+
+#[cfg(test)]
+mod dockerfiles_hors_produit {
+    use super::*;
+    use crate::tests::depot_sain;
+    use ynp_core::facts::{BuildRecipe, StackFacts};
+
+    #[test]
+    fn un_depot_dont_tous_les_dockerfiles_sont_dans_la_ci_est_refuse() {
+        // Cas reel d'AFFiNE : .github/deployment/node/Dockerfile,
+        // .github/helm/.../Dockerfile_pgvector et .render/Dockerfile. Aucun ne
+        // construit depuis les sources — ils assemblent ce que la chaine
+        // d'integration a bati ailleurs.
+        let mut f = depot_sain();
+        f.stack = StackFacts {
+            primary: Technology::NodeJs,
+            build_script: Some("npm run build".into()),
+            ..Default::default()
+        };
+        f.tree = vec![
+            ".github/deployment/node/Dockerfile".into(),
+            ".github/helm/separate-config/Dockerfile_pgvector".into(),
+            ".render/Dockerfile".into(),
+            "package.json".into(),
+        ];
+        f.build = Some(BuildRecipe {
+            dockerfile_path: ".github/deployment/node/Dockerfile".into(),
+            // Une etape existe, mais ce n'est pas une construction.
+            build_steps: vec!["node ./scripts/docker-clean.mjs".into()],
+            ..Default::default()
+        });
+
+        let finding = RecetteIntrouvable.check(&f).unwrap();
+        assert_eq!(finding.severity, Severity::Blocker);
+        assert!(finding.detail.contains("integration continue"));
+    }
+
+    #[test]
+    fn un_seul_dockerfile_hors_ci_suffit_a_lever_le_doute() {
+        let mut f = depot_sain();
+        f.stack = StackFacts {
+            primary: Technology::NodeJs,
+            build_script: Some("npm run build".into()),
+            ..Default::default()
+        };
+        f.tree = vec![".github/deployment/Dockerfile".into(), "Dockerfile".into()];
+        f.build = Some(BuildRecipe {
+            dockerfile_path: "Dockerfile".into(),
+            build_steps: vec!["yarn build".into()],
+            ..Default::default()
+        });
+        assert!(RecetteIntrouvable.check(&f).is_none());
+    }
+
+    #[test]
+    fn la_detection_ne_se_declenche_pas_sur_un_depot_sans_dockerfile() {
+        assert!(!tous_les_dockerfiles_sont_hors_produit(&[
+            "package.json".to_string()
+        ]));
     }
 }
