@@ -1,0 +1,14 @@
+#:schema https://raw.githubusercontent.com/YunoHost/apps/main/schemas/tests.v1.schema.json
+
+test_format = 1.0
+
+[default]
+
+    # Les tests a executer sont deduits du manifest par la CI. Ne rien declarer
+    # ici est le cas normal ; les exclusions doivent rester exceptionnelles.
+{%- if not install.path %}
+
+    # L'application exige un domaine dedie : l'installation en sous-chemin
+    # n'a pas lieu d'etre testee.
+    exclude = ["install.subdir"]
+{%- endif %}

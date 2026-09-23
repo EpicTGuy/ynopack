@@ -1,0 +1,86 @@
+#!/bin/bash
+# Genere par ynopack.
+
+source _common.sh
+source /usr/share/yunohost/helpers
+{% if features.systemd %}
+#=================================================
+# ARRET DU SERVICE
+#=================================================
+ynh_script_progression "Arret du service de $app..."
+
+ynh_systemctl --service="$app" --action="stop"
+{%- endif %}
+
+#=================================================
+# MISE A JOUR DES SOURCES
+#=================================================
+ynh_script_progression "Mise a jour de $app..."
+
+# --full_replace efface le repertoire avant de redeployer : sans cela, les
+# fichiers supprimes en amont subsisteraient d'une version a l'autre.
+ynh_setup_source --dest_dir="$install_dir" --full_replace
+{% if not sources.extract %}
+chmod +x "$install_dir/{{ sources.rename | default(value=app.id) }}"
+{%- endif %}
+
+chown -R "$app:www-data" "$install_dir"
+{%- if runtime.build_steps | length > 0 %}
+
+#=================================================
+# CONSTRUCTION
+#=================================================
+ynh_script_progression "Construction de $app..."
+
+pushd "$install_dir"
+{%- for etape in runtime.build_steps %}
+    ynh_exec_as_app {{ etape }}
+{%- endfor %}
+popd
+{%- endif %}
+{%- if runtime.config_file and runtime.env | length > 0 %}
+
+#=================================================
+# CONFIGURATION
+#=================================================
+ynh_script_progression "Mise a jour de la configuration de $app..."
+
+ynh_config_add --template="{{ runtime.config_file }}" --destination="$install_dir/{{ runtime.config_file }}"
+chmod 400 "$install_dir/{{ runtime.config_file }}"
+chown "$app:$app" "$install_dir/{{ runtime.config_file }}"
+{%- endif %}
+
+#=================================================
+# CONFIGURATIONS SYSTEME
+#=================================================
+ynh_script_progression "Mise a jour des configurations systeme..."
+{% if features.phpfpm %}
+ynh_config_add_phpfpm
+{%- endif %}
+{%- if features.nginx %}
+ynh_config_add_nginx
+{%- endif %}
+{%- if features.systemd %}
+ynh_config_add_systemd
+{%- endif %}
+{%- if features.logrotate %}
+ynh_config_add_logrotate
+{%- endif %}
+{%- if features.service_integration %}
+yunohost service add "$app" --description="{{ app.name }}" --log="/var/log/$app/$app.log"
+{%- endif %}
+{%- if features.systemd %}
+
+#=================================================
+# REDEMARRAGE DU SERVICE
+#=================================================
+ynh_script_progression "Redemarrage du service de $app..."
+
+ynh_systemctl --service="$app" --action="start"
+{%- endif %}
+
+#=================================================
+# FIN DU SCRIPT
+#=================================================
+
+ynh_script_progression "Mise a jour de $app terminee"

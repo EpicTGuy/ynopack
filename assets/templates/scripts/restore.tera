@@ -1,0 +1,86 @@
+#!/bin/bash
+# Genere par ynopack. Symetrique du script d'installation.
+
+source ../settings/scripts/_common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# REPERTOIRES
+#=================================================
+ynh_script_progression "Restauration des fichiers de $app..."
+
+ynh_restore "$install_dir"
+chown -R "$app:www-data" "$install_dir"
+{%- if resources.data_dir %}
+
+ynh_restore "$data_dir"
+{%- endif %}
+{%- if resources.database == "mysql" %}
+
+#=================================================
+# BASE DE DONNEES
+#=================================================
+ynh_script_progression "Restauration de la base MySQL..."
+
+ynh_mysql_db_shell < ./db.sql
+{%- elif resources.database == "postgresql" %}
+
+#=================================================
+# BASE DE DONNEES
+#=================================================
+ynh_script_progression "Restauration de la base PostgreSQL..."
+
+ynh_psql_db_shell < ./db.sql
+{%- endif %}
+
+#=================================================
+# CONFIGURATIONS SYSTEME
+#=================================================
+ynh_script_progression "Restauration des configurations systeme..."
+{% if features.phpfpm %}
+ynh_restore "/etc/php/$php_version/fpm/pool.d/$app.conf"
+{%- endif %}
+{%- if features.nginx %}
+ynh_restore "/etc/nginx/conf.d/$domain.d/$app.conf"
+{%- endif %}
+{%- if features.systemd %}
+ynh_restore "/etc/systemd/system/$app.service"
+systemctl enable "$app.service" --quiet
+{%- endif %}
+{%- if features.service_integration %}
+yunohost service add "$app" --description="{{ app.name }}" --log="/var/log/$app/$app.log"
+{%- endif %}
+{%- if features.logrotate %}
+ynh_restore "/etc/logrotate.d/$app"
+mkdir -p "/var/log/$app"
+chown -R "$app:www-data" "/var/log/$app"
+ynh_restore "/var/log/$app/"
+{%- endif %}
+{%- if features.fail2ban %}
+ynh_restore "/etc/fail2ban/jail.d/$app.conf"
+ynh_restore "/etc/fail2ban/filter.d/$app.conf"
+ynh_systemctl --service=fail2ban --action=restart
+{%- endif %}
+{%- if features.cron %}
+ynh_restore "/etc/cron.d/$app"
+{%- endif %}
+
+#=================================================
+# RECHARGEMENT DES SERVICES
+#=================================================
+ynh_script_progression "Rechargement de NGINX et du service de $app..."
+{% if features.systemd %}
+ynh_systemctl --service="$app" --action="start"
+{%- endif %}
+{%- if features.phpfpm %}
+ynh_systemctl --service="php$php_version-fpm" --action=reload
+{%- endif %}
+{%- if features.nginx %}
+ynh_systemctl --service=nginx --action=reload
+{%- endif %}
+
+#=================================================
+# FIN DU SCRIPT
+#=================================================
+
+ynh_script_progression "Restauration de $app terminee"

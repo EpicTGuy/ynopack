@@ -1,0 +1,69 @@
+#!/bin/bash
+# Genere par ynopack.
+
+source ../settings/scripts/_common.sh
+source /usr/share/yunohost/helpers
+
+# Ces appels ne copient rien : ils *declarent* ce qui doit etre sauvegarde.
+# La copie est faite par le coeur, apres ce script.
+
+ynh_print_info "Declaration des fichiers a sauvegarder..."
+
+#=================================================
+# REPERTOIRES
+#=================================================
+
+ynh_backup "$install_dir"
+{%- if resources.data_dir %}
+
+# Le repertoire de donnees n'est pas inclus dans la sauvegarde automatique
+# d'avant-mise-a-jour : il peut peser plusieurs gigaoctets.
+ynh_backup "$data_dir"
+{%- endif %}
+
+#=================================================
+# CONFIGURATIONS SYSTEME
+#=================================================
+{% if features.phpfpm %}
+ynh_backup "/etc/php/$php_version/fpm/pool.d/$app.conf"
+{%- endif %}
+{%- if features.nginx %}
+ynh_backup "/etc/nginx/conf.d/$domain.d/$app.conf"
+{%- endif %}
+{%- if features.systemd %}
+ynh_backup "/etc/systemd/system/$app.service"
+{%- endif %}
+{%- if features.logrotate %}
+ynh_backup "/etc/logrotate.d/$app"
+ynh_backup "/var/log/$app/"
+{%- endif %}
+{%- if features.fail2ban %}
+ynh_backup "/etc/fail2ban/jail.d/$app.conf"
+ynh_backup "/etc/fail2ban/filter.d/$app.conf"
+{%- endif %}
+{%- if features.cron %}
+ynh_backup "/etc/cron.d/$app"
+{%- endif %}
+{%- if resources.database == "mysql" %}
+
+#=================================================
+# BASE DE DONNEES
+#=================================================
+ynh_print_info "Sauvegarde de la base MySQL..."
+
+ynh_mysql_dump_db > db.sql
+{%- elif resources.database == "postgresql" %}
+
+#=================================================
+# BASE DE DONNEES
+#=================================================
+ynh_print_info "Sauvegarde de la base PostgreSQL..."
+
+ynh_psql_dump_db > db.sql
+{%- endif %}
+
+#=================================================
+# FIN DU SCRIPT
+#=================================================
+
+ynh_print_info "Sauvegarde de $app declaree."

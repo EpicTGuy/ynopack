@@ -1,0 +1,35 @@
+#!/bin/bash
+# Genere par ynopack.
+
+source _common.sh
+source /usr/share/yunohost/helpers
+{% if features.systemd %}
+ynh_script_progression "Arret du service de $app..."
+ynh_systemctl --service="$app" --action="stop"
+{%- endif %}
+
+#=================================================
+# MISE A JOUR DE L'ADRESSE
+#=================================================
+ynh_script_progression "Mise a jour des configurations..."
+{% if features.nginx %}
+ynh_config_change_url_nginx
+{%- endif %}
+{%- if runtime.config_file and runtime.env | length > 0 %}
+
+# La configuration de l'app porte son adresse publique : elle doit suivre.
+ynh_config_add --template="{{ runtime.config_file }}" --destination="$install_dir/{{ runtime.config_file }}"
+chmod 400 "$install_dir/{{ runtime.config_file }}"
+chown "$app:$app" "$install_dir/{{ runtime.config_file }}"
+{%- endif %}
+{%- if features.systemd %}
+
+ynh_script_progression "Redemarrage du service de $app..."
+ynh_systemctl --service="$app" --action="start"
+{%- endif %}
+
+#=================================================
+# FIN DU SCRIPT
+#=================================================
+
+ynh_script_progression "Changement d'adresse de $app termine"

@@ -56,6 +56,13 @@ enum Command {
         #[arg(long)]
         force: bool,
     },
+
+    /// Rend le paquet a partir de l'appspec.toml.
+    Generate {
+        /// Genere malgre des champs non completes, qui apparaitront en FIXME.
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[tokio::main]
@@ -81,7 +88,8 @@ async fn run() -> anyhow::Result<()> {
     match &cli.command {
         Command::Analyze { url } => analyze(url, &cli).await.map(|_| ()),
         Command::Assess { url, seuil } => assess(url.as_deref(), *seuil, &cli).await.map(|_| ()),
-        Command::Plan { url, force } => plan(url.as_deref(), *force, &cli).await,
+        Command::Plan { url, force } => plan(url.as_deref(), *force, &cli).await.map(|_| ()),
+        Command::Generate { force } => generate(*force, &cli),
     }
 }
 
@@ -166,7 +174,7 @@ async fn assess(
 /// C'est ici que le pipeline rend la main : ce que l'analyse n'a pas su
 /// deduire y figure en clair, et c'est a un humain ou a un agent de le
 /// completer avant de generer le paquet.
-async fn plan(url: Option<&str>, force: bool, cli: &Cli) -> anyhow::Result<()> {
+async fn plan(url: Option<&str>, force: bool, cli: &Cli) -> anyhow::Result<ynp_core::AppSpec> {
     let facts = assess(url, ynp_core::DEFAULT_FEASIBILITY_THRESHOLD, cli).await?;
     let spec = ynp_spec::build(&facts)?;
 
@@ -190,6 +198,63 @@ async fn plan(url: Option<&str>, force: bool, cli: &Cli) -> anyhow::Result<()> {
             path.display()
         );
         std::process::exit(20);
+    }
+    Ok(spec)
+}
+
+/// Rend le paquet. Aucune decision ici : tout a ete tranche dans l'appspec.
+fn generate(force: bool, cli: &Cli) -> anyhow::Result<()> {
+    let chemin = cli.out.join("appspec.toml");
+    let texte = std::fs::read_to_string(&chemin).map_err(|e| {
+        anyhow::anyhow!(
+            "{} illisible ({e}) — lancer d'abord `ynopack plan <url>`",
+            chemin.display()
+        )
+    })?;
+    let spec: ynp_core::AppSpec = toml::from_str(&texte)?;
+
+    let manquants = spec.unresolved();
+    if !manquants.is_empty() && !force {
+        eprintln!(
+            "Specification incomplete : {} champ(s) a renseigner.",
+            manquants.len()
+        );
+        for (champ, _) in &manquants {
+            eprintln!("  {champ}");
+        }
+        eprintln!(
+            "\nLes completer dans {}, ou passer --force pour generer\n\
+                   un paquet portant des marqueurs FIXME.",
+            chemin.display()
+        );
+        std::process::exit(20);
+    }
+
+    let genere = ynp_gen::generate(&spec, &cli.out)?;
+
+    if cli.json {
+        println!(
+            "{}",
+            serde_json::json!({
+                "racine": genere.racine,
+                "fichiers": genere.fichiers,
+                "a_completer": genere.a_completer,
+            })
+        );
+    } else {
+        println!("\nPaquet genere dans {}\n", genere.racine.display());
+        for f in &genere.fichiers {
+            println!("  {f}");
+        }
+        if genere.a_completer.is_empty() {
+            println!("\nAucun marqueur a completer.");
+        } else {
+            println!(
+                "\n{} marqueur(s) FIXME deposes — `ynopack verify` refusera le paquet\n\
+                 tant qu'ils subsistent.",
+                genere.a_completer.len()
+            );
+        }
     }
     Ok(())
 }

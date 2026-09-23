@@ -1,0 +1,49 @@
+<!--
+Ce README est genere automatiquement, au format attendu par l'outillage
+YunoHost (apps_tools/readme_generator). Ne pas l'editer a la main : modifier
+appspec.toml ou doc/DESCRIPTION.md, puis regenerer.
+-->
+
+# {{ app.name }} pour YunoHost
+
+[![Version](https://img.shields.io/badge/version-{{ app.version | replace(from="~", to="--") }}-blue)](https://github.com/YunoHost-Apps)
+
+*[Read this readme in english.](./README.md)*
+
+> *Ce paquet vous permet d'installer {{ app.name }} rapidement et simplement sur un serveur YunoHost.*
+> *Si vous n'avez pas YunoHost, consultez [le guide](https://yunohost.org/install) pour apprendre comment l'installer.*
+
+## Vue d'ensemble
+
+{% if docs.description %}{{ docs.description }}{% else %}{{ app.description_en }}{% endif %}
+
+**Version incluse :** {{ app.version }}
+{% if upstream.demo %}
+**Démo :** {{ upstream.demo }}
+{%- endif %}
+
+## Documentations et ressources
+{% if upstream.website %}
+- Site officiel de l'app : <{{ upstream.website }}>
+{%- endif %}
+{%- if upstream.admindoc %}
+- Documentation officielle de l'admin : <{{ upstream.admindoc }}>
+{%- endif %}
+{%- if upstream.code %}
+- Dépôt de code officiel de l'app : <{{ upstream.code }}>
+{%- endif %}
+- Documentation YunoHost pour cette app : <https://yunohost.org/app_{{ app.id }}>
+
+## Informations pour les développeurs
+
+**Licence amont :** {{ upstream.license }}
+
+Pour essayer la branche de test, procédez comme suit :
+
+```bash
+sudo yunohost app install https://github.com/YunoHost-Apps/{{ app.id }}_ynh/tree/testing --debug
+# ou
+sudo yunohost app upgrade {{ app.id }} -u https://github.com/YunoHost-Apps/{{ app.id }}_ynh/tree/testing --debug
+```
+
+**Plus d'infos sur le packaging d'applications :** <https://yunohost.org/packaging_apps>

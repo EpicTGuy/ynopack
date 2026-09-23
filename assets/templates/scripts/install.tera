@@ -1,0 +1,85 @@
+#!/bin/bash
+# Genere par ynopack.
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# DEPLOIEMENT DES SOURCES
+#=================================================
+ynh_script_progression "Mise en place des fichiers de $app..."
+
+ynh_setup_source --dest_dir="$install_dir"
+{% if not sources.extract %}
+chmod +x "$install_dir/{{ sources.rename | default(value=app.id) }}"
+{%- endif %}
+
+chown -R "$app:www-data" "$install_dir"
+{%- if runtime.build_steps | length > 0 %}
+
+#=================================================
+# CONSTRUCTION DE L'APPLICATION
+#=================================================
+ynh_script_progression "Construction de $app..."
+
+pushd "$install_dir"
+{%- for etape in runtime.build_steps %}
+    ynh_exec_as_app {{ etape }}
+{%- endfor %}
+popd
+{%- endif %}
+{%- if runtime.config_file %}
+
+#=================================================
+# CONFIGURATION DE L'APPLICATION
+#=================================================
+ynh_script_progression "Ajout de la configuration de $app..."
+{% if runtime.env | length > 0 %}
+ynh_config_add --template="{{ runtime.config_file }}" --destination="$install_dir/{{ runtime.config_file }}"
+
+# Le fichier peut contenir des identifiants : il n'est lisible que par l'app.
+chmod 400 "$install_dir/{{ runtime.config_file }}"
+chown "$app:$app" "$install_dir/{{ runtime.config_file }}"
+{%- endif %}
+{%- endif %}
+
+#=================================================
+# CONFIGURATIONS SYSTEME
+#=================================================
+ynh_script_progression "Ajout des configurations systeme liees a $app..."
+{% if features.phpfpm %}
+ynh_config_add_phpfpm
+{%- endif %}
+{%- if features.nginx %}
+
+ynh_config_add_nginx
+{%- endif %}
+{%- if features.systemd %}
+
+ynh_config_add_systemd
+{%- endif %}
+{%- if features.logrotate %}
+
+mkdir -p "/var/log/$app"
+chown -R "$app:www-data" "/var/log/$app"
+ynh_config_add_logrotate
+{%- endif %}
+{%- if features.service_integration %}
+
+yunohost service add "$app" --description="{{ app.name }}" --log="/var/log/$app/$app.log"
+{%- endif %}
+{%- if features.systemd %}
+
+#=================================================
+# DEMARRAGE DU SERVICE
+#=================================================
+ynh_script_progression "Demarrage du service de $app..."
+
+ynh_systemctl --service="$app" --action="start"
+{%- endif %}
+
+#=================================================
+# FIN DU SCRIPT
+#=================================================
+
+ynh_script_progression "Installation de $app terminee"

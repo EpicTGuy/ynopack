@@ -58,19 +58,19 @@ pure sur un arbre de fichiers, testable seule.
 - [x] **L2-5** · Gates G0 et G1
 - [x] **L2-6** · `ynopack assess` → rapport lisible en terminal et `--json`
 
-## L3 — Génération
+## L3 — Génération · **livré**
 
-- [ ] **L3-1** · `ynp-spec` : `RepoFacts` + `Feasibility` → `AppSpec`. **Le seul étage qui décide.**
+- [x] **L3-1** · `ynp-spec` : `RepoFacts` + `Feasibility` → `AppSpec`. **Le seul étage qui décide.**
       Tout ce qui ne se déduit pas devient `Known::unresolved`. → EXG-F-20, EXG-F-21
-- [ ] **L3-2** · `ynp-gen` : moteur Tera, écriture de l'arbre, permissions des scripts
-- [ ] **L3-3** · Template `manifest.toml.tera`, porté de `tests/fixtures/yologen/manifest.j2`
-- [ ] **L3-4** · Templates des scripts : install, remove, upgrade, backup, restore, change_url,
+- [x] **L3-2** · `ynp-gen` : moteur Tera, écriture de l'arbre, permissions des scripts
+- [x] **L3-3** · Template `manifest.toml.tera`, porté de `tests/fixtures/yologen/manifest.j2`
+- [x] **L3-4** · Templates des scripts : install, remove, upgrade, backup, restore, change_url,
       `_common.sh`. **Helpers 2.1 exclusivement.** → EXG-F-22, EXG-F-23
-- [ ] **L3-5** · Templates `conf/` : nginx, systemd, fichier de conf de l'app
-- [ ] **L3-6** · Templates `doc/` et `tests.toml`
-- [ ] **L3-7** · `README.md.tera` aligné sur `apps_tools/readme_generator` → EXG-F-24
-- [ ] **L3-8** · Injection des marqueurs `FIXME(ynopack)` dans les fichiers concernés
-- [ ] **L3-9** · `ynopack plan` et `ynopack generate`, snapshots `insta`
+- [x] **L3-5** · Templates `conf/` : nginx, systemd, fichier de conf de l'app
+- [x] **L3-6** · Templates `doc/` et `tests.toml`
+- [x] **L3-7** · `README.md.tera` aligné sur `apps_tools/readme_generator` → EXG-F-24
+- [x] **L3-8** · Injection des marqueurs `FIXME(ynopack)` dans les fichiers concernés
+- [x] **L3-9** · `ynopack plan` et `ynopack generate`, snapshots `insta`
 
 ## L4 — Vérification statique
 

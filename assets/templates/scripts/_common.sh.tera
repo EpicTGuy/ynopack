@@ -1,0 +1,15 @@
+#!/bin/bash
+# Genere par ynopack.
+
+#=================================================
+# VARIABLES ET HELPERS COMMUNS
+#=================================================
+{% if resources.nodejs_version %}
+nodejs_version={{ resources.nodejs_version }}
+{%- endif %}
+{%- if resources.ruby_version %}
+ruby_version={{ resources.ruby_version }}
+{%- endif %}
+{%- if resources.go_version %}
+go_version={{ resources.go_version }}
+{%- endif %}

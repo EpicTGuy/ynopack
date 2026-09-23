@@ -1,0 +1,40 @@
+#sub_path_only rewrite ^__PATH__$ __PATH__/ permanent;
+location __PATH__/ {
+{%- if features.phpfpm %}
+
+  alias __INSTALL_DIR__/;
+  index index.php;
+
+  try_files $uri $uri/ index.php;
+  location ~ [^/]\.php(/|$) {
+    fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+    fastcgi_pass unix:/var/run/php/php__PHP_VERSION__-fpm-__APP__.sock;
+
+    fastcgi_index index.php;
+    include fastcgi_params;
+    fastcgi_param REMOTE_USER $remote_user;
+    fastcgi_param PATH_INFO $fastcgi_path_info;
+    fastcgi_param SCRIPT_FILENAME $request_filename;
+  }
+{%- elif resources.ports %}
+
+  # Reverse-proxy vers le port reserve par le coeur de YunoHost.
+  proxy_pass http://127.0.0.1:__PORT__;
+
+  proxy_http_version 1.1;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection $connection_upgrade;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+{%- else %}
+
+  alias __INSTALL_DIR__/;
+  index index.html;
+  try_files $uri $uri/ =404;
+{%- endif %}
+
+  # Entete requis par le portail YunoHost.
+  more_set_headers "Content-Security-Policy: frame-ancestors 'self' https://$server_name;";
+}

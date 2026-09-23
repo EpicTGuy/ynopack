@@ -1,5 +1,6 @@
 [package]
 name = "ynp-gen"
+description = "AppSpec -> arborescence du paquet, par rendu de templates"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,3 +8,7 @@ license.workspace = true
 
 [dependencies]
 ynp-core.workspace = true
+tera.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

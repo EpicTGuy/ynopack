@@ -1,0 +1,163 @@
+#:schema https://raw.githubusercontent.com/YunoHost/apps/main/schemas/manifest.v2.schema.json
+# Genere par ynopack. Les valeurs proviennent de appspec.toml.
+
+packaging_format = 2
+
+id = "{{ app.id }}"
+name = "{{ app.name }}"
+description.en = "{{ app.description_en }}"
+{%- if app.description_fr %}
+description.fr = "{{ app.description_fr }}"
+{%- endif %}
+
+version = "{{ app.version }}"
+
+# Champ obligatoire selon le schema officiel. Une liste vide est honnete tant
+# que personne ne s'est engage a maintenir le paquet.
+maintainers = [{% for m in app.maintainers %}"{{ m }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+
+[upstream]
+license = "{{ upstream.license }}"
+{%- if upstream.website %}
+website = "{{ upstream.website }}"
+{%- endif %}
+{%- if upstream.demo %}
+demo = "{{ upstream.demo }}"
+{%- endif %}
+{%- if upstream.admindoc %}
+admindoc = "{{ upstream.admindoc }}"
+{%- endif %}
+{%- if upstream.userdoc %}
+userdoc = "{{ upstream.userdoc }}"
+{%- endif %}
+{%- if upstream.code %}
+code = "{{ upstream.code }}"
+{%- endif %}
+
+[integration]
+yunohost = "{{ integration.yunohost_min }}"
+helpers_version = "{{ integration.helpers_version }}"
+{%- if integration.architectures is string %}
+architectures = "{{ integration.architectures }}"
+{%- else %}
+architectures = [{% for a in integration.architectures %}"{{ a }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+{%- endif %}
+multi_instance = {{ integration.multi_instance }}
+ldap = {{ integration.ldap }}
+sso = {{ integration.sso }}
+disk = "{{ integration.disk }}"
+ram.build = "{{ integration.ram_build }}"
+ram.runtime = "{{ integration.ram_runtime }}"
+
+[install]
+{%- if install.domain %}
+
+    [install.domain]
+    type = "domain"
+{%- endif %}
+{%- if install.path %}
+
+    [install.path]
+    type = "path"
+    default = "/{{ app.id }}"
+{%- endif %}
+
+    [install.init_main_permission]
+    type = "group"
+    default = "{{ install.init_main_permission }}"
+{%- for q in install.extra %}
+
+    [install.{{ q.name }}]
+    type = "{{ q.kind }}"
+    {%- if q.ask_en %}
+    ask.en = "{{ q.ask_en }}"
+    {%- endif %}
+    {%- if q.default %}
+    default = "{{ q.default }}"
+    {%- endif %}
+    {%- if q.optional %}
+    optional = true
+    {%- endif %}
+{%- endfor %}
+
+[resources]
+
+    [resources.sources]
+
+    [resources.sources.main]
+{%- if sources.multi_arch %}
+{%- for a in sources.per_arch %}
+    {{ a.arch }}.url = "{{ a.url }}"
+    {{ a.arch }}.sha256 = "{{ a.sha256 }}"
+{%- endfor %}
+{%- else %}
+    url = "{{ sources.url }}"
+    sha256 = "{{ sources.sha256 }}"
+{%- endif %}
+{%- if not sources.in_subdir %}
+    in_subdir = false
+{%- endif %}
+{%- if not sources.extract %}
+    extract = false
+{%- endif %}
+{%- if sources.rename %}
+    rename = "{{ sources.rename }}"
+{%- endif %}
+{%- if sources.autoupdate %}
+
+    autoupdate.strategy = "{{ sources.autoupdate }}"
+{%- for a in sources.per_arch %}
+    autoupdate.asset.{{ a.arch }} = "{{ a.pattern }}"
+{%- endfor %}
+{%- endif %}
+{%- if resources.system_user %}
+
+    [resources.system_user]
+{%- endif %}
+{%- if resources.install_dir %}
+
+    [resources.install_dir]
+{%- endif %}
+{%- if resources.data_dir %}
+
+    [resources.data_dir]
+{%- endif %}
+{%- if resources.main_permission_url %}
+
+    [resources.permissions]
+    main.url = "{{ resources.main_permission_url }}"
+{%- endif %}
+{%- if resources.ports %}
+
+    [resources.ports]
+{%- endif %}
+{%- if resources.apt | length > 0 %}
+
+    [resources.apt]
+    packages = [{% for p in resources.apt %}"{{ p }}"{% if not loop.last %}, {% endif %}{% endfor %}]
+{%- endif %}
+{%- if resources.database %}
+
+    [resources.database]
+    type = "{{ resources.database }}"
+{%- endif %}
+{%- if resources.nodejs_version %}
+
+    [resources.nodejs]
+    version = "{{ resources.nodejs_version }}"
+{%- endif %}
+{%- if resources.ruby_version %}
+
+    [resources.ruby]
+    version = "{{ resources.ruby_version }}"
+{%- endif %}
+{%- if resources.go_version %}
+
+    [resources.go]
+    version = "{{ resources.go_version }}"
+{%- endif %}
+{%- if resources.composer_version %}
+
+    [resources.composer]
+    version = "{{ resources.composer_version }}"
+{%- endif %}

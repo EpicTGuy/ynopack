@@ -1,0 +1,49 @@
+#!/bin/bash
+# Genere par ynopack.
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+# Le coeur de YunoHost deprovisionne les resources du manifest APRES ce script :
+# utilisateur systeme, repertoire d'installation, base, ports. On ne retire ici
+# que ce que le script d'installation a ajoute de son cote.
+
+#=================================================
+# RETRAIT DES CONFIGURATIONS SYSTEME
+#=================================================
+ynh_script_progression "Retrait des configurations systeme liees a $app..."
+{% if features.fail2ban %}
+ynh_config_remove_fail2ban
+{%- endif %}
+{%- if features.logrotate %}
+ynh_config_remove_logrotate
+{%- endif %}
+{%- if features.service_integration %}
+
+if ynh_hide_warnings yunohost service status "$app" >/dev/null; then
+    yunohost service remove "$app"
+fi
+{%- endif %}
+{%- if features.systemd %}
+ynh_config_remove_systemd
+{%- endif %}
+{%- if features.nginx %}
+ynh_config_remove_nginx
+{%- endif %}
+{%- if features.phpfpm %}
+ynh_config_remove_phpfpm
+{%- endif %}
+{%- if features.cron %}
+
+ynh_safe_rm "/etc/cron.d/$app"
+{%- endif %}
+{%- if features.logrotate %}
+
+ynh_safe_rm "/var/log/$app"
+{%- endif %}
+
+#=================================================
+# FIN DU SCRIPT
+#=================================================
+
+ynh_script_progression "Suppression de $app terminee"

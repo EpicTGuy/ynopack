@@ -1,0 +1,5 @@
+# Configuration de {{ app.name }}, generee par ynopack.
+# Les __MAJUSCULES__ sont remplacees par les helpers a l'installation.
+{% for cle, valeur in runtime.env %}
+{{ cle }}={{ valeur }}
+{%- endfor %}
