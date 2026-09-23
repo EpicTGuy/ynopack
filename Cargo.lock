@@ -2166,6 +2166,7 @@ dependencies = [
  "ynp-dockerfile",
  "ynp-forge",
  "ynp-gen",
+ "ynp-publish",
  "ynp-rules",
  "ynp-runner",
  "ynp-spec",
@@ -2245,6 +2246,12 @@ dependencies = [
 name = "ynp-publish"
 version = "0.1.0"
 dependencies = [
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "toml",
  "ynp-core",
 ]
 

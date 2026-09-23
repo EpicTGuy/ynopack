@@ -322,3 +322,15 @@ fn effacer_les_journaux_a_la_suppression_est_signale() {
 
     assert!(ids(&racine, &spec()).contains(&"LINT005".to_string()));
 }
+
+#[test]
+fn un_depot_git_dans_le_paquet_n_interrompt_pas_la_verification() {
+    // Apres une premiere publication, le paquet contient un .git plein de
+    // fichiers binaires. Les lire comme du texte faisait echouer verify.
+    let racine = paquet_sain("git");
+    fs::create_dir_all(racine.join(".git")).unwrap();
+    fs::write(racine.join(".git/index"), [0u8, 159, 146, 150, 255]).unwrap();
+
+    let constats = ynp_verify::verify(&racine, &spec()).unwrap();
+    assert!(constats.is_empty(), "{constats:#?}");
+}

@@ -43,7 +43,10 @@ impl Cible {
 pub struct Etape {
     pub nom: String,
     pub reussie: bool,
-    #[serde(skip_serializing_if = "String::is_empty")]
+    // `default` est indispensable : sans lui, une etape reussie — dont le
+    // detail vide n'est pas serialise — devient illisible a la relecture, et
+    // le rapport entier est silencieusement perdu.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub detail: String,
     pub duree_s: u64,
 }
@@ -410,5 +413,41 @@ mod tests {
         ]);
         assert!(!r.reussi());
         assert_eq!(r.premiere_erreur().unwrap().nom, "absence de residus");
+    }
+}
+
+#[cfg(test)]
+mod serialisation {
+    use super::*;
+
+    #[test]
+    fn un_rapport_fait_un_aller_retour_json_sans_perte() {
+        // Le rapport est relu par `publish` pour decider du niveau a publier :
+        // une relecture qui echoue fait annoncer un niveau 0 a tort.
+        let r = Rapport {
+            hote: "dell".into(),
+            app: "demo".into(),
+            url: "https://x/demo/".into(),
+            etapes: vec![
+                Etape {
+                    nom: "installation".into(),
+                    reussie: true,
+                    detail: String::new(),
+                    duree_s: 12,
+                },
+                Etape {
+                    nom: "service".into(),
+                    reussie: false,
+                    detail: "journal".into(),
+                    duree_s: 3,
+                },
+            ],
+        };
+        let texte = serde_json::to_string(&r).unwrap();
+        let relu: Rapport = serde_json::from_str(&texte).unwrap();
+
+        assert_eq!(relu.etapes.len(), 2);
+        assert_eq!(relu.etapes[0].nom, "installation");
+        assert_eq!(relu.premiere_erreur().unwrap().nom, "service");
     }
 }

@@ -84,6 +84,35 @@ enum Command {
         #[arg(long)]
         rapide: bool,
     },
+
+    /// Publie le paquet sur la forge et l'inscrit au catalogue.
+    Publish {
+        /// Alias SSH de la forge, declare dans ~/.ssh/config.
+        #[arg(long, default_value = "forgejo")]
+        forge: String,
+
+        /// Fichier de catalogue a mettre a jour.
+        #[arg(long, default_value = "catalogue/apps.json")]
+        catalogue: PathBuf,
+
+        /// Ne rien envoyer : montrer ce qui serait fait.
+        #[arg(long)]
+        simuler: bool,
+    },
+
+    /// Enchaine tout le pipeline, de l'URL au paquet publie.
+    Run {
+        /// URL du depot.
+        url: String,
+
+        /// Hote de test pour la gate G3. Omis, l'installation reelle est sautee.
+        #[arg(long)]
+        host: Option<String>,
+
+        /// Poursuivre malgre une porte en echec. Reserve a la mise au point.
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[tokio::main]
@@ -116,7 +145,13 @@ async fn run() -> anyhow::Result<()> {
             host,
             domaine,
             rapide,
-        } => test(host, domaine.clone(), *rapide, &cli).await,
+        } => test(host, domaine.clone(), *rapide, &cli).await.map(|_| ()),
+        Command::Publish {
+            forge,
+            catalogue,
+            simuler,
+        } => publish(forge, catalogue, *simuler, &cli).await,
+        Command::Run { url, host, force } => run_pipeline(url, host.as_deref(), *force, &cli).await,
     }
 }
 
@@ -369,7 +404,12 @@ fn syntaxe_bash(racine: &std::path::Path) -> anyhow::Result<Vec<ynp_core::Findin
 }
 
 /// Gate G3 : le paquet s'installe-t-il et fonctionne-t-il vraiment ?
-async fn test(host: &str, domaine: Option<String>, rapide: bool, cli: &Cli) -> anyhow::Result<()> {
+async fn test(
+    host: &str,
+    domaine: Option<String>,
+    rapide: bool,
+    cli: &Cli,
+) -> anyhow::Result<ynp_runner::Rapport> {
     let spec_path = cli.out.join("appspec.toml");
     let spec: ynp_core::AppSpec = toml::from_str(&std::fs::read_to_string(&spec_path)?)?;
     let racine = cli.out.join(format!("{}_ynh", spec.app.id));
@@ -403,6 +443,127 @@ async fn test(host: &str, domaine: Option<String>, rapide: bool, cli: &Cli) -> a
 
     if rapport.gate().blocks_pipeline() {
         std::process::exit(13);
+    }
+    Ok(rapport)
+}
+
+/// Gate G5 : publication sur la forge et inscription au catalogue.
+async fn publish(
+    alias_forge: &str,
+    catalogue: &std::path::Path,
+    simuler: bool,
+    cli: &Cli,
+) -> anyhow::Result<()> {
+    let spec: ynp_core::AppSpec =
+        toml::from_str(&std::fs::read_to_string(cli.out.join("appspec.toml"))?)?;
+    let racine = cli.out.join(format!("{}_ynh", spec.app.id));
+    let depot = format!("{}_ynh", spec.app.id);
+
+    // On ne publie pas un paquet dont on n'a pas verifie la conformite :
+    // ce qui part sur la forge est installable par d'autres.
+    let constats = ynp_verify::verify(&racine, &spec)?;
+    if ynp_verify::gate(&constats).blocks_pipeline() {
+        anyhow::bail!(
+            "le paquet ne passe pas la verification statique — lancer `ynopack verify` \
+             et corriger avant de publier"
+        );
+    }
+
+    let Some(forge) = ynp_publish::forge::Forge::depuis_environnement(alias_forge) else {
+        anyhow::bail!(
+            "configuration de forge absente. Definir FORGEJO_URL et FORGEJO_OWNER \
+             (et FORGEJO_TOKEN pour creer le depot automatiquement)."
+        );
+    };
+
+    if simuler {
+        println!("\n  Simulation — rien ne sera envoye.\n");
+        println!("  depot     {}", forge.url_https(&depot));
+        println!("  push      {}", forge.url_ssh(&depot));
+        println!("  catalogue {}", catalogue.display());
+        return Ok(());
+    }
+
+    let cree = forge
+        .creer_depot(&depot, spec.app.description_en.value().map_or("", |v| v))
+        .await?;
+    let revision = ynp_publish::forge::pousser(
+        &racine,
+        &forge.url_ssh(&depot),
+        "main",
+        &format!("{} {}", spec.app.name, spec.app.version),
+    )?;
+
+    // Le manifest publie est celui du paquet, pas une reconstruction : le
+    // catalogue doit decrire exactement ce qui sera installe.
+    let manifest: serde_json::Value =
+        toml::from_str::<toml::Value>(&std::fs::read_to_string(racine.join("manifest.toml"))?)
+            .map(|v| serde_json::to_value(v).unwrap_or(serde_json::Value::Null))?;
+
+    let niveau = std::fs::read_to_string(cli.out.join("test.json"))
+        .ok()
+        .and_then(|t| serde_json::from_str::<ynp_runner::Rapport>(&t).ok())
+        .filter(|r| r.reussi())
+        // Un cycle G3 complet vaut le niveau 4 : installable, fonctionnel,
+        // sauvegardable. Au-dela, seul package_check peut se prononcer.
+        .map(|_| 4u8);
+
+    let mut cat = ynp_publish::catalogue::Catalogue::charger(catalogue)?;
+    cat.inscrire(
+        &spec.app.id,
+        manifest,
+        &forge.url_https(&depot),
+        "main",
+        &revision,
+        niveau,
+    );
+    cat.ecrire(catalogue)?;
+
+    println!("\n  {} publie\n", spec.app.id);
+    println!("  depot      {}", forge.url_https(&depot));
+    println!("  revision   {}", &revision[..12.min(revision.len())]);
+    if cree {
+        println!("  (depot cree sur la forge)");
+    }
+    println!(
+        "  catalogue  {} — {} app(s)",
+        catalogue.display(),
+        cat.nombre_d_apps()
+    );
+    match niveau {
+        Some(n) => println!("  niveau     {n} (cycle G3 complet)"),
+        None => println!("  niveau     0 — lancer `ynopack test` pour le mesurer"),
+    }
+    println!(
+        "\n  Pour l'installer :  yunohost app install {}",
+        forge.url_https(&depot)
+    );
+    Ok(())
+}
+
+/// Enchaine le pipeline complet, en s'arretant a la premiere porte en echec.
+async fn run_pipeline(url: &str, host: Option<&str>, force: bool, cli: &Cli) -> anyhow::Result<()> {
+    eprintln!("── analyse et faisabilite ──");
+    let spec = plan(Some(url), force, cli).await?;
+
+    eprintln!("\n── generation ──");
+    generate(force, cli)?;
+
+    eprintln!("\n── verification statique ──");
+    verify(None, cli)?;
+
+    match host {
+        None => {
+            eprintln!(
+                "\n  Installation reelle sautee (aucun --host).\n  \
+                 Le paquet est pret dans {}",
+                cli.out.join(format!("{}_ynh", spec.app.id)).display()
+            );
+        }
+        Some(h) => {
+            eprintln!("\n── installation reelle ──");
+            test(h, None, false, cli).await?;
+        }
     }
     Ok(())
 }

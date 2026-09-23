@@ -346,7 +346,11 @@ fn jetons(racine: &Path, spec: &AppSpec) -> Result<Vec<Finding>, VerifyError> {
 fn marqueurs_restants(racine: &Path) -> Result<Vec<Finding>, VerifyError> {
     let mut out = Vec::new();
     for chemin in fichiers_texte(racine) {
-        let contenu = lire(&chemin)?;
+        // Un binaire egare ne porte pas de marqueur : on passe plutot que
+        // d'interrompre toute la verification.
+        let Ok(contenu) = std::fs::read_to_string(&chemin) else {
+            continue;
+        };
         for (numero, ligne) in contenu.lines().enumerate() {
             if ligne.contains("FIXME(ynopack)") {
                 let relatif = chemin

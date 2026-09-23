@@ -92,13 +92,13 @@ pure sur un arbre de fichiers, testable seule.
 - [ ] **L5-5** *(optionnel)* · `scripts/provision-runner.sh` : VM Debian + Incus sur `hom-e`
 - [ ] **L5-6** *(optionnel)* · Pilotage de `package_check`, analyse du niveau 0-8, gate G4 → EXG-F-35
 
-## L6 — Publication
+## L6 — Publication · **livré**
 
-- [ ] **L6-1** · `ynp-publish` : création du dépôt Forgejo et push → EXG-F-40
-- [ ] **L6-2** · Catalogue custom : `apps.toml` → `apps.json`, inspiré de `apps_tools/list_builder.py` → EXG-F-41
-- [ ] **L6-3** · Gate G5, `ynopack publish`
+- [x] **L6-1** · `ynp-publish` : création du dépôt Forgejo et push → EXG-F-40
+- [x] **L6-2** · Catalogue custom : `apps.toml` → `apps.json`, inspiré de `apps_tools/list_builder.py` → EXG-F-41
+- [x] **L6-3** · Gate G5, `ynopack publish`
 - [ ] **L6-4** *(optionnel)* · Préparation de PR vers le catalogue officiel, sous condition de G4 → EXG-F-42
-- [ ] **L6-5** · `ynopack run` : pipeline complet, arrêt à la première gate en échec → EXG-F-50, EXG-F-51
+- [x] **L6-5** · `ynopack run` : pipeline complet, arrêt à la première gate en échec → EXG-F-50, EXG-F-51
 
 ## L7 — Interface web
 

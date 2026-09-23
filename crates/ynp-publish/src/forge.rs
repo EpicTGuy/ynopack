@@ -1,0 +1,194 @@
+//! Depot du paquet sur une forge Forgejo.
+//!
+//! La creation du depot passe par l'API et demande un jeton ; le push passe
+//! par SSH et n'en demande pas. Les deux sont separes pour que l'absence de
+//! jeton n'empeche pas de publier : on cree alors le depot a la main une fois,
+//! et tout le reste fonctionne.
+
+use serde_json::json;
+
+#[derive(Debug, thiserror::Error)]
+pub enum ForgeError {
+    #[error("git {commande} a echoue : {detail}")]
+    Git { commande: String, detail: String },
+    #[error("reseau vers la forge : {0}")]
+    Http(#[from] reqwest::Error),
+    #[error("la forge a repondu {code} : {corps}")]
+    Refus { code: u16, corps: String },
+}
+
+/// Ou publier.
+#[derive(Debug, Clone)]
+pub struct Forge {
+    /// Racine HTTP de l'instance, ex. `https://git.hom-e.fr`.
+    pub url: String,
+    pub proprietaire: String,
+    /// Alias SSH servant au push, declare dans `~/.ssh/config`.
+    pub alias_ssh: String,
+    /// Jeton d'API. Sans lui, la creation du depot est laissee a l'utilisateur.
+    pub jeton: Option<String>,
+}
+
+impl Forge {
+    /// Lit la configuration depuis l'environnement.
+    ///
+    /// Le jeton n'est jamais ecrit dans un fichier du projet : il vient de
+    /// l'environnement ou il n'est pas la.
+    pub fn depuis_environnement(alias_ssh: &str) -> Option<Self> {
+        Some(Self {
+            url: std::env::var("FORGEJO_URL")
+                .ok()?
+                .trim_end_matches('/')
+                .to_string(),
+            proprietaire: std::env::var("FORGEJO_OWNER").ok()?,
+            alias_ssh: alias_ssh.to_string(),
+            jeton: std::env::var("FORGEJO_TOKEN")
+                .ok()
+                .filter(|t| !t.is_empty()),
+        })
+    }
+
+    pub fn url_https(&self, depot: &str) -> String {
+        format!("{}/{}/{depot}", self.url, self.proprietaire)
+    }
+
+    pub fn url_ssh(&self, depot: &str) -> String {
+        format!("{}:{}/{depot}.git", self.alias_ssh, self.proprietaire)
+    }
+
+    /// Cree le depot s'il n'existe pas deja.
+    ///
+    /// Rend `false` quand il existait : republier n'est pas une erreur, c'est
+    /// le cas courant.
+    pub async fn creer_depot(&self, nom: &str, description: &str) -> Result<bool, ForgeError> {
+        let Some(jeton) = &self.jeton else {
+            return Ok(false);
+        };
+
+        let reponse = reqwest::Client::new()
+            .post(format!("{}/api/v1/user/repos", self.url))
+            .bearer_auth(jeton)
+            .json(&json!({
+                "name": nom,
+                "description": description,
+                "private": false,
+                "auto_init": false,
+            }))
+            .send()
+            .await?;
+
+        match reponse.status().as_u16() {
+            200 | 201 => Ok(true),
+            // 409 : le depot existe deja, ce qui est le cas nominal d'une
+            // republication.
+            409 => Ok(false),
+            code => Err(ForgeError::Refus {
+                code,
+                corps: reponse.text().await.unwrap_or_default(),
+            }),
+        }
+    }
+}
+
+/// Prepare le depot local et l'envoie sur la forge.
+///
+/// Le depot est (re)cree a chaque publication plutot que mis a jour : le
+/// paquet est integralement regenere, un historique local n'aurait aucun sens.
+pub fn pousser(
+    paquet: &std::path::Path,
+    distant: &str,
+    branche: &str,
+    message: &str,
+) -> Result<String, ForgeError> {
+    let git = |args: &[&str]| -> Result<String, ForgeError> {
+        let sortie = std::process::Command::new("git")
+            .args(args)
+            .current_dir(paquet)
+            .output()
+            .map_err(|e| ForgeError::Git {
+                commande: args.join(" "),
+                detail: e.to_string(),
+            })?;
+
+        if sortie.status.success() {
+            Ok(String::from_utf8_lossy(&sortie.stdout).trim().to_string())
+        } else {
+            Err(ForgeError::Git {
+                commande: args.join(" "),
+                detail: String::from_utf8_lossy(&sortie.stderr).trim().to_string(),
+            })
+        }
+    };
+
+    if !paquet.join(".git").exists() {
+        git(&["init", "-q", "-b", branche])?;
+    }
+    // L'identite est locale au depot : on ne touche pas a la configuration
+    // globale de la machine.
+    git(&["config", "user.name", "ynopack"])?;
+    git(&["config", "user.email", "ynopack@localhost"])?;
+
+    git(&["add", "-A"])?;
+    // Un commit sans changement echoue ; ce n'est pas une erreur ici.
+    let _ = git(&["commit", "-q", "-m", message]);
+
+    let _ = git(&["remote", "remove", "origin"]);
+    git(&["remote", "add", "origin", distant])?;
+    git(&["push", "-q", "--force", "origin", branche])?;
+
+    git(&["rev-parse", "HEAD"])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn forge() -> Forge {
+        Forge {
+            url: "https://git.hom-e.fr".into(),
+            proprietaire: "epicuser".into(),
+            alias_ssh: "forgejo".into(),
+            jeton: None,
+        }
+    }
+
+    #[test]
+    fn les_deux_formes_d_url_sont_construites_correctement() {
+        let f = forge();
+        assert_eq!(
+            f.url_https("demo_ynh"),
+            "https://git.hom-e.fr/epicuser/demo_ynh"
+        );
+        assert_eq!(f.url_ssh("demo_ynh"), "forgejo:epicuser/demo_ynh.git");
+    }
+
+    #[test]
+    fn une_barre_finale_dans_l_url_ne_se_duplique_pas() {
+        std::env::set_var("FORGEJO_URL", "https://git.hom-e.fr/");
+        std::env::set_var("FORGEJO_OWNER", "epicuser");
+        let f = Forge::depuis_environnement("forgejo").unwrap();
+        assert_eq!(f.url_https("x"), "https://git.hom-e.fr/epicuser/x");
+        std::env::remove_var("FORGEJO_URL");
+        std::env::remove_var("FORGEJO_OWNER");
+    }
+
+    #[tokio::test]
+    async fn sans_jeton_la_creation_est_laissee_a_l_utilisateur() {
+        // L'absence de jeton ne doit pas empecher de publier : le push passe
+        // par SSH, seul le premier `create` demande l'API.
+        assert!(!forge().creer_depot("demo_ynh", "").await.unwrap());
+    }
+
+    #[test]
+    fn un_pousser_sans_depot_git_initialise_le_depot() {
+        let paquet = std::env::temp_dir().join("ynopack-git-test");
+        let _ = std::fs::remove_dir_all(&paquet);
+        std::fs::create_dir_all(&paquet).unwrap();
+        std::fs::write(paquet.join("manifest.toml"), "id = \"demo\"\n").unwrap();
+
+        // Le push echouera faute de distant joignable, mais l'initialisation
+        // et le commit doivent avoir eu lieu.
+        let _ = pousser(&paquet, "/inexistant", "main", "test");
+        assert!(paquet.join(".git").exists());
+    }
+}
