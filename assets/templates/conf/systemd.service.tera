@@ -10,6 +10,11 @@ Type=simple
 User=__APP__
 Group=__APP__
 WorkingDirectory=__INSTALL_DIR__/
+{%- if runtime.has_config %}
+# Sans cette ligne, le fichier de configuration est ecrit mais jamais lu :
+# l'application demarre avec ses valeurs par defaut et echoue a joindre sa base.
+EnvironmentFile=__INSTALL_DIR__/{{ runtime.config_file }}
+{%- endif %}
 ExecStart={{ runtime.execstart }}
 {%- if resources.nodejs_version %}
 Environment="PATH=__PATH_WITH_NODEJS__"

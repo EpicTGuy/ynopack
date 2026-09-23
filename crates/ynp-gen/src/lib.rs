@@ -93,7 +93,7 @@ fn fichiers() -> Vec<Fichier> {
             template: "conf/app-config.tera",
             contenu: include_str!("../../../assets/templates/conf/app-config.tera"),
             executable: false,
-            requis: |s| s.runtime.config_file.is_some() && !s.runtime.env.is_empty(),
+            requis: AppSpec::a_une_configuration,
         },
     ]
 }

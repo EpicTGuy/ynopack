@@ -11,7 +11,7 @@
 pub mod apt;
 pub mod execstart;
 
-use ynp_core::facts::{RepoFacts, Technology};
+use ynp_core::facts::{ConfigRole, Database, RepoFacts, Technology};
 use ynp_core::known::Known;
 use ynp_core::spec::*;
 
@@ -231,34 +231,101 @@ fn runtime(facts: &RepoFacts, app_id: &str) -> Runtime {
                 .unwrap_or_default()
         },
         execstart: execstart::derive(facts, app_id),
-        port_env_var: facts
-            .config
-            .get(ynp_core::facts::ConfigRole::Port)
-            .map(|v| v.name.clone()),
-        config_file: facts
-            .config
-            .example_file
-            .as_ref()
-            .map(|_| ".env".to_string()),
+        port_env_var: facts.config.get(ConfigRole::Port).map(|v| v.name.clone()),
+        port_binding: liaison_port(facts),
+        database_binding: liaison_base(facts),
+        // Un fichier de configuration est necessaire des qu'il y a quelque
+        // chose a transmettre a l'application, meme si l'amont n'en publie
+        // aucun exemple. C'est ce manque qui a fait installer un miniflux
+        // incapable de demarrer.
+        config_file: (facts.config.example_file.is_some()
+            || facts.services.database != Database::None
+            || !env.is_empty())
+        .then(|| ".env".to_string()),
         env,
     }
+}
+
+/// Ligne de configuration transmettant le port reserve par le coeur.
+fn liaison_port(facts: &RepoFacts) -> Known<String> {
+    if !expose_un_port(facts) {
+        return Known::resolved(String::new());
+    }
+    match facts.config.get(ConfigRole::Port) {
+        Some(v) => Known::resolved(format!("{}=__PORT__", v.name)),
+        None => Known::unresolved(
+            "on ignore sous quel nom l'application attend son port d'ecoute ; la forme varie \
+             d'une application a l'autre (PORT=__PORT__, LISTEN_ADDR=127.0.0.1:__PORT__...)",
+            &[
+                "documentation de configuration de l'amont",
+                "sortie de --help du binaire",
+            ],
+        ),
+    }
+}
+
+/// Ligne de configuration transmettant les identifiants de la base.
+///
+/// La chaine de connexion se compose de facon deterministe a partir des
+/// reglages que le coeur fournit ; seul le *nom* sous lequel l'application
+/// l'attend reste inconnu quand l'amont ne publie aucun exemple.
+fn liaison_base(facts: &RepoFacts) -> Known<String> {
+    let adresse = match facts.services.database {
+        Database::PostgreSql => {
+            "postgres://__DB_USER__:__DB_PWD__@127.0.0.1/__DB_NAME__?sslmode=disable"
+        }
+        Database::MySql => "mysql://__DB_USER__:__DB_PWD__@127.0.0.1/__DB_NAME__",
+        // Rien a transmettre : pas de base, ou une base fichier.
+        _ => return Known::resolved(String::new()),
+    };
+
+    if let Some(v) = facts.config.get(ConfigRole::DatabaseUrl) {
+        return Known::resolved(format!("{}={adresse}", v.name));
+    }
+
+    // Certaines applications attendent les champs separement plutot qu'une URL.
+    let champs: Vec<String> = [
+        (ConfigRole::DatabaseHost, "127.0.0.1"),
+        (ConfigRole::DatabaseName, "__DB_NAME__"),
+        (ConfigRole::DatabaseUser, "__DB_USER__"),
+        (ConfigRole::DatabasePassword, "__DB_PWD__"),
+    ]
+    .iter()
+    .filter_map(|(role, valeur)| {
+        facts
+            .config
+            .get(*role)
+            .map(|v| format!("{}={valeur}", v.name))
+    })
+    .collect();
+
+    if !champs.is_empty() {
+        return Known::resolved(champs.join("\n"));
+    }
+
+    Known::unresolved(
+        format!(
+            "une base est provisionnee mais on ignore sous quel nom l'application attend son \
+             adresse ; la valeur a transmettre est « {adresse} »"
+        ),
+        &[
+            "documentation de configuration de l'amont",
+            "aucun .env.example dans le depot",
+        ],
+    )
 }
 
 /// Valeur YunoHost correspondant a un role de configuration.
 ///
 /// Les placeholders sont remplaces par les helpers au moment ou le fichier est
 /// installe : c'est le mecanisme de templating natif, pas une invention.
-fn valeur_yunohost(role: ynp_core::facts::ConfigRole) -> Option<&'static str> {
-    use ynp_core::facts::ConfigRole as R;
+fn valeur_yunohost(role: ConfigRole) -> Option<&'static str> {
     Some(match role {
-        R::Port => "__PORT__",
-        R::DatabaseName => "__DB_NAME__",
-        R::DatabaseUser => "__DB_USER__",
-        R::DatabasePassword => "__DB_PWD__",
-        R::DatabaseHost => "127.0.0.1",
-        R::BaseUrl => "https://__DOMAIN____PATH__",
-        R::DataPath => "__DATA_DIR__",
-        R::Secret => "__SECRET__",
+        ConfigRole::BaseUrl => "https://__DOMAIN____PATH__",
+        ConfigRole::DataPath => "__DATA_DIR__",
+        ConfigRole::Secret => "__SECRET__",
+        // Le port et la base passent par les liaisons dediees, qui savent les
+        // composer et signalent leur absence.
         _ => return None,
     })
 }

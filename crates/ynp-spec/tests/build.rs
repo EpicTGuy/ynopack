@@ -57,9 +57,33 @@ fn depot_go_avec_binaires() -> RepoFacts {
     }
 }
 
+/// Le meme depot, mais dont l'amont publie un .env.example : tout est alors
+/// deductible.
+fn depot_complet() -> RepoFacts {
+    let mut f = depot_go_avec_binaires();
+    f.config = ConfigFacts {
+        example_file: Some(".env.example".into()),
+        variables: vec![
+            ConfigVar {
+                name: "PORT".into(),
+                role: ConfigRole::Port,
+                default: Some("8080".into()),
+                secret: false,
+            },
+            ConfigVar {
+                name: "DATABASE_URL".into(),
+                role: ConfigRole::DatabaseUrl,
+                default: None,
+                secret: false,
+            },
+        ],
+    };
+    f
+}
+
 #[test]
 fn une_application_bien_documentee_produit_une_specification_complete() {
-    let spec = ynp_spec::build(&depot_go_avec_binaires()).unwrap();
+    let spec = ynp_spec::build(&depot_complet()).unwrap();
 
     assert!(
         spec.is_complete(),
@@ -87,7 +111,7 @@ fn un_binaire_publie_borne_les_architectures_annoncees() {
 
 #[test]
 fn un_binaire_publie_dispense_de_construire_et_de_reserver_la_memoire() {
-    let spec = ynp_spec::build(&depot_go_avec_binaires()).unwrap();
+    let spec = ynp_spec::build(&depot_complet()).unwrap();
 
     assert!(spec.runtime.build_steps.is_empty(), "rien a construire");
     assert_eq!(spec.integration.ram_build, "50M");
@@ -134,7 +158,7 @@ fn une_application_opaque_avoue_ce_qu_elle_ignore() {
 
 #[test]
 fn la_configuration_reconnue_est_cablee_sur_les_valeurs_yunohost() {
-    let mut facts = depot_go_avec_binaires();
+    let mut facts = depot_complet();
     facts.config = ConfigFacts {
         example_file: Some(".env.example".into()),
         variables: vec![
@@ -161,17 +185,17 @@ fn la_configuration_reconnue_est_cablee_sur_les_valeurs_yunohost() {
     let spec = ynp_spec::build(&facts).unwrap();
 
     assert_eq!(
-        spec.runtime.env.get("PORT").map(String::as_str),
-        Some("__PORT__")
-    );
-    assert_eq!(
         spec.runtime.env.get("BASE_URL").map(String::as_str),
         Some("https://__DOMAIN____PATH__")
     );
-    assert_eq!(spec.runtime.port_env_var.as_deref(), Some("PORT"));
-    // DATABASE_URL n'a pas de valeur YunoHost toute faite : elle se compose
-    // dans le script d'installation, pas ici.
-    assert!(!spec.runtime.env.contains_key("DATABASE_URL"));
+    // Le port et la base ne passent pas par `env` : ils ont des liaisons
+    // dediees, qui savent les composer et signalent leur absence.
+    assert_eq!(spec.runtime.port_binding.value().unwrap(), "PORT=__PORT__");
+    assert_eq!(
+        spec.runtime.database_binding.value().unwrap(),
+        "DATABASE_URL=postgres://__DB_USER__:__DB_PWD__@127.0.0.1/__DB_NAME__?sslmode=disable"
+    );
+    assert!(spec.is_complete());
 }
 
 #[test]

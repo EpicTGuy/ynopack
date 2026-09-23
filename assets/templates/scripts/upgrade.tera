@@ -38,7 +38,7 @@ pushd "$install_dir"
 {%- endfor %}
 popd
 {%- endif %}
-{%- if runtime.config_file and runtime.env | length > 0 %}
+{%- if runtime.has_config %}
 
 #=================================================
 # CONFIGURATION

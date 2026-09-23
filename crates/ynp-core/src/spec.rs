@@ -38,6 +38,26 @@ pub struct AppSpec {
 }
 
 impl AppSpec {
+    /// Vrai si le paquet doit embarquer un fichier de configuration.
+    ///
+    /// Trois sources peuvent l'exiger : des variables reconnues, la liaison du
+    /// port, celle de la base. N'en tester qu'une laissait le fichier de
+    /// cote — c'est ainsi que miniflux s'installait sans pouvoir demarrer.
+    pub fn a_une_configuration(&self) -> bool {
+        self.runtime.config_file.is_some()
+            && (!self.runtime.env.is_empty()
+                || self
+                    .runtime
+                    .port_binding
+                    .value()
+                    .is_some_and(|v| !v.is_empty())
+                || self
+                    .runtime
+                    .database_binding
+                    .value()
+                    .is_some_and(|v| !v.is_empty()))
+    }
+
     /// Tous les champs non resolus, sous la forme `(chemin, marqueur FIXME)`.
     ///
     /// C'est ce que `assess` affiche a l'utilisateur et ce que `verify`
@@ -79,6 +99,25 @@ impl AppSpec {
                 self.runtime.execstart.fixme("runtime.execstart"),
             );
         }
+        // Une ressource provisionnee dont l'application ignore l'existence ne
+        // sert a rien. Constate sur miniflux : le paquet s'installait, toutes
+        // les ressources etaient creees, et le service ne demarrait pas faute
+        // de savoir joindre sa base.
+        if self.resources.ports {
+            push(
+                "runtime.port_binding",
+                self.runtime.port_binding.fixme("runtime.port_binding"),
+            );
+        }
+        if self.resources.database.manifest_type().is_some() {
+            push(
+                "runtime.database_binding",
+                self.runtime
+                    .database_binding
+                    .fixme("runtime.database_binding"),
+            );
+        }
+
         out
     }
 
@@ -336,6 +375,21 @@ pub struct Runtime {
     /// Fichier de conf a generer dans `$install_dir`, avec ses substitutions.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config_file: Option<String>,
+    /// Ligne de configuration par laquelle l'application apprend son port.
+    ///
+    /// Obligatoire des qu'un port est reserve : sans elle, l'application
+    /// ecoute ou bon lui semble et le reverse-proxy ne la trouve pas. La forme
+    /// varie d'une application a l'autre — `PORT=__PORT__` ou
+    /// `LISTEN_ADDR=127.0.0.1:__PORT__` — et ne se devine pas.
+    #[serde(default)]
+    pub port_binding: Known<String>,
+    /// Ligne par laquelle l'application apprend comment joindre sa base.
+    ///
+    /// Obligatoire des qu'une base est provisionnee. Sans elle, le paquet
+    /// s'installe mais l'application ne demarre pas — constate sur miniflux,
+    /// qui retombait sur `postgres://postgres@localhost` et echouait.
+    #[serde(default)]
+    pub database_binding: Known<String>,
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     pub env: IndexMap<String, String>,
 }

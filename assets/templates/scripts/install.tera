@@ -34,7 +34,7 @@ popd
 # CONFIGURATION DE L'APPLICATION
 #=================================================
 ynh_script_progression "Ajout de la configuration de $app..."
-{% if runtime.env | length > 0 %}
+{% if runtime.has_config %}
 ynh_config_add --template="{{ runtime.config_file }}" --destination="$install_dir/{{ runtime.config_file }}"
 
 # Le fichier peut contenir des identifiants : il n'est lisible que par l'app.

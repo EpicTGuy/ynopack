@@ -15,7 +15,7 @@ ynh_script_progression "Mise a jour des configurations..."
 {% if features.nginx %}
 ynh_config_change_url_nginx
 {%- endif %}
-{%- if runtime.config_file and runtime.env | length > 0 %}
+{%- if runtime.has_config %}
 
 # La configuration de l'app porte son adresse publique : elle doit suivre.
 ynh_config_add --template="{{ runtime.config_file }}" --destination="$install_dir/{{ runtime.config_file }}"

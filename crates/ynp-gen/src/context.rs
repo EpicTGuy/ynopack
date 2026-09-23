@@ -30,6 +30,21 @@ pub fn build(spec: &AppSpec) -> (Value, Vec<String>) {
     } else {
         String::new()
     };
+    // Une ressource provisionnee dont l'application ignore l'existence ne sert
+    // a rien : ces liaisons sont exigees des que la ressource l'est.
+    let port_binding = if spec.resources.ports {
+        resoudre("runtime.port_binding", spec.runtime.port_binding.value())
+    } else {
+        String::new()
+    };
+    let database_binding = if spec.resources.database.manifest_type().is_some() {
+        resoudre(
+            "runtime.database_binding",
+            spec.runtime.database_binding.value(),
+        )
+    } else {
+        String::new()
+    };
 
     let technologie = spec
         .runtime
@@ -108,7 +123,10 @@ pub fn build(spec: &AppSpec) -> (Value, Vec<String>) {
             "build_steps": spec.runtime.build_steps,
             "execstart": execstart,
             "port_env_var": spec.runtime.port_env_var,
+            "port_binding": port_binding,
+            "database_binding": database_binding,
             "config_file": spec.runtime.config_file,
+            "has_config": spec.a_une_configuration(),
             "env": spec.runtime.env,
         },
         "features": {

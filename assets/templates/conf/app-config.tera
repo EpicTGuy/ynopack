@@ -1,5 +1,14 @@
 # Configuration de {{ app.name }}, generee par ynopack.
-# Les __MAJUSCULES__ sont remplacees par les helpers a l'installation.
-{% for cle, valeur in runtime.env %}
+#
+# Attention : YunoHost substitue tout jeton entoure de deux tirets bas, y
+# compris dans les commentaires. En ecrire un ici pour l'exemple fait echouer
+# l'installation avec « Variable $x wasn't initialized ».
+{% if runtime.port_binding %}
+{{ runtime.port_binding }}
+{%- endif %}
+{%- if runtime.database_binding %}
+{{ runtime.database_binding }}
+{%- endif %}
+{%- for cle, valeur in runtime.env %}
 {{ cle }}={{ valeur }}
 {%- endfor %}

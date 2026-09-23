@@ -59,6 +59,11 @@ execstart = "__NODEJS_DIR__/node __INSTALL_DIR__/sandbox/supervisor.js"
 port_env_var = "PORT"
 config_file = ".env"
 
+# Liaisons obligatoires des qu'un port et une base sont provisionnes : sans
+# elles, l'application ne sait pas les joindre et le service ne demarre pas.
+port_binding = "PORT=__PORT__"
+database_binding = "DATABASE_URL=postgres://__DB_USER__:__DB_PWD__@127.0.0.1/__DB_NAME__"
+
 [runtime.env]
 GRIST_SANDBOX_FLAVOR = "gvisor"
 GRIST_SESSION_SECRET = "__SECRET__"
