@@ -1,0 +1,198 @@
+//! La specification est le seul document relu par un humain : elle doit etre
+//! juste, et avouer ce qu'elle ignore.
+
+use ynp_core::facts::*;
+use ynp_core::spec::{Architectures, UrlScheme};
+
+/// Une application Go dont l'amont publie des binaires : le cas le plus
+/// confortable, celui de gotify et miniflux.
+fn depot_go_avec_binaires() -> RepoFacts {
+    RepoFacts {
+        source: SourceRef {
+            forge: Forge::GitHub,
+            owner: "miniflux".into(),
+            repo: "v2".into(),
+            url: "https://github.com/miniflux/v2".into(),
+            default_branch: Some("main".into()),
+            commit: None,
+        },
+        meta: RepoMeta {
+            description: Some("Minimalist and opinionated feed reader".into()),
+            license_spdx: Some("Apache-2.0".into()),
+            homepage: Some("https://miniflux.app".into()),
+            ..Default::default()
+        },
+        stack: StackFacts {
+            primary: Technology::Go,
+            runtime_version: Some("1.26".into()),
+            ..Default::default()
+        },
+        services: ServiceFacts {
+            database: Database::PostgreSql,
+            ..Default::default()
+        },
+        build: Some(BuildRecipe {
+            dockerfile_path: "Dockerfile".into(),
+            expose: vec![8080],
+            apt_packages: vec!["ca-certificates".into(), "curl".into()],
+            ..Default::default()
+        }),
+        selection: Some(SourceSelection {
+            reference: "2.3.3".into(),
+            strategy: "latest_github_release".into(),
+            version: Some("2.3.3".into()),
+            kind: "release".into(),
+            url: "https://github.com/miniflux/v2/archive/2.3.3.tar.gz".into(),
+            sha256: "ab".repeat(32),
+            prebuilt: vec![ArchAsset {
+                arch: "amd64".into(),
+                name: "miniflux-linux-amd64".into(),
+                url: "https://x/miniflux-linux-amd64".into(),
+                sha256: "cd".repeat(32),
+                pattern: "^miniflux-linux-amd64$".into(),
+                extract: false,
+            }],
+        }),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn une_application_bien_documentee_produit_une_specification_complete() {
+    let spec = ynp_spec::build(&depot_go_avec_binaires()).unwrap();
+
+    assert!(
+        spec.is_complete(),
+        "champs manquants : {:?}",
+        spec.unresolved()
+    );
+    // Le depot s'appelle miniflux/v2 : « v2 » ne designe pas l'application.
+    assert_eq!(spec.app.id, "miniflux");
+    assert_eq!(spec.app.name, "Miniflux");
+    assert_eq!(spec.upstream.license.value().unwrap(), "Apache-2.0");
+    assert_eq!(spec.app.version.value().unwrap(), "2.3.3");
+    assert_eq!(spec.resources.database, Database::PostgreSql);
+    assert_eq!(spec.install.url_scheme, UrlScheme::DomainAndPath);
+}
+
+#[test]
+fn un_binaire_publie_borne_les_architectures_annoncees() {
+    // Annoncer « all » masquerait l'app sur les plateformes non couvertes.
+    let spec = ynp_spec::build(&depot_go_avec_binaires()).unwrap();
+    assert_eq!(
+        spec.integration.architectures,
+        Architectures::Only(vec!["amd64".into()])
+    );
+}
+
+#[test]
+fn un_binaire_publie_dispense_de_construire_et_de_reserver_la_memoire() {
+    let spec = ynp_spec::build(&depot_go_avec_binaires()).unwrap();
+
+    assert!(spec.runtime.build_steps.is_empty(), "rien a construire");
+    assert_eq!(spec.integration.ram_build, "50M");
+    assert!(
+        !spec.resources.sources.in_subdir,
+        "un binaire nu n'a pas de sous-repertoire"
+    );
+    assert_eq!(
+        spec.runtime.execstart.value().unwrap(),
+        "__INSTALL_DIR__/miniflux"
+    );
+}
+
+#[test]
+fn le_socle_fourni_par_yunohost_n_est_pas_redeclare_en_dependance() {
+    let spec = ynp_spec::build(&depot_go_avec_binaires()).unwrap();
+    assert_eq!(spec.resources.apt_packages, vec!["curl"]);
+}
+
+#[test]
+fn une_application_opaque_avoue_ce_qu_elle_ignore() {
+    // Le contrat du projet : ni licence, ni description, ni commande de
+    // demarrage ne doivent etre inventees.
+    let mut facts = depot_go_avec_binaires();
+    facts.meta.license_spdx = None;
+    facts.meta.description = None;
+    facts.stack = StackFacts::default();
+    facts.build = None;
+    facts.selection = None;
+
+    let spec = ynp_spec::build(&facts).unwrap();
+    let manquants: Vec<String> = spec.unresolved().into_iter().map(|(c, _)| c).collect();
+
+    assert!(manquants.contains(&"upstream.license".to_string()));
+    assert!(manquants.contains(&"app.description_en".to_string()));
+    assert!(manquants.contains(&"runtime.technology".to_string()));
+    assert!(manquants.contains(&"resources.sources.url".to_string()));
+
+    // Chaque manque dit ou chercher.
+    for (_, marqueur) in spec.unresolved() {
+        assert!(marqueur.starts_with("FIXME(ynopack)"), "{marqueur}");
+    }
+}
+
+#[test]
+fn la_configuration_reconnue_est_cablee_sur_les_valeurs_yunohost() {
+    let mut facts = depot_go_avec_binaires();
+    facts.config = ConfigFacts {
+        example_file: Some(".env.example".into()),
+        variables: vec![
+            ConfigVar {
+                name: "PORT".into(),
+                role: ConfigRole::Port,
+                default: Some("8080".into()),
+                secret: false,
+            },
+            ConfigVar {
+                name: "DATABASE_URL".into(),
+                role: ConfigRole::DatabaseUrl,
+                default: None,
+                secret: false,
+            },
+            ConfigVar {
+                name: "BASE_URL".into(),
+                role: ConfigRole::BaseUrl,
+                default: None,
+                secret: false,
+            },
+        ],
+    };
+    let spec = ynp_spec::build(&facts).unwrap();
+
+    assert_eq!(
+        spec.runtime.env.get("PORT").map(String::as_str),
+        Some("__PORT__")
+    );
+    assert_eq!(
+        spec.runtime.env.get("BASE_URL").map(String::as_str),
+        Some("https://__DOMAIN____PATH__")
+    );
+    assert_eq!(spec.runtime.port_env_var.as_deref(), Some("PORT"));
+    // DATABASE_URL n'a pas de valeur YunoHost toute faite : elle se compose
+    // dans le script d'installation, pas ici.
+    assert!(!spec.runtime.env.contains_key("DATABASE_URL"));
+}
+
+#[test]
+fn une_application_php_passe_par_la_brique_fpm_plutot_qu_un_service() {
+    let mut facts = depot_go_avec_binaires();
+    facts.stack = StackFacts {
+        primary: Technology::Php,
+        ..Default::default()
+    };
+    facts.selection.as_mut().unwrap().prebuilt.clear();
+
+    let spec = ynp_spec::build(&facts).unwrap();
+    assert!(spec.features.phpfpm);
+    assert!(!spec.features.systemd);
+}
+
+#[test]
+fn la_specification_fait_un_aller_retour_toml_sans_perte() {
+    // C'est le fichier qu'un agent edite puis rend au pipeline.
+    let spec = ynp_spec::build(&depot_go_avec_binaires()).unwrap();
+    let texte = toml::to_string_pretty(&spec).unwrap();
+    let relu: ynp_core::AppSpec = toml::from_str(&texte).unwrap();
+    assert_eq!(spec, relu);
+}

@@ -46,6 +46,16 @@ enum Command {
         #[arg(long, default_value_t = ynp_core::DEFAULT_FEASIBILITY_THRESHOLD)]
         seuil: u8,
     },
+
+    /// Produit l'appspec.toml : le seul document ou une decision se prend.
+    Plan {
+        /// URL du depot. A defaut, le facts.json deja produit est relu.
+        url: Option<String>,
+
+        /// Produit la specification meme s'il y reste des champs a completer.
+        #[arg(long)]
+        force: bool,
+    },
 }
 
 #[tokio::main]
@@ -70,7 +80,8 @@ async fn run() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match &cli.command {
         Command::Analyze { url } => analyze(url, &cli).await.map(|_| ()),
-        Command::Assess { url, seuil } => assess(url.as_deref(), *seuil, &cli).await,
+        Command::Assess { url, seuil } => assess(url.as_deref(), *seuil, &cli).await.map(|_| ()),
+        Command::Plan { url, force } => plan(url.as_deref(), *force, &cli).await,
     }
 }
 
@@ -110,7 +121,11 @@ async fn analyze(url: &str, cli: &Cli) -> anyhow::Result<ynp_core::facts::RepoFa
 ///
 /// Le code de sortie designe la porte en echec, pour qu'un script appelant
 /// sache *ou* ca a casse sans analyser la sortie.
-async fn assess(url: Option<&str>, seuil: u8, cli: &Cli) -> anyhow::Result<()> {
+async fn assess(
+    url: Option<&str>,
+    seuil: u8,
+    cli: &Cli,
+) -> anyhow::Result<ynp_core::facts::RepoFacts> {
     let facts = match url {
         Some(u) => analyze(u, cli).await?,
         None => {
@@ -142,6 +157,39 @@ async fn assess(url: Option<&str>, seuil: u8, cli: &Cli) -> anyhow::Result<()> {
     let code = gates.exit_code();
     if code != 0 {
         std::process::exit(code);
+    }
+    Ok(facts)
+}
+
+/// Produit `appspec.toml`, le document de decision.
+///
+/// C'est ici que le pipeline rend la main : ce que l'analyse n'a pas su
+/// deduire y figure en clair, et c'est a un humain ou a un agent de le
+/// completer avant de generer le paquet.
+async fn plan(url: Option<&str>, force: bool, cli: &Cli) -> anyhow::Result<()> {
+    let facts = assess(url, ynp_core::DEFAULT_FEASIBILITY_THRESHOLD, cli).await?;
+    let spec = ynp_spec::build(&facts)?;
+
+    std::fs::create_dir_all(&cli.out)?;
+    let path = cli.out.join("appspec.toml");
+    std::fs::write(&path, toml::to_string_pretty(&spec)?)?;
+
+    let manquants = spec.unresolved();
+    if cli.json {
+        println!("{}", serde_json::to_string_pretty(&spec)?);
+    } else {
+        print!("{}", report::spec(&spec));
+        println!("\nSpecification ecrite dans {}", path.display());
+    }
+
+    if !manquants.is_empty() && !force {
+        eprintln!(
+            "\n{} champ(s) restent a completer dans {}.\n\
+             Les renseigner, puis relancer `ynopack generate`.",
+            manquants.len(),
+            path.display()
+        );
+        std::process::exit(20);
     }
     Ok(())
 }

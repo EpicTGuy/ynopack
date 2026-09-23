@@ -1643,11 +1643,13 @@ dependencies = [
  "clap",
  "serde_json",
  "tokio",
+ "toml",
  "ynp-analyze",
  "ynp-core",
  "ynp-dockerfile",
  "ynp-forge",
  "ynp-rules",
+ "ynp-spec",
 ]
 
 [[package]]
@@ -1741,6 +1743,9 @@ dependencies = [
 name = "ynp-spec"
 version = "0.1.0"
 dependencies = [
+ "indexmap",
+ "toml",
+ "ynp-analyze",
  "ynp-core",
 ]
 

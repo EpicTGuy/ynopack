@@ -356,6 +356,81 @@ pub fn selection(s: &ynp_core::facts::SourceSelection) -> String {
     out
 }
 
+/// Resume de la specification, en insistant sur ce qui reste a completer.
+pub fn spec(s: &ynp_core::AppSpec) -> String {
+    let mut out = String::new();
+    out.push('\n');
+
+    line(&mut out, "identifiant", s.app.id.clone());
+    line(&mut out, "nom", s.app.name.clone());
+    line(&mut out, "version", s.app.version.to_string());
+    line(&mut out, "licence", s.upstream.license.to_string());
+    line(
+        &mut out,
+        "architectures",
+        match &s.integration.architectures {
+            ynp_core::spec::Architectures::All => "all".to_string(),
+            ynp_core::spec::Architectures::Only(v) => v.join(", "),
+        },
+    );
+
+    out.push('\n');
+    line(&mut out, "technologie", s.runtime.technology.to_string());
+    line(&mut out, "demarrage", s.runtime.execstart.to_string());
+    if !s.runtime.build_steps.is_empty() {
+        line(
+            &mut out,
+            "construction",
+            format!("{} etape(s)", s.runtime.build_steps.len()),
+        );
+        for e in &s.runtime.build_steps {
+            out.push_str(&format!("      · {e}\n"));
+        }
+    }
+
+    out.push('\n');
+    let mut briques: Vec<&str> = Vec::new();
+    for (actif, nom) in [
+        (s.features.nginx, "nginx"),
+        (s.features.systemd, "systemd"),
+        (s.features.phpfpm, "php-fpm"),
+        (s.features.logrotate, "logrotate"),
+        (s.features.change_url, "change_url"),
+    ] {
+        if actif {
+            briques.push(nom);
+        }
+    }
+    line(&mut out, "briques", briques.join(", "));
+    if let Some(t) = s.resources.database.manifest_type() {
+        line(&mut out, "base", t.to_string());
+    }
+    if !s.resources.apt_packages.is_empty() {
+        line(
+            &mut out,
+            "dependances apt",
+            s.resources.apt_packages.join(", "),
+        );
+    }
+
+    let manquants = s.unresolved();
+    if manquants.is_empty() {
+        out.push_str("\n  Specification complete : rien a completer.\n");
+    } else {
+        out.push_str(&format!(
+            "\n  ── {} champ(s) a completer ──\n",
+            manquants.len()
+        ));
+        for (chemin, marqueur) in &manquants {
+            out.push_str(&format!("\n  {chemin}\n"));
+            for l in enrouler(marqueur.trim_start_matches("FIXME(ynopack): "), 72) {
+                out.push_str(&format!("      {l}\n"));
+            }
+        }
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

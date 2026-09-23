@@ -1,5 +1,6 @@
 [package]
 name = "ynp-spec"
+description = "Faits + faisabilite -> AppSpec : le seul etage qui decide"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,3 +8,9 @@ license.workspace = true
 
 [dependencies]
 ynp-core.workspace = true
+ynp-analyze.workspace = true
+toml.workspace = true
+indexmap.workspace = true
+
+[dev-dependencies]
+toml.workspace = true

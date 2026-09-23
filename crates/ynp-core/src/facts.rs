@@ -247,6 +247,22 @@ impl Technology {
     }
 }
 
+impl std::fmt::Display for Technology {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Technology::Php => "PHP",
+            Technology::NodeJs => "Node.js",
+            Technology::Python => "Python",
+            Technology::Go => "Go",
+            Technology::Ruby => "Ruby",
+            Technology::Rust => "Rust",
+            Technology::Java => "Java",
+            Technology::Static => "fichiers statiques",
+            Technology::Unknown => "non identifiee",
+        })
+    }
+}
+
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StackFacts {
     pub primary: Technology,

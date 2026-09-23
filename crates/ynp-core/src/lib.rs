@@ -51,6 +51,52 @@ pub enum CoreError {
 /// lettre. Le suffixe `_ynh` frequent dans les noms de depot est retire, sinon
 /// on obtiendrait des apps nommees `foo-ynh`.
 pub fn app_id_from_repo(repo: &str) -> Result<String, CoreError> {
+    app_id_from(None, repo)
+}
+
+/// Noms de depot qui ne designent pas l'application mais une composante.
+///
+/// `miniflux/v2` et `gotify/server` doivent donner « miniflux » et « gotify »,
+/// comme le font les paquets officiels — pas « v2 » ni « server ».
+const NOMS_GENERIQUES: &[&str] = &[
+    "server",
+    "core",
+    "app",
+    "web",
+    "api",
+    "main",
+    "backend",
+    "frontend",
+    "client",
+    "docker",
+    "self-hosted",
+    "selfhosted",
+    "community",
+    "oss",
+    "ce",
+    "src",
+];
+
+/// Derive l'identifiant, en preferant le proprietaire quand le nom du depot
+/// n'identifie rien par lui-meme.
+pub fn app_id_from(owner: Option<&str>, repo: &str) -> Result<String, CoreError> {
+    let base = repo
+        .trim_end_matches("_ynh")
+        .trim_end_matches("-ynh")
+        .to_lowercase();
+    // `v2`, `v3`... sont des noms de version, pas d'application.
+    let est_une_version =
+        base.starts_with('v') && base.len() <= 3 && base[1..].chars().all(|c| c.is_ascii_digit());
+
+    if let Some(owner) = owner {
+        if NOMS_GENERIQUES.contains(&base.as_str()) || est_une_version {
+            return normaliser(owner);
+        }
+    }
+    normaliser(repo)
+}
+
+fn normaliser(repo: &str) -> Result<String, CoreError> {
     let base = repo.trim_end_matches("_ynh").trim_end_matches("-ynh");
     let mut id: String = base
         .chars()
@@ -87,6 +133,20 @@ mod tests {
     fn le_suffixe_ynh_du_depot_n_entre_pas_dans_l_identifiant() {
         assert_eq!(app_id_from_repo("nextcloud_ynh").unwrap(), "nextcloud");
         assert_eq!(app_id_from_repo("grist-ynh").unwrap(), "grist");
+    }
+
+    #[test]
+    fn un_nom_de_depot_generique_cede_la_place_au_proprietaire() {
+        // Comme le font les paquets officiels : miniflux_ynh, gotify_ynh.
+        assert_eq!(app_id_from(Some("miniflux"), "v2").unwrap(), "miniflux");
+        assert_eq!(app_id_from(Some("gotify"), "server").unwrap(), "gotify");
+        assert_eq!(
+            app_id_from(Some("toeverything"), "AFFiNE").unwrap(),
+            "affine"
+        );
+        // Un nom de depot parlant l'emporte sur le proprietaire.
+        assert_eq!(app_id_from(Some("block"), "buzz").unwrap(), "buzz");
+        assert_eq!(app_id_from(Some("usememos"), "memos").unwrap(), "memos");
     }
 
     #[test]
