@@ -339,28 +339,48 @@ fn finalize(recipe: &mut BuildRecipe, stages: Vec<StageAccu>) {
 
     let Some(last) = stages.last() else { return };
 
-    // Une etape qui part d'une etape precedente en herite l'environnement.
-    let mut env = IndexMap::new();
-    if let Some(parent) = last
+    // Une etape qui part d'une etape precedente en herite tout : environnement,
+    // ports, commande de demarrage, volumes. Docker fait de meme.
+    //
+    // Constate sur block/buzz : `EXPOSE 3000 8080 9102` et `ENTRYPOINT` sont
+    // declares dans l'etape `runtime-base`, et la derniere etape est un simple
+    // `FROM runtime-base AS runtime`. Sans heritage, le Dockerfile principal
+    // paraissait n'exposer aucun port ni demarrer quoi que ce soit.
+    let parent = last
         .from_alias
         .as_ref()
-        .and_then(|a| stages.iter().find(|s| s.stage.alias.as_ref() == Some(a)))
-    {
-        env.extend(parent.env.clone());
-        if last.workdir.is_none() {
-            recipe.workdir = parent.workdir.clone();
-        }
+        .and_then(|a| stages.iter().find(|s| s.stage.alias.as_ref() == Some(a)));
+
+    let mut env = IndexMap::new();
+    if let Some(p) = parent {
+        env.extend(p.env.clone());
     }
     env.extend(last.env.clone());
-
     recipe.env = env;
-    recipe.expose = last.expose.clone();
-    recipe.volumes = last.volumes.clone();
-    recipe.cmd = last.cmd.clone();
-    recipe.entrypoint = last.entrypoint.clone();
-    if last.workdir.is_some() {
-        recipe.workdir = last.workdir.clone();
-    }
+
+    recipe.expose = if last.expose.is_empty() {
+        parent.map(|p| p.expose.clone()).unwrap_or_default()
+    } else {
+        last.expose.clone()
+    };
+
+    recipe.volumes = if last.volumes.is_empty() {
+        parent.map(|p| p.volumes.clone()).unwrap_or_default()
+    } else {
+        last.volumes.clone()
+    };
+    recipe.cmd = last
+        .cmd
+        .clone()
+        .or_else(|| parent.and_then(|p| p.cmd.clone()));
+    recipe.entrypoint = last
+        .entrypoint
+        .clone()
+        .or_else(|| parent.and_then(|p| p.entrypoint.clone()));
+    recipe.workdir = last
+        .workdir
+        .clone()
+        .or_else(|| parent.and_then(|p| p.workdir.clone()));
 }
 
 fn dedup(recipe: &mut BuildRecipe) {

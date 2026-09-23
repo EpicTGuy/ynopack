@@ -78,6 +78,37 @@ impl Rule for BaseNonSupportee {
         if facts.services.unsupported.is_empty() {
             return None;
         }
+        let liste = facts.services.unsupported.join(", ");
+
+        // Un compose sans service applicatif decrit un environnement de
+        // developpement, pas un deploiement. Ses services accompagnent le
+        // travail de l'equipe sans etre forcement exiges par l'application.
+        // Constate sur block/buzz, dont le compose ne lance que postgres,
+        // redis, keycloak, minio et prometheus — l'application tourne a cote.
+        let compose_de_dev = facts
+            .compose
+            .as_ref()
+            .is_some_and(|c| !c.services.is_empty() && c.services.iter().all(|s| !s.is_app));
+
+        if compose_de_dev {
+            return Some(
+                Finding::new(
+                    self.id(),
+                    Severity::Major,
+                    format!("Service sans equivalent YunoHost, en environnement de dev : {liste}"),
+                )
+                .detail(
+                    "Ce service apparait dans un compose qui ne lance aucun service applicatif : \
+                     c'est un environnement de developpement, pas un deploiement. Rien ne dit \
+                     que l'application en a besoin pour tourner.",
+                )
+                .remediation(
+                    "Lire la documentation de deploiement de l'amont pour savoir si ce service \
+                     est reellement exige. S'il l'est, le refus devient definitif.",
+                ),
+            );
+        }
+
         Some(
             Finding::new(
                 self.id(),
@@ -558,5 +589,74 @@ mod tests {
 
         assert_eq!(finding.severity, Severity::Info);
         assert!(finding.detail.contains("libvips-dev"));
+    }
+}
+
+#[cfg(test)]
+mod compose_de_developpement {
+    use super::*;
+    use crate::tests::depot_sain;
+    use ynp_core::facts::{ComposeFacts, ComposeService};
+
+    fn compose(services: &[(&str, bool)]) -> ComposeFacts {
+        ComposeFacts {
+            path: "docker-compose.yml".into(),
+            services: services
+                .iter()
+                .map(|(n, is_app)| ComposeService {
+                    name: (*n).into(),
+                    is_app: *is_app,
+                    ..Default::default()
+                })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn un_service_non_supporte_dans_un_deploiement_bloque() {
+        let mut f = depot_sain();
+        f.services.unsupported = vec!["meilisearch".into()];
+        f.compose = Some(compose(&[("app", true), ("meilisearch", false)]));
+
+        assert_eq!(
+            BaseNonSupportee.check(&f).unwrap().severity,
+            Severity::Blocker
+        );
+    }
+
+    #[test]
+    fn le_meme_service_dans_un_compose_de_dev_degrade_sans_refuser() {
+        // Cas reel de block/buzz : le compose ne lance que des dependances de
+        // developpement, l'application tourne a cote. Rien ne dit qu'elle exige
+        // minio pour fonctionner.
+        let mut f = depot_sain();
+        f.services.unsupported = vec!["minio (minio/minio:latest)".into()];
+        f.compose = Some(compose(&[
+            ("postgres", false),
+            ("minio", false),
+            ("keycloak", false),
+        ]));
+
+        let finding = BaseNonSupportee.check(&f).unwrap();
+        assert_eq!(finding.severity, Severity::Major);
+        assert!(finding.title.contains("environnement de dev"));
+        assert!(finding
+            .remediation
+            .as_deref()
+            .unwrap()
+            .contains("documentation de deploiement"));
+    }
+
+    #[test]
+    fn sans_compose_du_tout_le_refus_reste_ferme() {
+        // Le service vient alors d'un autre indice, plus proche du deploiement.
+        let mut f = depot_sain();
+        f.services.unsupported = vec!["elasticsearch".into()];
+        f.compose = None;
+
+        assert_eq!(
+            BaseNonSupportee.check(&f).unwrap().severity,
+            Severity::Blocker
+        );
     }
 }

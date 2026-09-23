@@ -139,7 +139,7 @@ pub fn services_from_compose(facts: &ComposeFacts) -> ServiceFacts {
             Some(Kind::Unsupported) => {
                 out.unsupported.push(format!("{} ({})", svc.name, image));
             }
-            Some(Kind::Proxy) | None => {}
+            Some(Kind::Proxy) | Some(Kind::Tooling) | None => {}
         }
     }
     out
@@ -152,6 +152,9 @@ enum Kind {
     /// Reverse-proxy ou frontal : YunoHost fournit deja nginx, ces services
     /// disparaissent au packaging. Ils ne sont ni l'application, ni un blocage.
     Proxy,
+    /// Outillage d'administration, d'observabilite ou de developpement.
+    /// Accompagne l'application sans en faire partie.
+    Tooling,
 }
 
 /// Reconnait un service d'infrastructure d'apres son image.
@@ -161,8 +164,16 @@ enum Kind {
 fn classify_image(image: &str) -> Option<Kind> {
     let short = image.rsplit('/').next().unwrap_or(image);
     let name = short.split(':').next().unwrap_or(short).to_lowercase();
+    // Certaines entrees designent l'organisation autant que l'image
+    // (`minio/mc`) : comparer le seul nom court les manquerait, et `mc` seul
+    // serait trop generique pour etre compare sans son prefixe.
+    let complet = image.to_lowercase();
 
-    let has = |needles: &[&str]| needles.iter().any(|n| name.contains(n));
+    let has = |needles: &[&str]| {
+        needles
+            .iter()
+            .any(|n| name.contains(n) || complet.contains(n))
+    };
 
     if has(&["postgres", "pgvector", "timescale", "pgautoupgrade"]) {
         Some(Kind::Database(Database::PostgreSql))
@@ -174,6 +185,43 @@ fn classify_image(image: &str) -> Option<Kind> {
         Some(Kind::Redis)
     } else if has(&["nginx", "traefik", "caddy", "haproxy", "swag"]) {
         Some(Kind::Proxy)
+    } else if has(&[
+        // Outils d'administration, d'observabilite et de developpement. Ils
+        // accompagnent l'application sans en faire partie, et disparaissent au
+        // packaging. Constate sur block/buzz, ou adminer, keycloak, prometheus
+        // et minio-init etaient pris pour le service applicatif.
+        "adminer",
+        "pgadmin",
+        "phpmyadmin",
+        "mongo-express",
+        "redisinsight",
+        "prometheus",
+        "grafana",
+        "jaeger",
+        "loki",
+        "tempo",
+        "otel",
+        "cadvisor",
+        "node-exporter",
+        "statsd",
+        "zipkin",
+        "mailhog",
+        "mailpit",
+        "maildev",
+        "smtp4dev",
+        "keycloak",
+        "authelia",
+        "authentik",
+        "dex",
+        "oauth2-proxy",
+        "minio/mc",
+        "busybox",
+        "alpine",
+        "watchtower",
+        "portainer",
+        "dozzle",
+    ]) {
+        Some(Kind::Tooling)
     } else if has(&[
         "elasticsearch",
         "opensearch",

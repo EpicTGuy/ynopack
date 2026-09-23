@@ -179,3 +179,43 @@ services:
     assert_eq!(app[0].name, "webserver");
     assert_eq!(app[0].ports, vec![8000]);
 }
+
+#[test]
+fn les_outils_d_administration_ne_sont_pas_pris_pour_l_application() {
+    // Cas reel de block/buzz : son compose ne lance que des dependances de
+    // developpement. Adminer, Keycloak, Prometheus et le client minio etaient
+    // designes comme le service applicatif.
+    let yml = r#"
+services:
+  postgres:
+    image: postgres:17-alpine
+  redis:
+    image: redis:7-alpine
+  adminer:
+    image: adminer:latest
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+  minio:
+    image: minio/minio:latest
+  minio-init:
+    image: minio/mc:latest
+  prometheus:
+    image: prom/prometheus:latest
+"#;
+    let c = parse_compose("docker-compose.yml", yml, Some("buzz")).unwrap();
+
+    let app: Vec<&str> = c
+        .services
+        .iter()
+        .filter(|s| s.is_app)
+        .map(|s| s.name.as_str())
+        .collect();
+    assert!(app.is_empty(), "aucun service applicatif ici, or : {app:?}");
+
+    // minio reste signale : c'est un stockage sans equivalent YunoHost.
+    let s = services_from_compose(&c);
+    assert_eq!(s.database, Database::PostgreSql);
+    assert!(s.needs_redis);
+    assert_eq!(s.unsupported.len(), 1);
+    assert!(s.unsupported[0].contains("minio"));
+}

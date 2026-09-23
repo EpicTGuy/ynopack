@@ -416,3 +416,47 @@ fn le_choix_est_reproductible_a_egalite_de_score() {
     assert_eq!(choose_dockerfile(&tree), choose_dockerfile(&tree));
     assert_eq!(choose_dockerfile(&tree).as_deref(), Some("b/Dockerfile"));
 }
+
+#[test]
+fn une_etape_finale_herite_du_port_et_du_demarrage_de_son_parent() {
+    // Cas reel de block/buzz : EXPOSE et ENTRYPOINT sont declares dans
+    // `runtime-base`, et la derniere etape n'est qu'un `FROM runtime-base`.
+    // Sans heritage, le Dockerfile principal paraissait n'exposer aucun port,
+    // et un Dockerfile secondaire lui etait prefere.
+    let df = r#"
+FROM rust:1.83 AS builder
+RUN cargo build --release
+
+FROM debian:bookworm-slim AS runtime-base
+WORKDIR /srv
+EXPOSE 3000 8080
+ENTRYPOINT ["/usr/local/bin/buzz-relay"]
+
+FROM runtime-base AS runtime
+"#;
+    let r = parse_dockerfile("Dockerfile", df);
+
+    assert_eq!(r.expose, vec![3000, 8080]);
+    assert_eq!(
+        r.start_command().as_deref(),
+        Some("/usr/local/bin/buzz-relay")
+    );
+    assert_eq!(r.workdir.as_deref(), Some("/srv"));
+    assert_eq!(r.runtime_stage().unwrap().image, "debian");
+}
+
+#[test]
+fn une_etape_finale_qui_redefinit_l_emporte_sur_son_parent() {
+    let df = r#"
+FROM debian AS base
+EXPOSE 8080
+CMD ["/base"]
+
+FROM base
+EXPOSE 9000
+CMD ["/final"]
+"#;
+    let r = parse_dockerfile("Dockerfile", df);
+    assert_eq!(r.expose, vec![9000]);
+    assert_eq!(r.start_command().as_deref(), Some("/final"));
+}
