@@ -24,16 +24,45 @@ jobs:
           - runner: ubuntu-24.04-arm
             arch: arm64
     runs-on: ${{ matrix.runner }}
+    # On compile dans la distribution visee, pas dans celle du coureur.
+    # Les coureurs Ubuntu 24.04 fournissent la glibc 2.39, Debian bookworm la
+    # 2.36 : un binaire construit sur le premier refuse de demarrer sur le
+    # second. Constate en installant ynopack sur une instance reelle — le
+    # binaire echouait sur « GLIBC_2.39 not found ».
+    container: debian:bookworm
     steps:
+      - name: Outils de compilation
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential curl ca-certificates pkg-config git
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Chaine Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - uses: Swatinem/rust-cache@v2
 
       - name: Compiler
         run: cargo build --release -p ynopack-cli -p ynopack-server
 
+      - name: Verifier la compatibilite glibc
+        # Un binaire qui exige une glibc plus recente que celle de bookworm ne
+        # demarrerait pas chez l'utilisateur. Mieux vaut echouer ici.
+        run: |
+          for b in target/release/ynopack target/release/ynopack-server; do
+            exige=$(objdump -T "$b" | grep -oE 'GLIBC_2\.[0-9]+' | sort -V | tail -1)
+            echo "$b exige au plus $exige"
+            plus_recent=$(printf '%s\nGLIBC_2.36\n' "$exige" | sort -V | tail -1)
+            if [ "$plus_recent" != "GLIBC_2.36" ]; then
+              echo "::error::$b exige $exige, au-dela de la glibc 2.36 de bookworm"
+              exit 1
+            fi
+          done
+
       - name: Empaqueter
         run: |
+          apt-get install -y --no-install-recommends binutils
           mkdir -p dist
           cp target/release/ynopack target/release/ynopack-server dist/
           # Les templates et tables sont incorpores au binaire ; seule la
