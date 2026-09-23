@@ -11,8 +11,10 @@
 //! assert_eq!(recipe.start_command().as_deref(), Some("node s.js"));
 //! ```
 
+pub mod compose;
 pub mod dockerfile;
 pub mod lexer;
 pub mod shell;
 
+pub use compose::{find_compose, parse as parse_compose, services_from_compose, COMPOSE_NAMES};
 pub use dockerfile::{find_dockerfile, parse as parse_dockerfile, DOCKERFILE_NAMES};
