@@ -196,3 +196,59 @@ fn la_specification_fait_un_aller_retour_toml_sans_perte() {
     let relu: ynp_core::AppSpec = toml::from_str(&texte).unwrap();
     assert_eq!(spec, relu);
 }
+
+#[test]
+fn une_archive_de_release_est_extraite_mais_sans_sous_repertoire() {
+    // Cas de gotify : des zips plats, que le paquet officiel declare avec
+    // `in_subdir = false`. Le tarball d'une forge, lui, enveloppe tout dans
+    // `repo-sha/`.
+    let mut facts = depot_go_avec_binaires();
+    let asset = &mut facts.selection.as_mut().unwrap().prebuilt[0];
+    asset.name = "gotify-linux-amd64.zip".into();
+    asset.extract = true;
+
+    let s = ynp_spec::build(&facts).unwrap().resources.sources;
+    assert!(s.utilise_des_binaires());
+    assert!(s.extract, "un zip s'extrait");
+    assert_eq!(s.rename, None, "rien a renommer dans une archive");
+    assert!(!s.in_subdir, "une archive de release est plate");
+}
+
+#[test]
+fn un_binaire_nu_est_depose_sous_le_nom_de_l_application() {
+    // Cas de miniflux : `miniflux-linux-amd64` devient `miniflux`.
+    let s = ynp_spec::build(&depot_go_avec_binaires())
+        .unwrap()
+        .resources
+        .sources;
+
+    assert!(!s.extract, "un binaire nu ne s'extrait pas");
+    assert_eq!(s.rename.as_deref(), Some("miniflux"));
+    assert!(!s.in_subdir);
+}
+
+#[test]
+fn sans_binaire_publie_le_tarball_de_la_forge_a_son_sous_repertoire() {
+    let mut facts = depot_go_avec_binaires();
+    facts.selection.as_mut().unwrap().prebuilt.clear();
+
+    let s = ynp_spec::build(&facts).unwrap().resources.sources;
+    assert!(!s.utilise_des_binaires());
+    assert!(
+        s.in_subdir,
+        "le tarball d'une forge enveloppe tout dans repo-sha/"
+    );
+    assert!(s.extract);
+}
+
+#[test]
+fn chaque_architecture_porte_son_url_et_sa_somme() {
+    let s = ynp_spec::build(&depot_go_avec_binaires())
+        .unwrap()
+        .resources
+        .sources;
+    assert_eq!(s.per_arch.len(), 1);
+    assert_eq!(s.per_arch[0].arch, "amd64");
+    assert_eq!(s.per_arch[0].sha256.len(), 64);
+    assert!(s.per_arch[0].pattern.starts_with('^'));
+}

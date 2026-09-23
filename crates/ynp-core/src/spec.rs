@@ -292,6 +292,28 @@ pub struct Sources {
     /// `false` quand l'archive n'a pas de repertoire intermediaire.
     #[serde(default = "default_true")]
     pub in_subdir: bool,
+    /// Binaires publies par l'amont, un par architecture.
+    ///
+    /// Quand cette liste n'est pas vide, c'est elle qui fait foi : le manifest
+    /// declare `amd64.url`, `arm64.url`... et `url` n'est plus qu'un repli
+    /// documentaire. C'est ainsi que procedent les paquets officiels, pour
+    /// eviter de compiler sur la machine cible.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub per_arch: Vec<crate::facts::ArchAsset>,
+    /// `false` pour un binaire nu, que `ynh_setup_source` deplace au lieu de
+    /// l'extraire.
+    #[serde(default = "default_true")]
+    pub extract: bool,
+    /// Nom sous lequel deposer un fichier non extrait.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rename: Option<String>,
+}
+
+impl Sources {
+    /// Vrai si le paquet installera un binaire deja construit.
+    pub fn utilise_des_binaires(&self) -> bool {
+        !self.per_arch.is_empty()
+    }
 }
 
 fn default_true() -> bool {
@@ -381,6 +403,7 @@ mod tests {
                     sha256: Known::resolved("ab".repeat(32)),
                     autoupdate_strategy: None,
                     in_subdir: true,
+                    ..Default::default()
                 },
                 ..Default::default()
             },

@@ -25,7 +25,7 @@ pub fn build(facts: &RepoFacts) -> Result<AppSpec, ynp_core::CoreError> {
         upstream: upstream(facts),
         integration: integration(facts),
         install: questions(),
-        resources: resources(facts),
+        resources: resources(facts, &app_id),
         runtime: runtime(facts, &app_id),
         features: features(facts),
         docs: docs(facts),
@@ -134,8 +134,9 @@ fn questions() -> InstallQuestions {
     }
 }
 
-fn resources(facts: &RepoFacts) -> Resources {
+fn resources(facts: &RepoFacts, app_id: &str) -> Resources {
     let sel = facts.selection.as_ref();
+    let binaire_nu = sel.is_some_and(|s| s.prebuilt.iter().any(|a| !a.extract));
 
     Resources {
         sources: Sources {
@@ -148,8 +149,15 @@ fn resources(facts: &RepoFacts) -> Resources {
                 None => Known::unresolved("somme de controle non calculee", &[]),
             },
             autoupdate_strategy: sel.map(|s| s.strategy.clone()),
-            // Un binaire nu n'a pas de repertoire intermediaire.
-            in_subdir: !sel.is_some_and(|s| s.prebuilt.iter().any(|a| !a.extract)),
+            per_arch: sel.map(|s| s.prebuilt.clone()).unwrap_or_default(),
+            // Un binaire nu ne s'extrait pas : il est depose sous le nom de
+            // l'application.
+            extract: !binaire_nu,
+            rename: binaire_nu.then(|| app_id.to_string()),
+            // Une archive de release est plate, contrairement au tarball d'une
+            // forge qui enveloppe tout dans `repo-sha/`. Le paquet officiel de
+            // gotify declare ainsi `in_subdir = false` sur ses zips.
+            in_subdir: !sel.is_some_and(|s| s.evite_la_compilation()),
         },
         system_user: true,
         install_dir: true,
