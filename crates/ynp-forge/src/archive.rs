@@ -108,6 +108,9 @@ fn is_interesting(path: &str) -> bool {
         "procfile",
         "readme.md",
         "license",
+        "license.md",
+        "license.txt",
+        "copying",
         "pom.xml",
         "build.gradle",
         "build.gradle.kts",
@@ -202,5 +205,19 @@ mod tests {
         // Le chemin du code source est connu, son contenu n'est pas charge.
         assert!(tree.has("src/main.js"));
         assert_eq!(tree.text("src/main.js"), None);
+    }
+}
+
+#[cfg(test)]
+mod licence_conservee {
+    use super::*;
+
+    #[test]
+    fn les_variantes_de_nom_de_licence_sont_conservees() {
+        // Le fichier sert de repli quand la forge rend « NOASSERTION » : s'il
+        // n'etait pas conserve, le repli serait sans effet.
+        for f in ["LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING", "license"] {
+            assert!(is_interesting(f), "{f} doit etre conserve");
+        }
     }
 }

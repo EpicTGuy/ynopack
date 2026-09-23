@@ -1647,6 +1647,7 @@ dependencies = [
  "ynp-core",
  "ynp-dockerfile",
  "ynp-forge",
+ "ynp-rules",
 ]
 
 [[package]]
@@ -1725,6 +1726,7 @@ dependencies = [
 name = "ynp-rules"
 version = "0.1.0"
 dependencies = [
+ "ynp-analyze",
  "ynp-core",
 ]
 

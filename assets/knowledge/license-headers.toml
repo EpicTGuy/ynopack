@@ -1,0 +1,74 @@
+# Reconnaissance d'une licence a l'en-tete de son fichier.
+#
+# GitHub rend « NOASSERTION » des qu'il ne sait pas classer un LICENSE — c'est
+# le cas de gotify, dont le fichier commence pourtant par « MIT License ».
+# Sans cette table, ces depots seraient refuses a tort par la regle LIC001.
+#
+# Ce n'est pas de la devinette : on exige que *tous* les marqueurs soient
+# presents dans l'en-tete, et les textes de licence sont standardises.
+# L'ordre compte : les licences dont l'en-tete en prefixe une autre d'abord
+# (AGPL avant GPL, LGPL avant GPL).
+
+[[licence]]
+spdx = "AGPL-3.0-or-later"
+marqueurs = ["gnu affero general public license", "version 3"]
+
+[[licence]]
+spdx = "LGPL-3.0-or-later"
+marqueurs = ["gnu lesser general public license", "version 3"]
+
+[[licence]]
+spdx = "LGPL-2.1-or-later"
+marqueurs = ["gnu lesser general public license", "version 2.1"]
+
+[[licence]]
+spdx = "GPL-3.0-or-later"
+marqueurs = ["gnu general public license", "version 3"]
+
+[[licence]]
+spdx = "GPL-2.0-or-later"
+marqueurs = ["gnu general public license", "version 2"]
+
+[[licence]]
+spdx = "Apache-2.0"
+marqueurs = ["apache license", "version 2.0"]
+
+[[licence]]
+spdx = "MPL-2.0"
+marqueurs = ["mozilla public license", "2.0"]
+
+[[licence]]
+spdx = "MIT"
+marqueurs = ["mit license"]
+
+[[licence]]
+spdx = "MIT"
+marqueurs = ["permission is hereby granted, free of charge"]
+
+[[licence]]
+spdx = "ISC"
+marqueurs = ["isc license"]
+
+[[licence]]
+spdx = "BSD-3-Clause"
+marqueurs = ["redistribution and use in source and binary forms", "neither the name"]
+
+[[licence]]
+spdx = "BSD-2-Clause"
+marqueurs = ["redistribution and use in source and binary forms"]
+
+[[licence]]
+spdx = "Unlicense"
+marqueurs = ["this is free and unencumbered software released into the public domain"]
+
+[[licence]]
+spdx = "CC0-1.0"
+marqueurs = ["creative commons", "cc0"]
+
+[[licence]]
+spdx = "WTFPL"
+marqueurs = ["do what the fuck you want to public license"]
+
+[[licence]]
+spdx = "EUPL-1.2"
+marqueurs = ["european union public licence", "1.2"]

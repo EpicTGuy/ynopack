@@ -15,6 +15,7 @@ const APK_TO_DEB: &str = include_str!("../../../assets/knowledge/apk-to-deb.toml
 const RUNTIME_VERSIONS: &str = include_str!("../../../assets/knowledge/runtime-versions.toml");
 const UNSUPPORTED: &str = include_str!("../../../assets/knowledge/unsupported-services.toml");
 const NPM_NATIVE: &str = include_str!("../../../assets/knowledge/npm-native-deps.toml");
+const LICENSE_HEADERS: &str = include_str!("../../../assets/knowledge/license-headers.toml");
 
 #[derive(Debug, Deserialize)]
 struct EnvVarTable {
@@ -50,6 +51,17 @@ struct ResourcesTable {
 }
 
 #[derive(Debug, Deserialize)]
+struct LicenseTable {
+    licence: Vec<LicenseHeader>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LicenseHeader {
+    spdx: String,
+    marqueurs: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
 struct UnsupportedTable {
     services: UnsupportedServices,
 }
@@ -69,6 +81,7 @@ pub struct Knowledge {
     provisionable: Vec<String>,
     unsupported: Vec<String>,
     replaced: Vec<String>,
+    licenses: Vec<LicenseHeader>,
 }
 
 static KNOWLEDGE: OnceLock<Knowledge> = OnceLock::new();
@@ -86,6 +99,8 @@ pub fn get() -> &'static Knowledge {
             toml::from_str(RUNTIME_VERSIONS).expect("runtime-versions.toml invalide");
         let un: UnsupportedTable =
             toml::from_str(UNSUPPORTED).expect("unsupported-services.toml invalide");
+        let lic: LicenseTable =
+            toml::from_str(LICENSE_HEADERS).expect("license-headers.toml invalide");
 
         Knowledge {
             env_rules: env.rule,
@@ -95,6 +110,7 @@ pub fn get() -> &'static Knowledge {
             provisionable: rt.resources.provisionable,
             unsupported: un.services.blocking,
             replaced: un.services.replaced,
+            licenses: lic.licence,
         }
     })
 }
@@ -156,6 +172,27 @@ impl Knowledge {
     pub fn is_unsupported_service(&self, image: &str) -> bool {
         let lower = image.to_lowercase();
         self.unsupported.iter().any(|s| lower.contains(s.as_str()))
+    }
+
+    /// Identifiant SPDX reconnu a l'en-tete d'un fichier de licence.
+    ///
+    /// Utile quand la forge rend « NOASSERTION » alors que le fichier porte
+    /// une licence parfaitement standard — cas de gotify, dont le LICENSE
+    /// commence par « MIT License ».
+    ///
+    /// Seul l'en-tete est examine : le corps d'une GPL cite d'autres licences,
+    /// et chercher dans le texte entier produirait des faux positifs.
+    pub fn license_from_text(&self, text: &str) -> Option<&str> {
+        let entete: String = text
+            .lines()
+            .take(12)
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_lowercase();
+        self.licenses
+            .iter()
+            .find(|l| l.marqueurs.iter().all(|m| entete.contains(m.as_str())))
+            .map(|l| l.spdx.as_str())
     }
 
     pub fn is_replaced_service(&self, image: &str) -> bool {
@@ -252,5 +289,59 @@ mod tests {
         assert!(k.is_unsupported_service("docker.elastic.co/elasticsearch:8"));
         assert!(!k.is_unsupported_service("nginx:alpine"));
         assert!(k.is_replaced_service("nginx:alpine"));
+    }
+}
+
+#[cfg(test)]
+mod licences {
+    use super::*;
+
+    #[test]
+    fn une_licence_que_la_forge_ne_classe_pas_est_reconnue_a_son_entete() {
+        // Cas reel de gotify : GitHub rend NOASSERTION, le fichier dit « MIT License ».
+        let k = get();
+        let mit = "MIT License\n\nCopyright (c) 2018 jmattheis\n\nPermission is hereby granted…";
+        assert_eq!(k.license_from_text(mit), Some("MIT"));
+    }
+
+    #[test]
+    fn les_grandes_familles_sont_distinguees_les_unes_des_autres() {
+        let k = get();
+        // L'AGPL ne doit pas etre prise pour une GPL : son en-tete la prefixe.
+        assert_eq!(
+            k.license_from_text("                    GNU AFFERO GENERAL PUBLIC LICENSE\n                       Version 3, 19 November 2007"),
+            Some("AGPL-3.0-or-later")
+        );
+        assert_eq!(
+            k.license_from_text("                    GNU GENERAL PUBLIC LICENSE\n                       Version 3, 29 June 2007"),
+            Some("GPL-3.0-or-later")
+        );
+        assert_eq!(
+            k.license_from_text("                   GNU LESSER GENERAL PUBLIC LICENSE\n                       Version 3, 29 June 2007"),
+            Some("LGPL-3.0-or-later")
+        );
+        assert_eq!(
+            k.license_from_text("                                 Apache License\n                           Version 2.0, January 2004"),
+            Some("Apache-2.0")
+        );
+    }
+
+    #[test]
+    fn un_texte_qui_n_est_pas_une_licence_ne_produit_rien() {
+        let k = get();
+        assert_eq!(
+            k.license_from_text("# Mon projet\n\nUn outil sympathique."),
+            None
+        );
+        assert_eq!(k.license_from_text(""), None);
+    }
+
+    #[test]
+    fn seul_l_entete_est_examine() {
+        // Le corps d'une licence cite souvent d'autres licences : chercher dans
+        // le texte entier produirait des faux positifs.
+        let k = get();
+        let faux = "Mon super projet\n".repeat(20) + "MIT License";
+        assert_eq!(k.license_from_text(&faux), None);
     }
 }

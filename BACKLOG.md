@@ -19,38 +19,38 @@ Tâches dimensionnées pour un agent : un crate, un détecteur ou une règle cha
 
 ---
 
-## L1 — Analyse
+## L1 — Analyse · **livré**
 
 Dépend de L0. Les tâches L1-2 à L1-8 sont **parallélisables** : chaque détecteur est une fonction
 pure sur un arbre de fichiers, testable seule.
 
-- [ ] **L1-1** · `ynp-forge` : client GitHub (métadonnées, releases, tags, tarball), traits pour
+- [x] **L1-1** · `ynp-forge` : client GitHub (métadonnées, releases, tags, tarball), traits pour
       accueillir GitLab/Gitea. Tests avec `wiremock`, jamais d'appel réseau en test. → EXG-F-01
-- [ ] **L1-2** · `ynp-dockerfile` : parseur Dockerfile → `BuildRecipe`. Gérer le multi-étage, les
+- [x] **L1-2** · `ynp-dockerfile` : parseur Dockerfile → `BuildRecipe`. Gérer le multi-étage, les
       continuations `\`, `apt-get install` sur plusieurs lignes, les formes shell et exec de
       `CMD`/`ENTRYPOINT`. **La tâche la plus structurante du lot** : elle porte le pari zéro-LLM. → EXG-F-02
-- [ ] **L1-3** · `ynp-dockerfile` : parseur `docker-compose.yml` → `ComposeFacts`. Distinguer le
+- [x] **L1-3** · `ynp-dockerfile` : parseur `docker-compose.yml` → `ComposeFacts`. Distinguer le
       service applicatif (`build:`) des services d'infrastructure (`image: postgres`). → EXG-F-03
-- [ ] **L1-4** · Détecteur `stack` : techno principale et version de runtime. → EXG-F-04
-- [ ] **L1-5** · Détecteur `config` : `.env.example` → variables classées par rôle, via
+- [x] **L1-4** · Détecteur `stack` : techno principale et version de runtime. → EXG-F-04
+- [x] **L1-5** · Détecteur `config` : `.env.example` → variables classées par rôle, via
       `assets/knowledge/env-vars.toml`. → EXG-F-05
-- [ ] **L1-6** · Détecteur `assets` : choisir la source (release, tag, commit), calculer le
+- [x] **L1-6** · Détecteur `assets` : choisir la source (release, tag, commit), calculer le
       `sha256`, déduire la stratégie d'autoupdate. → EXG-F-06
-- [ ] **L1-7** · Détecteur `services` : base de données, Redis, services non supportés
-- [ ] **L1-8** · Détecteur `health` : archivé, inactivité, absence de release
-- [ ] **L1-9** · Tables `assets/knowledge/` : `apk-to-deb.toml`, `env-vars.toml`,
+- [x] **L1-7** · Détecteur `services` : base de données, Redis, services non supportés
+- [x] **L1-8** · Détecteur `health` : archivé, inactivité, absence de release
+- [x] **L1-9** · Tables `assets/knowledge/` : `apk-to-deb.toml`, `env-vars.toml`,
       `runtime-versions.toml`, `unsupported-services.toml`
-- [ ] **L1-10** · `ynopack analyze <url>` → `facts.json`
+- [x] **L1-10** · `ynopack analyze <url>` → `facts.json`
 
-## L2 — Faisabilité
+## L2 — Faisabilité · **livré**
 
-- [ ] **L2-1** · `ynp-rules` : moteur (trait `Rule`, registre, application), scoring
-- [ ] **L2-2** · Règles bloquantes : `LIC001`, `SRC001`, `RUN001`, `DB002`, `K8S001`. Un test
+- [x] **L2-1** · `ynp-rules` : moteur (trait `Rule`, registre, application), scoring
+- [x] **L2-2** · Règles bloquantes : `LIC001`, `SRC001`, `RUN001`, `DB002`, `K8S001`. Un test
       positif et un négatif chacune. → EXG-F-10, EXG-F-12
-- [ ] **L2-3** · Règles majeures et mineures : `PY001`, `BUILD001`, `ARCH001`, `PORT001`, `MAINT001`
-- [ ] **L2-4** · Règles informatives : `DB001`, `SSO001`
-- [ ] **L2-5** · Gates G0 et G1
-- [ ] **L2-6** · `ynopack assess` → rapport lisible en terminal et `--json`
+- [x] **L2-3** · Règles majeures et mineures : `PY001`, `BUILD001`, `ARCH001`, `PORT001`, `MAINT001`
+- [x] **L2-4** · Règles informatives : `DB001`, `SSO001`
+- [x] **L2-5** · Gates G0 et G1
+- [x] **L2-6** · `ynopack assess` → rapport lisible en terminal et `--json`
 
 ## L3 — Génération
 

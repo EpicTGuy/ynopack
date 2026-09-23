@@ -36,6 +36,16 @@ enum Command {
         /// URL du depot, sous n'importe quelle forme.
         url: String,
     },
+
+    /// Decide si le depot est packageable, et dit pourquoi si ce n'est pas le cas.
+    Assess {
+        /// URL du depot. A defaut, le facts.json deja produit par `analyze` est relu.
+        url: Option<String>,
+
+        /// Score en deca duquel le verdict devient « faisable avec travail ».
+        #[arg(long, default_value_t = ynp_core::DEFAULT_FEASIBILITY_THRESHOLD)]
+        seuil: u8,
+    },
 }
 
 #[tokio::main]
@@ -59,11 +69,12 @@ async fn main() -> std::process::ExitCode {
 async fn run() -> anyhow::Result<()> {
     let cli = Cli::parse();
     match &cli.command {
-        Command::Analyze { url } => analyze(url, &cli).await,
+        Command::Analyze { url } => analyze(url, &cli).await.map(|_| ()),
+        Command::Assess { url, seuil } => assess(url.as_deref(), *seuil, &cli).await,
     }
 }
 
-async fn analyze(url: &str, cli: &Cli) -> anyhow::Result<()> {
+async fn analyze(url: &str, cli: &Cli) -> anyhow::Result<ynp_core::facts::RepoFacts> {
     if !cli.json {
         eprintln!("Recuperation de {url} …");
     }
@@ -91,6 +102,46 @@ async fn analyze(url: &str, cli: &Cli) -> anyhow::Result<()> {
         println!("\n  source          {}", fetched.choice.url);
         println!("  sha256          {}", fetched.sha256);
         println!("\nFaits ecrits dans {}", path.display());
+    }
+    Ok(facts)
+}
+
+/// Verdict de faisabilite, avec les portes G0 et G1.
+///
+/// Le code de sortie designe la porte en echec, pour qu'un script appelant
+/// sache *ou* ca a casse sans analyser la sortie.
+async fn assess(url: Option<&str>, seuil: u8, cli: &Cli) -> anyhow::Result<()> {
+    let facts = match url {
+        Some(u) => analyze(u, cli).await?,
+        None => {
+            let path = cli.out.join("facts.json");
+            let text = std::fs::read_to_string(&path).map_err(|e| {
+                anyhow::anyhow!(
+                    "{} illisible ({e}) — lancer d'abord `ynopack analyze <url>`",
+                    path.display()
+                )
+            })?;
+            serde_json::from_str(&text)?
+        }
+    };
+
+    let (feasibility, gates) = ynp_rules::gates::evaluate(&facts, seuil);
+
+    std::fs::create_dir_all(&cli.out)?;
+    std::fs::write(
+        cli.out.join("report.json"),
+        serde_json::to_string_pretty(&feasibility)?,
+    )?;
+
+    if cli.json {
+        println!("{}", serde_json::to_string_pretty(&feasibility)?);
+    } else {
+        print!("{}", report::feasibility(&feasibility, &gates));
+    }
+
+    let code = gates.exit_code();
+    if code != 0 {
+        std::process::exit(code);
     }
     Ok(())
 }

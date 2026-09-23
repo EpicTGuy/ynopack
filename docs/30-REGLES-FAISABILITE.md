@@ -23,13 +23,22 @@ Le catalogue YunoHost n'accepte que du logiciel libre, ou éthique au cas par ca
 (`docs/yunohost/90-policy.md`). Sans identifiant SPDX exploitable, on ne peut ni remplir
 `upstream.license` ni trancher sur l'admissibilité.
 **Preuve** : `license.spdx_id` de la forge, ou absence de `LICENSE`.
-**Remédiation** : vérifier manuellement ; une licence non détectée automatiquement peut être valide.
+**Remédiation** : ouvrir le fichier `LICENSE` ; s'il porte une licence libre, renseigner
+`upstream.license` à la main.
 
-### `SRC001` — Aucune source stable
-Le manifest exige un `sha256` sur les sources. Sans tag, sans release et sans archive stable, il n'y
-a rien à figer : le paquet ne serait pas reproductible.
-**Remédiation** : utiliser `autoupdate.strategy = "latest_github_commit"`, qui fixe la version à la
-date du commit — à défaut, attendre que l'upstream publie une release.
+> Un repli déterministe limite les faux positifs : quand la forge rend `NOASSERTION`, le fichier
+> `LICENSE` est lu et comparé aux en-têtes standards (`assets/knowledge/license-headers.toml`).
+> Constaté sur gotify, dont GitHub ne classe pas le `LICENSE` alors qu'il commence par
+> « MIT License ». Une licence **inconnue mais présente** produit un constat *majeur*
+> (« à vérifier »), pas un refus : refuser une licence libre par méconnaissance serait pire.
+
+### `SRC001` — Aucune archive téléchargeable
+Ni release, ni tag, ni branche par défaut : il n'y a rien à figer dans `[resources.sources]`, dont
+l'`url` et le `sha256` sont obligatoires.
+**Remédiation** : vérifier que le dépôt n'est pas vide et qu'il est bien public.
+
+> Note : l'absence de release ou de tag n'est **pas** bloquante — la stratégie
+> `latest_github_commit` permet de packager quand même. C'est l'objet de `SRC002`, majeur.
 
 ### `RUN001` — Le runtime exige un moteur de conteneurs
 Une application YunoHost tourne en natif sur l'hôte. Une application distribuée **uniquement** sous
@@ -49,6 +58,19 @@ helpers. Elasticsearch, ClickHouse, Cassandra et consorts n'ont pas d'équivalen
 Variante de `RUN001` à une autre échelle : pas de chemin d'installation sur une machine unique.
 
 ## Majeurs
+
+### `SRC002` — Ni release ni tag de version
+L'application reste packageable avec `latest_github_commit`, mais sa version devient la date du
+commit : l'administrateur n'a aucun repère pour savoir ce qu'il installe, et les propositions de
+mise à jour n'ont pas de journal des modifications.
+**Remédiation** : vérifier si l'amont publie ses versions ailleurs ; sinon, accepter la stratégie
+par commit en connaissance de cause.
+
+### `STACK001` — Technologie non identifiée
+Ni Dockerfile exploitable, ni fichier de projet reconnu. Le packager ne peut pas déduire comment
+l'application se construit — et il ne le devinera pas.
+**Remédiation** : renseigner `runtime.technology`, `runtime.build_steps` et `runtime.execstart`
+à la main dans `appspec.toml`.
 
 ### `PY001` — Python autre que celui de bookworm
 Il existe des `[resources]` pour nodejs, ruby, go et composer — **pas pour Python**. Une application
@@ -82,15 +104,13 @@ Ces règles ne sont pas des défauts : elles transportent vers `plan` une inform
 | Id | Constat | Conséquence dans l'`AppSpec` |
 |---|---|---|
 | `DB001` | MySQL ou PostgreSQL détecté | `resources.database` |
-| `SSO001` | Ni LDAP ni OIDC | `ldap = false`, `sso = false` |
-| `PORT002` | `EXPOSE` trouvé | `resources.ports`, `runtime.port_env_var` |
-| `NODE001` | Version de Node exigée | `resources.nodejs_version` |
-| `ASSET001` | Release avec assets préconstruits | Source choisie, `BUILD001` évitée |
+| `APK001` | Dépendances Alpine à traduire | `resources.apt_packages`. Passe en **mineur** si un paquet n'a pas d'équivalent connu — il faut alors enrichir `assets/knowledge/apk-to-deb.toml` |
+| `NPM001` | Modules npm à compilation native | Paquets `-dev` à ajouter aux dépendances apt. Cause la plus fréquente d'un `npm ci` en échec |
 
 ## Ajouter une règle
 
 1. Choisir un identifiant dans une famille existante (`LIC`, `SRC`, `RUN`, `DB`, `BUILD`, `ARCH`,
-   `PORT`, `MAINT`, `NODE`, `ASSET`) ou en ouvrir une, documentée ici.
+   `PORT`, `MAINT`, `STACK`, `APK`, `NPM`, `K8S`) ou en ouvrir une, documentée ici.
 2. Implémenter `Rule` dans `ynp-rules`, en citant systématiquement une preuve.
 3. Écrire un test qui déclenche la règle et un test qui ne la déclenche pas. Le second est le plus
    important : c'est lui qui attrape les faux positifs.

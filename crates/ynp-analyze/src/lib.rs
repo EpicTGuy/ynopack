@@ -53,6 +53,18 @@ pub fn analyze(forge: ForgeData, tree: &RepoTree) -> RepoFacts {
         ynp_dockerfile::parse_compose(&path, content, Some(repo_hint))
     });
 
+    // La forge fait foi quand elle sait classer la licence ; sinon on lit le
+    // fichier, ce qui evite de refuser a tort un depot parfaitement libre.
+    if facts.meta.license_spdx.is_none() {
+        if let Some((_, texte)) =
+            tree.first_text(&["LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING"])
+        {
+            facts.meta.license_spdx = knowledge::get()
+                .license_from_text(texte)
+                .map(str::to_string);
+        }
+    }
+
     facts.stack = stack::detect(tree, facts.build.as_ref());
     facts.config = config::detect(tree, facts.compose.as_ref());
     facts.services = services::detect(

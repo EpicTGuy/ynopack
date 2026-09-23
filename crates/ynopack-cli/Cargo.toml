@@ -15,6 +15,7 @@ ynp-core.workspace = true
 ynp-analyze.workspace = true
 ynp-forge.workspace = true
 ynp-dockerfile.workspace = true
+ynp-rules.workspace = true
 clap.workspace = true
 tokio.workspace = true
 anyhow.workspace = true

@@ -218,3 +218,141 @@ fn liste(items: &[String]) -> String {
     }
     format!("{}, … (+{})", items[..MAX].join(", "), items.len() - MAX)
 }
+
+// --- Rapport de faisabilite ---
+
+use ynp_core::finding::{Feasibility, Finding, Verdict};
+use ynp_core::gate::GateReport;
+
+pub fn feasibility(f: &Feasibility, gates: &GateReport) -> String {
+    let mut out = String::new();
+
+    out.push_str(&format!(
+        "\n  {}   —   score {}/100\n",
+        f.verdict.label(),
+        f.score
+    ));
+
+    if f.findings.is_empty() {
+        out.push_str("\n  Aucun constat.\n");
+    }
+
+    let mut severite_courante = None;
+    for finding in &f.findings {
+        if severite_courante != Some(finding.severity) {
+            out.push_str(&format!("\n  ── {} ──\n", finding.severity.label()));
+            severite_courante = Some(finding.severity);
+        }
+        out.push_str(&constat(finding));
+    }
+
+    out.push_str("\n  ── portes ──\n");
+    for r in &gates.results {
+        let etat = match &r.outcome {
+            ynp_core::gate::GateOutcome::Pass => "ok".to_string(),
+            ynp_core::gate::GateOutcome::Fail { findings } => {
+                format!(
+                    "ECHEC ({})",
+                    findings
+                        .iter()
+                        .map(|f| f.id.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+            ynp_core::gate::GateOutcome::Skipped { reason } => format!("sautee — {reason}"),
+        };
+        out.push_str(&format!(
+            "  {:<6}{:<26}{etat}\n",
+            r.gate.code(),
+            r.gate.label()
+        ));
+    }
+
+    // Le verdict seul ne dit pas quoi faire : on l'explicite.
+    out.push_str(match f.verdict {
+        Verdict::Feasible => "\n  Prochaine etape : ynopack plan\n",
+        Verdict::FeasibleWithWork => {
+            "\n  Packageable, mais l'appspec demandera des arbitrages.\n  \
+             Prochaine etape : ynopack plan\n"
+        }
+        Verdict::NotFeasible => {
+            "\n  Le pipeline s'arrete ici. Lever les blocages ci-dessus, ou renoncer.\n"
+        }
+    });
+
+    out
+}
+
+fn constat(f: &Finding) -> String {
+    let mut out = format!("\n  [{}] {}\n", f.id, f.title);
+
+    if !f.detail.is_empty() {
+        for ligne in enrouler(&f.detail, 74) {
+            out.push_str(&format!("        {ligne}\n"));
+        }
+    }
+    for e in &f.evidence {
+        let ou = match (e.line, &e.excerpt) {
+            (Some(l), Some(x)) => format!("{}:{l} — {x}", e.file),
+            (None, Some(x)) => format!("{} — {x}", e.file),
+            _ => e.file.clone(),
+        };
+        out.push_str(&format!("        preuve : {ou}\n"));
+    }
+    if let Some(r) = &f.remediation {
+        for (i, ligne) in enrouler(r, 72).into_iter().enumerate() {
+            out.push_str(&format!(
+                "        {} {ligne}\n",
+                if i == 0 { "→" } else { " " }
+            ));
+        }
+    }
+    out
+}
+
+/// Enroule un texte sans couper les mots : un rapport illisible en terminal
+/// n'est pas lu.
+fn enrouler(texte: &str, largeur: usize) -> Vec<String> {
+    let mut lignes = Vec::new();
+    let mut courante = String::new();
+
+    for mot in texte.split_whitespace() {
+        if !courante.is_empty() && courante.chars().count() + 1 + mot.chars().count() > largeur {
+            lignes.push(std::mem::take(&mut courante));
+        }
+        if !courante.is_empty() {
+            courante.push(' ');
+        }
+        courante.push_str(mot);
+    }
+    if !courante.is_empty() {
+        lignes.push(courante);
+    }
+    lignes
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn l_enroulement_ne_coupe_pas_les_mots() {
+        let l = enrouler(
+            "un texte assez long pour devoir etre reparti sur plusieurs lignes",
+            20,
+        );
+        assert!(l.len() > 2);
+        assert!(l.iter().all(|x| x.chars().count() <= 20), "{l:?}");
+        assert_eq!(
+            l.join(" "),
+            "un texte assez long pour devoir etre reparti sur plusieurs lignes"
+        );
+    }
+
+    #[test]
+    fn un_mot_plus_long_que_la_largeur_n_est_pas_perdu() {
+        let l = enrouler("court anticonstitutionnellement", 10);
+        assert_eq!(l.join(" "), "court anticonstitutionnellement");
+    }
+}
