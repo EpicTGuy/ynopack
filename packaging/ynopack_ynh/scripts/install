@@ -1,0 +1,42 @@
+#!/bin/bash
+# Genere par ynopack.
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# DEPLOIEMENT DES SOURCES
+#=================================================
+ynh_script_progression "Mise en place des fichiers de $app..."
+
+ynh_setup_source --dest_dir="$install_dir"
+
+chown -R "$app:www-data" "$install_dir"
+
+#=================================================
+# CONFIGURATIONS SYSTEME
+#=================================================
+ynh_script_progression "Ajout des configurations systeme liees a $app..."
+
+ynh_config_add_nginx
+
+ynh_config_add_systemd
+
+mkdir -p "/var/log/$app"
+chown -R "$app:www-data" "/var/log/$app"
+ynh_config_add_logrotate
+
+yunohost service add "$app" --description="Ynopack" --log="/var/log/$app/$app.log"
+
+#=================================================
+# DEMARRAGE DU SERVICE
+#=================================================
+ynh_script_progression "Demarrage du service de $app..."
+
+ynh_systemctl --service="$app" --action="start"
+
+#=================================================
+# FIN DU SCRIPT
+#=================================================
+
+ynh_script_progression "Installation de $app terminee"

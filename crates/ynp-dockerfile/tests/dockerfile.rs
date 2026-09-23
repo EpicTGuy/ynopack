@@ -460,3 +460,52 @@ CMD ["/final"]
     assert_eq!(r.expose, vec![9000]);
     assert_eq!(r.start_command().as_deref(), Some("/final"));
 }
+
+#[test]
+fn un_fichier_source_nomme_dockerfile_n_est_pas_un_dockerfile() {
+    // Defaut trouve en faisant analyser ynopack par lui-meme : ses fichiers
+    // `dockerfile.rs` etaient lus comme des Dockerfiles. Il en tirait les
+    // dependances de ses propres fixtures et se croyait ecrit en Python,
+    // parce qu'une fixture contient `FROM python:3.12`.
+    use ynp_core::tree::RepoTree;
+    use ynp_dockerfile::choose_dockerfile;
+
+    let tree = RepoTree::from_pairs([
+        (
+            "crates/ynp-dockerfile/src/dockerfile.rs",
+            "// FROM python:3.12\n",
+        ),
+        (
+            "crates/ynp-dockerfile/tests/dockerfile.rs",
+            "// FROM golang:1\n",
+        ),
+        ("Cargo.toml", "[workspace]\n"),
+    ]);
+    assert_eq!(choose_dockerfile(&tree), None, "aucun vrai Dockerfile ici");
+}
+
+#[test]
+fn les_variantes_legitimes_restent_reconnues() {
+    use ynp_dockerfile::dockerfile::est_un_dockerfile;
+
+    for nom in [
+        "Dockerfile",
+        "dockerfile",
+        "Dockerfile.prod",
+        "Dockerfile.alpine",
+        "grist.Dockerfile",
+        "Containerfile",
+    ] {
+        assert!(est_un_dockerfile(nom), "{nom} devrait etre reconnu");
+    }
+    for nom in [
+        "dockerfile.rs",
+        "Dockerfile.md",
+        "dockerfile.yml",
+        "dockerfile_test.go",
+        "Dockerfile.j2",
+        "dockerfile.tera",
+    ] {
+        assert!(!est_un_dockerfile(nom), "{nom} ne devrait pas l'etre");
+    }
+}

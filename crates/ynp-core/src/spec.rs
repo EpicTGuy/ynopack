@@ -103,7 +103,16 @@ impl AppSpec {
         // sert a rien. Constate sur miniflux : le paquet s'installait, toutes
         // les ressources etaient creees, et le service ne demarrait pas faute
         // de savoir joindre sa base.
-        if self.resources.ports {
+        // Le port peut aussi etre transmis en ligne de commande plutot que par
+        // un fichier de configuration. C'est le cas de ynopack lui-meme, dont
+        // le serveur prend `--addr` : exiger alors une ligne de configuration
+        // reclamerait un fichier qui n'aurait aucune raison d'exister.
+        let port_en_ligne_de_commande = self
+            .runtime
+            .execstart
+            .value()
+            .is_some_and(|c| c.contains("__PORT__"));
+        if self.resources.ports && !port_en_ligne_de_commande {
             push(
                 "runtime.port_binding",
                 self.runtime.port_binding.fixme("runtime.port_binding"),
@@ -538,5 +547,66 @@ mod exemple_documente {
             "l'exemple ne doit contenir aucun FIXME : {:?}",
             spec.unresolved()
         );
+    }
+}
+
+#[cfg(test)]
+mod port_en_ligne_de_commande {
+    use super::*;
+    use crate::facts::Technology;
+
+    fn spec_avec(execstart: &str) -> AppSpec {
+        AppSpec {
+            schema_version: SPEC_SCHEMA_VERSION,
+            app: AppIdentity {
+                id: "demo".into(),
+                name: "Demo".into(),
+                description_en: Known::resolved("x".into()),
+                description_fr: None,
+                version: Known::resolved("1.0".into()),
+                maintainers: vec![],
+            },
+            upstream: Upstream {
+                license: Known::resolved("MIT".into()),
+                ..Default::default()
+            },
+            integration: Integration::default(),
+            install: InstallQuestions::default(),
+            resources: Resources {
+                ports: true,
+                sources: Sources {
+                    url: Known::resolved("u".into()),
+                    sha256: Known::resolved("s".into()),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            runtime: Runtime {
+                technology: Known::resolved(Technology::Rust),
+                execstart: Known::resolved(execstart.into()),
+                ..Default::default()
+            },
+            features: Features {
+                systemd: true,
+                nginx: true,
+                ..Default::default()
+            },
+            docs: Docs::default(),
+        }
+    }
+
+    #[test]
+    fn un_port_passe_en_argument_dispense_de_ligne_de_configuration() {
+        // Cas de ynopack lui-meme : son serveur prend `--addr`. Reclamer une
+        // ligne de configuration exigerait un fichier sans raison d'etre.
+        let s = spec_avec("__INSTALL_DIR__/serveur --addr 127.0.0.1:__PORT__");
+        assert!(s.is_complete(), "champs manquants : {:?}", s.unresolved());
+    }
+
+    #[test]
+    fn sans_port_dans_la_commande_la_liaison_reste_exigee() {
+        let s = spec_avec("__INSTALL_DIR__/serveur");
+        let manquants: Vec<String> = s.unresolved().into_iter().map(|(c, _)| c).collect();
+        assert!(manquants.contains(&"runtime.port_binding".to_string()));
     }
 }

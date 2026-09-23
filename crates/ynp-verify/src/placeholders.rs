@@ -66,6 +66,56 @@ pub fn extraire(contenu: &str) -> BTreeSet<String> {
     out
 }
 
+/// Jetons qu'un paquet peut resoudre, d'apres son seul manifest.
+///
+/// Permet de controler un paquet ecrit a la main, sans specification — y
+/// compris ceux d'autres auteurs. Le verificateur devient ainsi utilisable
+/// comme un linter autonome.
+pub fn disponibles_depuis_manifest(manifest: &toml::Value) -> BTreeSet<String> {
+    let mut out: BTreeSet<String> = TOUJOURS_FOURNIS.iter().map(|s| s.to_string()).collect();
+    out.extend(DEFINIS_PAR_LE_SCRIPT.iter().map(|s| s.to_string()));
+
+    let declare = |chemin: &[&str]| -> bool {
+        let mut courant = manifest;
+        for c in chemin {
+            match courant.get(c) {
+                Some(v) => courant = v,
+                None => return false,
+            }
+        }
+        true
+    };
+
+    let actif = |ressource: &str| match ressource {
+        "ports" => declare(&["resources", "ports"]),
+        "data_dir" => declare(&["resources", "data_dir"]),
+        "database" => declare(&["resources", "database"]),
+        "phpfpm" => manifest
+            .get("resources")
+            .and_then(|r| r.get("apt"))
+            .and_then(|a| a.get("packages"))
+            .map(|p| p.to_string().contains("php"))
+            .unwrap_or(false),
+        "nodejs" => declare(&["resources", "nodejs"]),
+        "ruby" => declare(&["resources", "ruby"]),
+        "go" => declare(&["resources", "go"]),
+        _ => false,
+    };
+    for (jeton, ressource) in SELON_RESSOURCE {
+        if actif(ressource) {
+            out.insert((*jeton).to_string());
+        }
+    }
+
+    // Chaque question d'installation devient un reglage du meme nom.
+    if let Some(toml::Value::Table(questions)) = manifest.get("install") {
+        for nom in questions.keys() {
+            out.insert(nom.to_ascii_uppercase());
+        }
+    }
+    out
+}
+
 /// Jetons qu'un paquet peut resoudre, d'apres ce que sa specification declare.
 pub fn disponibles(spec: &AppSpec) -> BTreeSet<String> {
     let mut out: BTreeSet<String> = TOUJOURS_FOURNIS.iter().map(|s| s.to_string()).collect();

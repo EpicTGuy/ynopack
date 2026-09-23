@@ -32,7 +32,14 @@ pub fn build(spec: &AppSpec) -> (Value, Vec<String>) {
     };
     // Une ressource provisionnee dont l'application ignore l'existence ne sert
     // a rien : ces liaisons sont exigees des que la ressource l'est.
-    let port_binding = if spec.resources.ports {
+    // Meme exemption que dans la specification : un port passe en argument de
+    // la commande de demarrage n'a pas besoin d'une ligne de configuration.
+    let port_en_argument = spec
+        .runtime
+        .execstart
+        .value()
+        .is_some_and(|c| c.contains("__PORT__"));
+    let port_binding = if spec.resources.ports && !port_en_argument {
         resoudre("runtime.port_binding", spec.runtime.port_binding.value())
     } else {
         String::new()

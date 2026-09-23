@@ -1,0 +1,46 @@
+#!/bin/bash
+# Genere par ynopack.
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# ARRET DU SERVICE
+#=================================================
+ynh_script_progression "Arret du service de $app..."
+
+ynh_systemctl --service="$app" --action="stop"
+
+#=================================================
+# MISE A JOUR DES SOURCES
+#=================================================
+ynh_script_progression "Mise a jour de $app..."
+
+# --full_replace efface le repertoire avant de redeployer : sans cela, les
+# fichiers supprimes en amont subsisteraient d'une version a l'autre.
+ynh_setup_source --dest_dir="$install_dir" --full_replace
+
+chown -R "$app:www-data" "$install_dir"
+
+#=================================================
+# CONFIGURATIONS SYSTEME
+#=================================================
+ynh_script_progression "Mise a jour des configurations systeme..."
+
+ynh_config_add_nginx
+ynh_config_add_systemd
+ynh_config_add_logrotate
+yunohost service add "$app" --description="Ynopack" --log="/var/log/$app/$app.log"
+
+#=================================================
+# REDEMARRAGE DU SERVICE
+#=================================================
+ynh_script_progression "Redemarrage du service de $app..."
+
+ynh_systemctl --service="$app" --action="start"
+
+#=================================================
+# FIN DU SCRIPT
+#=================================================
+
+ynh_script_progression "Mise a jour de $app terminee"

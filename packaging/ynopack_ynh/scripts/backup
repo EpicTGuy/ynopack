@@ -1,0 +1,35 @@
+#!/bin/bash
+# Genere par ynopack.
+
+source ../settings/scripts/_common.sh
+source /usr/share/yunohost/helpers
+
+# Ces appels ne copient rien : ils *declarent* ce qui doit etre sauvegarde.
+# La copie est faite par le coeur, apres ce script.
+
+ynh_print_info "Declaration des fichiers a sauvegarder..."
+
+#=================================================
+# REPERTOIRES
+#=================================================
+
+ynh_backup "$install_dir"
+
+# Le repertoire de donnees n'est pas inclus dans la sauvegarde automatique
+# d'avant-mise-a-jour : il peut peser plusieurs gigaoctets.
+ynh_backup "$data_dir"
+
+#=================================================
+# CONFIGURATIONS SYSTEME
+#=================================================
+
+ynh_backup "/etc/nginx/conf.d/$domain.d/$app.conf"
+ynh_backup "/etc/systemd/system/$app.service"
+ynh_backup "/etc/logrotate.d/$app"
+ynh_backup "/var/log/$app/"
+
+#=================================================
+# FIN DU SCRIPT
+#=================================================
+
+ynh_print_info "Sauvegarde de $app declaree."

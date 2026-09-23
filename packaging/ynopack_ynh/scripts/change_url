@@ -1,0 +1,24 @@
+#!/bin/bash
+# Genere par ynopack.
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_script_progression "Arret du service de $app..."
+ynh_systemctl --service="$app" --action="stop"
+
+#=================================================
+# MISE A JOUR DE L'ADRESSE
+#=================================================
+ynh_script_progression "Mise a jour des configurations..."
+
+ynh_config_change_url_nginx
+
+ynh_script_progression "Redemarrage du service de $app..."
+ynh_systemctl --service="$app" --action="start"
+
+#=================================================
+# FIN DU SCRIPT
+#=================================================
+
+ynh_script_progression "Changement d'adresse de $app termine"

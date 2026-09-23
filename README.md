@@ -18,29 +18,29 @@ G5 Publication ..................... ok   https://forge.local/etg/bar_ynh
    yunohost app install bar
 ```
 
-## Le parti pris : aucun LLM à l'exécution
+## Comment il procède
 
-Des agents IA **construisent** l'outil. L'outil, lui, ne fait appel à aucun modèle : ni clé d'API,
-ni réseau hors la forge, ni résultat qui change d'une exécution à l'autre.
+Une application auto-hébergeable moderne décrit déjà sa construction quelque
+part : un `Dockerfile` indique son image de base, donc sa version de runtime ;
+ses lignes `apt-get install` donnent ses dépendances ; son `EXPOSE` donne son
+port ; son `CMD` donne sa commande de démarrage. Un `docker-compose.yml` ajoute
+la base de données, les volumes et la configuration.
 
-Ce n'est pas un choix idéologique, c'est ce que permet la nature du problème. Une application
-auto-hébergeable moderne embarque déjà sa recette de construction sous forme lisible par une
-machine. Un `Dockerfile`, c'est une image de base (donc une version de runtime), des `apt-get
-install` (donc des dépendances, littéralement), des `RUN npm ci && npm run build` (donc des étapes
-de build), un `EXPOSE` (donc un port), un `CMD` (donc un `ExecStart` systemd). Le travail qu'on
-confierait d'ordinaire à un modèle — « lis le README et devine » — est en réalité une
-**transpilation** : de l'analyse syntaxique, pas du raisonnement.
+ynopack lit ces fichiers et en tire un `appspec.toml` — le document où toutes
+les décisions de packaging sont réunies, et le seul qu'on relise. Le paquet est
+ensuite produit mécaniquement à partir de là.
 
-Reste ce qui ne se déduit pas. La réponse n'est pas de deviner, c'est de le dire :
+Quand un champ ne se déduit pas, l'outil l'écrit au lieu de choisir à votre
+place :
 
 ```toml
 # appspec.toml — extrait
 execstart = { unknown = "aucun CMD dans le Dockerfile", look_in = ["Procfile", "README.md"] }
 ```
 
-`verify` refuse tout paquet où subsiste un marqueur de ce genre. **L'outil ne rend jamais un paquet
-qui a l'air fini alors qu'il est deviné** — et c'est plus sûr qu'un modèle, qui comble les trous
-sans le signaler.
+`verify` refuse tout paquet où subsiste un champ de ce genre. Vous obtenez donc
+soit un paquet complet, soit la liste précise de ce qu'il reste à renseigner —
+jamais un paquet qui a l'air fini alors qu'il ne l'est pas.
 
 ## Le pipeline
 
@@ -56,8 +56,13 @@ sans le signaler.
 | `ynopack run <url>` | tout | Enchaîne les étapes, s'arrête à la première gate en échec |
 | `ynopack eval` | matrice | Compare les paquets produits à ceux du catalogue officiel |
 
-Il existe aussi `ynopack-server`, qui expose le même pipeline dans un navigateur :
-on colle une URL, on suit la progression en direct.
+Deux commandes servent à trouver quoi packager plutôt qu'à le faire :
+`ynopack wishlist` liste ce que la communauté YunoHost attend, et
+`ynopack alternatives <nom>` propose les logiciels auto-hébergeables voisins
+qui ne sont pas encore au catalogue.
+
+Il existe aussi `ynopack-server`, qui expose le même pipeline dans un
+navigateur : on colle une URL, on suit la progression en direct.
 
 Un agent n'écrit jamais de bash : il édite `appspec.toml`, relance `generate`, puis `verify`.
 
@@ -114,7 +119,9 @@ Ce que la validation sur des applications réelles établit aujourd'hui :
 - le cycle complet sur l'instance de test — installation, service actif, migrations de base,
   sauvegarde, restauration, désinstallation sans le moindre résidu — passe en une centaine de secondes ;
 - l'accord avec les paquets écrits à la main est de **85 %** sur le corpus d'évaluation, et les
-  écarts restants sont des arbitrages, pas des erreurs.
+  écarts restants sont des arbitrages, pas des erreurs ;
+- ynopack se package lui-même, et le paquet obtenu passe le même cycle sur
+  l'instance de test.
 
 La gate G4 (`package_check`, niveau 0-8) reste optionnelle : elle demande une VM dédiée, et la CI
 publique de YunoHost mesure le même niveau gratuitement sur une pull request.

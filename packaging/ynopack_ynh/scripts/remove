@@ -1,0 +1,32 @@
+#!/bin/bash
+# Genere par ynopack.
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+# Le coeur de YunoHost deprovisionne les resources du manifest APRES ce script :
+# utilisateur systeme, repertoire d'installation, base, ports. On ne retire ici
+# que ce que le script d'installation a ajoute de son cote.
+
+#=================================================
+# RETRAIT DES CONFIGURATIONS SYSTEME
+#=================================================
+ynh_script_progression "Retrait des configurations systeme liees a $app..."
+
+ynh_config_remove_logrotate
+
+if ynh_hide_warnings yunohost service status "$app" >/dev/null; then
+    yunohost service remove "$app"
+fi
+ynh_config_remove_systemd
+ynh_config_remove_nginx
+
+# Les journaux ne sont pas effaces ici : le coeur s'en charge, et les detruire
+# maintenant les ferait disparaitre si une mise a jour echouait et devait etre
+# annulee.
+
+#=================================================
+# FIN DU SCRIPT
+#=================================================
+
+ynh_script_progression "Suppression de $app terminee"
