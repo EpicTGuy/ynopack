@@ -2435,6 +2435,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "clap",
  "futures",
  "serde",
  "serde_json",

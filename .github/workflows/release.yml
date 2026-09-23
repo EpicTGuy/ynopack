@@ -1,0 +1,64 @@
+name: Release
+
+# Produit les binaires que le paquet YunoHost telechargera. Les compiler ici
+# plutot que sur la machine de l'utilisateur est ce que font tous les paquets
+# Rust du catalogue — et ce que notre propre regle BUILD001 recommande.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  binaires:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Des coureurs natifs plutot qu'une compilation croisee : moins de
+          # pieces mobiles, et les binaires sont testes sur leur architecture.
+          - runner: ubuntu-latest
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Compiler
+        run: cargo build --release -p ynopack-cli -p ynopack-server
+
+      - name: Empaqueter
+        run: |
+          mkdir -p dist
+          cp target/release/ynopack target/release/ynopack-server dist/
+          # Les templates et tables sont incorpores au binaire ; seule la
+          # documentation de reference accompagne l'archive.
+          cp README.md LICENSE dist/
+          tar czf "ynopack-linux-${{ matrix.arch }}.tar.gz" -C dist .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ynopack-linux-${{ matrix.arch }}
+          path: ynopack-linux-${{ matrix.arch }}.tar.gz
+
+  publier:
+    needs: binaires
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Sommes de controle
+        run: sha256sum ynopack-linux-*.tar.gz | tee SHA256SUMS
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ynopack-linux-*.tar.gz
+            SHA256SUMS
+          generate_release_notes: true

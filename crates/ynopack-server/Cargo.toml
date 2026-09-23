@@ -19,6 +19,7 @@ ynp-spec.workspace = true
 ynp-gen.workspace = true
 ynp-verify.workspace = true
 axum.workspace = true
+clap.workspace = true
 tokio = { workspace = true, features = ["sync", "time"] }
 tower-http.workspace = true
 serde.workspace = true

@@ -4,6 +4,8 @@
 //! le CLI. Une divergence entre les deux interfaces serait une source
 //! d'incomprehension sans contrepartie.
 
+use clap::Parser;
+
 use axum::extract::{Path, State};
 use axum::response::sse::{Event, Sse};
 use axum::response::Html;
@@ -26,6 +28,24 @@ struct Demande {
     url: String,
 }
 
+/// Sans cette declaration, `--help` demarrait le serveur au lieu d'afficher
+/// l'aide : surprenant pour qui decouvre la commande, et genant dans un script.
+#[derive(Parser)]
+#[command(
+    name = "ynopack-server",
+    version,
+    about = "Interface web du packager : coller une URL, suivre le pipeline"
+)]
+struct Options {
+    /// Adresse d'ecoute.
+    #[arg(long, env = "YNOPACK_ADDR", default_value = "127.0.0.1:8730")]
+    addr: String,
+
+    /// Repertoire ou sont ecrits les artefacts de chaque travail.
+    #[arg(long, env = "YNOPACK_OUT", default_value = ".ynopack/web")]
+    out: PathBuf,
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -35,12 +55,10 @@ async fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    let racine = std::env::var("YNOPACK_OUT")
-        .unwrap_or_else(|_| ".ynopack/web".into())
-        .into();
+    let options = Options::parse();
     let etat = Etat {
         registre: Registre::new(),
-        racine,
+        racine: options.out.clone(),
     };
 
     let app = Router::new()
@@ -50,9 +68,8 @@ async fn main() -> anyhow::Result<()> {
         .route("/jobs/:id/events", get(evenements))
         .with_state(etat);
 
-    let adresse = std::env::var("YNOPACK_ADDR").unwrap_or_else(|_| "127.0.0.1:8730".into());
-    let ecoute = tokio::net::TcpListener::bind(&adresse).await?;
-    tracing::info!("ynopack sur http://{adresse}");
+    let ecoute = tokio::net::TcpListener::bind(&options.addr).await?;
+    tracing::info!("ynopack sur http://{}", options.addr);
     axum::serve(ecoute, app).await?;
     Ok(())
 }
