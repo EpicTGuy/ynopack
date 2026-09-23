@@ -461,6 +461,29 @@ pub fn verification(racine: &std::path::Path, constats: &[Finding]) -> String {
     out
 }
 
+/// Deroule d'une campagne de validation dynamique.
+pub fn campagne(r: &ynp_runner::Rapport) -> String {
+    let mut out = format!("\n  {} sur {}\n  {}\n\n", r.app, r.hote, r.url);
+
+    for e in &r.etapes {
+        let marque = if e.reussie { "ok" } else { "ECHEC" };
+        out.push_str(&format!("  {:<28} {marque:<6} {}s\n", e.nom, e.duree_s));
+        if !e.reussie && !e.detail.is_empty() {
+            for ligne in e.detail.lines().take(12) {
+                out.push_str(&format!("        {ligne}\n"));
+            }
+        }
+    }
+
+    out.push_str(match r.premiere_erreur() {
+        None => {
+            "\n  Gate G3 franchie : le paquet s'installe, fonctionne et se retire proprement.\n"
+        }
+        Some(_) => "\n  Gate G3 en echec.\n",
+    });
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

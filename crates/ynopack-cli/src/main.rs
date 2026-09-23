@@ -69,6 +69,21 @@ enum Command {
         /// Repertoire du paquet. A defaut, celui produit par `generate`.
         chemin: Option<PathBuf>,
     },
+
+    /// Installe reellement le paquet sur un hote YunoHost et verifie qu'il tourne.
+    Test {
+        /// Alias SSH de l'hote, tel que declare dans ~/.ssh/config.
+        #[arg(long, default_value = "dell")]
+        host: String,
+
+        /// Domaine d'installation. A defaut, le domaine principal de l'hote.
+        #[arg(long)]
+        domaine: Option<String>,
+
+        /// Sauter la sauvegarde et la restauration, plus lentes.
+        #[arg(long)]
+        rapide: bool,
+    },
 }
 
 #[tokio::main]
@@ -97,6 +112,11 @@ async fn run() -> anyhow::Result<()> {
         Command::Plan { url, force } => plan(url.as_deref(), *force, &cli).await.map(|_| ()),
         Command::Generate { force } => generate(*force, &cli),
         Command::Verify { chemin } => verify(chemin.as_deref(), &cli),
+        Command::Test {
+            host,
+            domaine,
+            rapide,
+        } => test(host, domaine.clone(), *rapide, &cli).await,
     }
 }
 
@@ -346,4 +366,43 @@ fn syntaxe_bash(racine: &std::path::Path) -> anyhow::Result<Vec<ynp_core::Findin
         }
     }
     Ok(out)
+}
+
+/// Gate G3 : le paquet s'installe-t-il et fonctionne-t-il vraiment ?
+async fn test(host: &str, domaine: Option<String>, rapide: bool, cli: &Cli) -> anyhow::Result<()> {
+    let spec_path = cli.out.join("appspec.toml");
+    let spec: ynp_core::AppSpec = toml::from_str(&std::fs::read_to_string(&spec_path)?)?;
+    let racine = cli.out.join(format!("{}_ynh", spec.app.id));
+    if !racine.is_dir() {
+        anyhow::bail!(
+            "{} introuvable — lancer d'abord `ynopack generate`",
+            racine.display()
+        );
+    }
+
+    let cible = ynp_runner::Cible {
+        domaine,
+        rapide,
+        ..ynp_runner::Cible::new(host)
+    };
+    if !cli.json {
+        eprintln!("Campagne sur « {host} » — cela prend quelques minutes.\n");
+    }
+
+    let rapport = ynp_runner::run_g3(&racine, &spec, &cible).await?;
+    std::fs::write(
+        cli.out.join("test.json"),
+        serde_json::to_string_pretty(&rapport)?,
+    )?;
+
+    if cli.json {
+        println!("{}", serde_json::to_string_pretty(&rapport)?);
+    } else {
+        print!("{}", report::campagne(&rapport));
+    }
+
+    if rapport.gate().blocks_pipeline() {
+        std::process::exit(13);
+    }
+    Ok(())
 }
