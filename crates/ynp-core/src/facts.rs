@@ -30,6 +30,9 @@ pub struct RepoFacts {
     pub stack: StackFacts,
     pub services: ServiceFacts,
     pub config: ConfigFacts,
+    /// Source retenue, renseignee par `ynp-forge` apres telechargement.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selection: Option<SourceSelection>,
 }
 
 impl RepoFacts {
@@ -439,4 +442,56 @@ mod serde_names {
         assert_eq!(db(Database::MySql), "\"mysql\"");
         assert_eq!(db(Database::MongoDb), "\"mongodb\"");
     }
+}
+
+/// La source retenue pour le packaging, et sa somme de controle.
+///
+/// Conservee dans les faits pour que le pipeline puisse reprendre a l'etage
+/// suivant sans retelecharger — et sans risquer que l'amont ait change entre
+/// deux telechargements, ce qui publierait un sha256 ne correspondant a rien.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceSelection {
+    pub reference: String,
+    /// Valeur de `autoupdate.strategy` dans le manifest.
+    pub strategy: String,
+    pub version: Option<String>,
+    /// `release`, `tag` ou `commit`.
+    pub kind: String,
+    /// Archive des sources.
+    pub url: String,
+    pub sha256: String,
+    /// Binaires deja construits, par architecture.
+    ///
+    /// Quand l'amont en publie, les paquets YunoHost les preferent aux sources :
+    /// `gotify_ynh`, `memos_ynh` et `miniflux_ynh` procedent tous ainsi, avec
+    /// `ram.build = 50M`. Compiler sur la machine cible est le principal motif
+    /// d'echec d'installation sur les petites instances.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub prebuilt: Vec<ArchAsset>,
+}
+
+impl SourceSelection {
+    /// Vrai si l'on peut se dispenser de construire sur la machine cible.
+    pub fn evite_la_compilation(&self) -> bool {
+        !self.prebuilt.is_empty()
+    }
+}
+
+/// Un binaire publie pour une architecture donnee.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArchAsset {
+    /// Nomenclature `dpkg --print-architecture` : amd64, i386, armhf, arm64.
+    pub arch: String,
+    pub name: String,
+    pub url: String,
+    pub sha256: String,
+    /// Motif reconnaissant cet asset d'une version a l'autre, pour
+    /// `autoupdate.asset.<arch>`.
+    pub pattern: String,
+    /// Faux pour un binaire nu, que `ynh_setup_source` deplace au lieu de
+    /// l'extraire. Beaucoup de projets Go publient ainsi : miniflux livre un
+    /// `miniflux-linux-amd64` sans extension, et le paquet officiel le declare
+    /// avec `extract = false` et `rename`.
+    #[serde(default)]
+    pub extract: bool,
 }

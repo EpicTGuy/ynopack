@@ -332,6 +332,30 @@ fn enrouler(texte: &str, largeur: usize) -> Vec<String> {
     lignes
 }
 
+/// Source retenue, et binaires preconstruits s'il y en a.
+pub fn selection(s: &ynp_core::facts::SourceSelection) -> String {
+    let mut out = String::new();
+    out.push('\n');
+
+    if s.evite_la_compilation() {
+        line(
+            &mut out,
+            "source",
+            format!("binaires publies ({})", s.reference),
+        );
+        for a in &s.prebuilt {
+            out.push_str(&format!("    {:<12}{}\n", a.arch, a.name));
+        }
+        // C'est l'information qui compte pour une petite instance.
+        line(&mut out, "", "rien a compiler sur la machine cible".into());
+    } else {
+        line(&mut out, "source", s.url.clone());
+        line(&mut out, "sha256", s.sha256.clone());
+    }
+    line(&mut out, "autoupdate", s.strategy.clone());
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

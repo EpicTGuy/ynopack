@@ -89,7 +89,8 @@ async fn analyze(url: &str, cli: &Cli) -> anyhow::Result<ynp_core::facts::RepoFa
         );
     }
 
-    let facts = ynp_analyze::analyze(fetched.forge, &fetched.tree);
+    let mut facts = ynp_analyze::analyze(fetched.forge, &fetched.tree);
+    facts.selection = Some(fetched.selection.clone());
 
     std::fs::create_dir_all(&cli.out)?;
     let path = cli.out.join("facts.json");
@@ -99,8 +100,7 @@ async fn analyze(url: &str, cli: &Cli) -> anyhow::Result<ynp_core::facts::RepoFa
         println!("{}", serde_json::to_string_pretty(&facts)?);
     } else {
         print!("{}", report::facts(&facts));
-        println!("\n  source          {}", fetched.choice.url);
-        println!("  sha256          {}", fetched.sha256);
+        print!("{}", report::selection(&fetched.selection));
         println!("\nFaits ecrits dans {}", path.display());
     }
     Ok(facts)

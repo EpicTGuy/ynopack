@@ -39,6 +39,10 @@ pub fn find_compose(tree: &[String]) -> Option<String> {
             f.contains("compose") && (f.ends_with(".yml") || f.ends_with(".yaml"))
         })
         .max_by_key(|p| pertinence_compose(p))
+        // Un compose de test ou de poste de developpement n'apprend rien sur le
+        // deploiement : mieux vaut n'en retenir aucun. Constate sur gotify, dont
+        // le seul compose sert a lancer un serveur OIDC pour la suite de tests.
+        .filter(|p| pertinence_compose(p).0 >= 0)
         .cloned()
 }
 

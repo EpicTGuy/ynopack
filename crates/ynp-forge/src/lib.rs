@@ -6,6 +6,7 @@
 
 pub mod archive;
 pub mod github;
+pub mod prebuilt;
 pub mod sources;
 pub mod url;
 
@@ -31,6 +32,8 @@ pub struct Fetched {
     pub choice: SourceChoice,
     /// Somme de controle de l'archive choisie, telle qu'elle ira au manifest.
     pub sha256: String,
+    /// Source retenue, avec les binaires preconstruits s'il y en a.
+    pub selection: ynp_core::facts::SourceSelection,
 }
 
 /// Recupere un depot a partir de son URL.
@@ -54,6 +57,36 @@ pub async fn fetch(repo_url: &str) -> Result<Fetched, FetchError> {
 
     source.commit = Some(choice.reference.clone());
 
+    // Les binaires deja construits, quand l'amont en publie, evitent de
+    // compiler sur la machine cible — ce que font tous les paquets YunoHost de
+    // reference. Leur somme de controle demande un telechargement chacun ;
+    // c'est le prix d'un paquet qui s'installe sur une petite instance.
+    let mut prebuilt = releases
+        .iter()
+        .find(|r| r.tag == choice.reference)
+        .map(prebuilt::select)
+        .unwrap_or_default();
+
+    for asset in &mut prebuilt {
+        let bytes = client.download(&asset.url).await?;
+        asset.sha256 = sources::sha256(&bytes);
+    }
+
+    let selection = ynp_core::facts::SourceSelection {
+        reference: choice.reference.clone(),
+        strategy: choice.strategy.clone(),
+        version: choice.version.clone(),
+        kind: match choice.kind {
+            SourceKind::Release => "release",
+            SourceKind::Tag => "tag",
+            SourceKind::Commit => "commit",
+        }
+        .to_string(),
+        url: choice.url.clone(),
+        sha256: sha256.clone(),
+        prebuilt,
+    };
+
     Ok(Fetched {
         forge: ForgeData {
             source,
@@ -64,5 +97,6 @@ pub async fn fetch(repo_url: &str) -> Result<Fetched, FetchError> {
         tree,
         choice,
         sha256,
+        selection,
     })
 }

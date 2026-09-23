@@ -21,8 +21,8 @@ pub mod spec;
 pub mod tree;
 
 pub use facts::{
-    BuildRecipe, ComposeFacts, ConfigRole, ConfigVar, Database, Forge, RepoFacts, SourceRef,
-    Technology,
+    ArchAsset, BuildRecipe, ComposeFacts, ConfigRole, ConfigVar, Database, Forge, RepoFacts,
+    SourceRef, SourceSelection, Technology,
 };
 pub use finding::{Evidence, Feasibility, Finding, Severity, Verdict};
 pub use gate::{GateId, GateOutcome, GateReport, GateResult};

@@ -181,6 +181,15 @@ impl Rule for BuildGourmand {
     }
 
     fn check(&self, facts: &RepoFacts) -> Option<Finding> {
+        // Si l'amont publie des binaires deja construits, on ne compilera rien
+        // sur la machine cible : l'avertissement n'a plus lieu d'etre.
+        if facts
+            .selection
+            .as_ref()
+            .is_some_and(|s| s.evite_la_compilation())
+        {
+            return None;
+        }
         let build = facts.build.as_ref()?;
         // Un build de frontal se reconnait a ses gestionnaires de paquets
         // JavaScript combines a une etape de construction.
@@ -864,5 +873,38 @@ mod dockerfiles_hors_produit {
         assert!(!tous_les_dockerfiles_sont_hors_produit(&[
             "package.json".to_string()
         ]));
+    }
+}
+
+#[cfg(test)]
+mod binaires_publies {
+    use super::*;
+    use crate::tests::depot_sain;
+    use ynp_core::facts::{ArchAsset, BuildRecipe, SourceSelection};
+
+    #[test]
+    fn l_avertissement_de_build_se_tait_quand_rien_n_est_a_compiler() {
+        let mut f = depot_sain();
+        f.build = Some(BuildRecipe {
+            dockerfile_path: "Dockerfile".into(),
+            build_steps: vec!["npm ci".into(), "npm run build".into()],
+            ..Default::default()
+        });
+        assert!(
+            BuildGourmand.check(&f).is_some(),
+            "sans binaire publie, l'alerte tient"
+        );
+
+        f.selection = Some(SourceSelection {
+            prebuilt: vec![ArchAsset {
+                arch: "amd64".into(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        });
+        assert!(
+            BuildGourmand.check(&f).is_none(),
+            "avec un binaire publie, la machine cible ne compile rien"
+        );
     }
 }

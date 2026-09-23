@@ -219,3 +219,23 @@ services:
     assert_eq!(s.unsupported.len(), 1);
     assert!(s.unsupported[0].contains("minio"));
 }
+
+#[test]
+fn un_compose_de_test_n_est_pas_retenu_faute_de_mieux() {
+    // Cas reel de gotify : son unique compose lance un serveur OIDC pour la
+    // suite de tests. Le retenir laissait croire a une dependance du produit.
+    use ynp_dockerfile::find_compose;
+
+    let tree = vec![
+        "test/oidc/dex/docker-compose.yml".to_string(),
+        "README.md".to_string(),
+    ];
+    assert_eq!(find_compose(&tree), None);
+
+    // En revanche un compose d'auto-hebergement, meme profond, doit sortir.
+    let tree = vec![".docker/selfhost/compose.yml".to_string()];
+    assert_eq!(
+        find_compose(&tree).as_deref(),
+        Some(".docker/selfhost/compose.yml")
+    );
+}
