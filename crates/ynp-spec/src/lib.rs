@@ -355,6 +355,7 @@ fn docs(facts: &RepoFacts) -> Docs {
         pre_install: None,
         post_install: None,
         admin: None,
+        license_text: facts.meta.license_text.clone(),
     }
 }
 

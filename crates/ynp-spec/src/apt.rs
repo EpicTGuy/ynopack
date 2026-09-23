@@ -63,6 +63,15 @@ pub fn packages(facts: &RepoFacts) -> Vec<String> {
         }
     }
 
+    // Le linter l'exige : declarer une base sans installer son serveur laisse
+    // l'application sans rien a quoi se connecter sur une instance ou il
+    // n'est pas deja present.
+    match facts.services.database {
+        ynp_core::facts::Database::PostgreSql => ajouter("postgresql"),
+        ynp_core::facts::Database::MySql => ajouter("mariadb-server"),
+        _ => {}
+    }
+
     out.sort_unstable();
     out
 }

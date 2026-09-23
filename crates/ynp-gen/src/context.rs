@@ -144,6 +144,7 @@ pub fn build(spec: &AppSpec) -> (Value, Vec<String>) {
             "pre_install": spec.docs.pre_install,
             "post_install": spec.docs.post_install,
             "admin": spec.docs.admin,
+            "license_text": spec.docs.license_text,
         },
     });
 

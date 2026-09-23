@@ -37,10 +37,10 @@ ynh_config_remove_phpfpm
 
 ynh_safe_rm "/etc/cron.d/$app"
 {%- endif %}
-{%- if features.logrotate %}
 
-ynh_safe_rm "/var/log/$app"
-{%- endif %}
+# Les journaux ne sont pas effaces ici : le coeur s'en charge, et les detruire
+# maintenant les ferait disparaitre si une mise a jour echouait et devait etre
+# annulee.
 
 #=================================================
 # FIN DU SCRIPT

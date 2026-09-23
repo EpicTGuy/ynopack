@@ -112,6 +112,9 @@ pub struct RepoMeta {
     /// Identifiant SPDX tel que rendu par la forge, ex. `AGPL-3.0`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub license_spdx: Option<String>,
+    /// Texte integral du fichier de licence amont, que le paquet doit inclure.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub license_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

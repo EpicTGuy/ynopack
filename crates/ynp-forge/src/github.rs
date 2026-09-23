@@ -77,6 +77,8 @@ impl GitHub {
             stars: raw.stargazers_count,
             archived: raw.archived,
             pushed_at: raw.pushed_at,
+            // Le texte de licence est lu depuis l'arborescence, pas ici.
+            license_text: None,
             license_spdx: raw
                 .license
                 .and_then(|l| l.spdx_id)

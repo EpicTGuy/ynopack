@@ -55,10 +55,14 @@ pub fn analyze(forge: ForgeData, tree: &RepoTree) -> RepoFacts {
 
     // La forge fait foi quand elle sait classer la licence ; sinon on lit le
     // fichier, ce qui evite de refuser a tort un depot parfaitement libre.
-    if facts.meta.license_spdx.is_none() {
-        if let Some((_, texte)) =
-            tree.first_text(&["LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING"])
-        {
+    // Le texte de licence est recopie tel quel dans le paquet : le linter
+    // officiel exige un fichier LICENSE, et resumer une licence n'a pas de sens.
+    if let Some((_, texte)) = tree.first_text(&["LICENSE", "LICENSE.md", "LICENSE.txt", "COPYING"])
+    {
+        facts.meta.license_text = Some(texte.to_string());
+        // La forge fait foi quand elle sait classer la licence ; sinon on
+        // reconnait le fichier, ce qui evite de refuser a tort un depot libre.
+        if facts.meta.license_spdx.is_none() {
             facts.meta.license_spdx = knowledge::get()
                 .license_from_text(texte)
                 .map(str::to_string);

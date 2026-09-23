@@ -221,7 +221,7 @@ fn liste(items: &[String]) -> String {
 
 // --- Rapport de faisabilite ---
 
-use ynp_core::finding::{Feasibility, Finding, Verdict};
+use ynp_core::finding::{Feasibility, Finding, Severity, Verdict};
 use ynp_core::gate::GateReport;
 
 pub fn feasibility(f: &Feasibility, gates: &GateReport) -> String {
@@ -428,6 +428,36 @@ pub fn spec(s: &ynp_core::AppSpec) -> String {
             }
         }
     }
+    out
+}
+
+/// Resultat de la verification statique.
+pub fn verification(racine: &std::path::Path, constats: &[Finding]) -> String {
+    let mut out = format!("\n  {}\n", racine.display());
+
+    if constats.is_empty() {
+        out.push_str("\n  Paquet conforme : aucun constat.\n");
+        return out;
+    }
+
+    let mut severite_courante = None;
+    for f in constats {
+        if severite_courante != Some(f.severity) {
+            out.push_str(&format!("\n  ── {} ──\n", f.severity.label()));
+            severite_courante = Some(f.severity);
+        }
+        out.push_str(&constat(f));
+    }
+
+    let bloquants = constats
+        .iter()
+        .filter(|f| f.severity == Severity::Blocker)
+        .count();
+    out.push_str(&if bloquants == 0 {
+        "\n  Aucun blocage : le paquet peut etre teste.\n".to_string()
+    } else {
+        format!("\n  {bloquants} blocage(s) : le paquet ne doit pas etre installe en l'etat.\n")
+    });
     out
 }
 

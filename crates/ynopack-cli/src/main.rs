@@ -63,6 +63,12 @@ enum Command {
         #[arg(long)]
         force: bool,
     },
+
+    /// Verifie la conformite statique du paquet genere.
+    Verify {
+        /// Repertoire du paquet. A defaut, celui produit par `generate`.
+        chemin: Option<PathBuf>,
+    },
 }
 
 #[tokio::main]
@@ -90,6 +96,7 @@ async fn run() -> anyhow::Result<()> {
         Command::Assess { url, seuil } => assess(url.as_deref(), *seuil, &cli).await.map(|_| ()),
         Command::Plan { url, force } => plan(url.as_deref(), *force, &cli).await.map(|_| ()),
         Command::Generate { force } => generate(*force, &cli),
+        Command::Verify { chemin } => verify(chemin.as_deref(), &cli),
     }
 }
 
@@ -265,4 +272,78 @@ fn strategie(c: &ynp_forge::SourceChoice) -> &'static str {
         ynp_forge::SourceKind::Tag => "tag",
         ynp_forge::SourceKind::Commit => "commit — ni release ni tag exploitable",
     }
+}
+
+/// Gate G2 : conformite statique.
+fn verify(chemin: Option<&std::path::Path>, cli: &Cli) -> anyhow::Result<()> {
+    let spec_path = cli.out.join("appspec.toml");
+    let spec: ynp_core::AppSpec = toml::from_str(&std::fs::read_to_string(&spec_path)?)?;
+
+    let racine = match chemin {
+        Some(c) => c.to_path_buf(),
+        None => cli.out.join(format!("{}_ynh", spec.app.id)),
+    };
+    if !racine.is_dir() {
+        anyhow::bail!(
+            "{} introuvable — lancer d'abord `ynopack generate`",
+            racine.display()
+        );
+    }
+
+    let mut constats = ynp_verify::verify(&racine, &spec)?;
+    constats.extend(syntaxe_bash(&racine)?);
+
+    let porte = ynp_verify::gate(&constats);
+    std::fs::write(
+        cli.out.join("lint.json"),
+        serde_json::to_string_pretty(&constats)?,
+    )?;
+
+    if cli.json {
+        println!("{}", serde_json::to_string_pretty(&constats)?);
+    } else {
+        print!("{}", report::verification(&racine, &constats));
+    }
+
+    if porte.blocks_pipeline() {
+        std::process::exit(12);
+    }
+    Ok(())
+}
+
+/// `bash -n` sur chaque script : une erreur de syntaxe se voit sans installer.
+fn syntaxe_bash(racine: &std::path::Path) -> anyhow::Result<Vec<ynp_core::Finding>> {
+    use ynp_core::finding::{Evidence, Finding, Severity};
+
+    let mut out = Vec::new();
+    let Ok(entrees) = std::fs::read_dir(racine.join("scripts")) else {
+        return Ok(out);
+    };
+
+    let mut chemins: Vec<_> = entrees.filter_map(Result::ok).map(|e| e.path()).collect();
+    chemins.sort();
+
+    for chemin in chemins.iter().filter(|c| c.is_file()) {
+        let nom = chemin
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let sortie = std::process::Command::new("bash")
+            .arg("-n")
+            .arg(chemin)
+            .output()?;
+        if !sortie.status.success() {
+            out.push(
+                Finding::new(
+                    "BASH001",
+                    Severity::Blocker,
+                    format!("Erreur de syntaxe : {nom}"),
+                )
+                .detail(String::from_utf8_lossy(&sortie.stderr).trim().to_string())
+                .evidence(Evidence::file(format!("scripts/{nom}"))),
+            );
+        }
+    }
+    Ok(out)
 }

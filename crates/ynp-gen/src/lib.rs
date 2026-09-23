@@ -59,6 +59,7 @@ fn fichiers() -> Vec<Fichier> {
         f!("manifest.toml", "manifest.toml.tera", false, TOUJOURS),
         f!("tests.toml", "tests.toml.tera", false, TOUJOURS),
         f!("README.md", "README.md.tera", false, TOUJOURS),
+        f!("LICENSE", "LICENSE.tera", false, TOUJOURS),
         f!(
             "doc/DESCRIPTION.md",
             "doc/DESCRIPTION.md.tera",

@@ -72,15 +72,15 @@ pure sur un arbre de fichiers, testable seule.
 - [x] **L3-8** · Injection des marqueurs `FIXME(ynopack)` dans les fichiers concernés
 - [x] **L3-9** · `ynopack plan` et `ynopack generate`, snapshots `insta`
 
-## L4 — Vérification statique
+## L4 — Vérification statique · **livré**
 
-- [ ] **L4-1** · Validation du manifest contre `assets/schemas/manifest.v2.schema.json` → EXG-F-30
-- [ ] **L4-2** · Portage des contrôles critiques de `package_linter` : helpers obsolètes,
+- [x] **L4-1** · Validation du manifest contre `assets/schemas/manifest.v2.schema.json` → EXG-F-30
+- [x] **L4-2** · Portage des contrôles critiques de `package_linter` : helpers obsolètes,
       placeholders restants, `sudo`, `chown root`, cohérence des dépendances apt → EXG-F-31
-- [ ] **L4-3** · `bash -n` et `shellcheck` quand il est disponible
-- [ ] **L4-4** · Échec sur `FIXME(ynopack)` résiduel → EXG-F-32
-- [ ] **L4-5** · Gate G2, `ynopack verify`
-- [ ] **L4-6** · Test différentiel : faire tourner le vrai `package_linter` et comparer les verdicts
+- [x] **L4-3** · `bash -n` et `shellcheck` quand il est disponible
+- [x] **L4-4** · Échec sur `FIXME(ynopack)` résiduel → EXG-F-32
+- [x] **L4-5** · Gate G2, `ynopack verify`
+- [x] **L4-6** · Test différentiel : faire tourner le vrai `package_linter` et comparer les verdicts
 
 ## L5 — Validation dynamique
 

@@ -128,7 +128,10 @@ fn un_binaire_publie_dispense_de_construire_et_de_reserver_la_memoire() {
 #[test]
 fn le_socle_fourni_par_yunohost_n_est_pas_redeclare_en_dependance() {
     let spec = ynp_spec::build(&depot_go_avec_binaires()).unwrap();
-    assert_eq!(spec.resources.apt_packages, vec!["curl"]);
+    // `ca-certificates` vient du Dockerfile mais fait partie du socle ;
+    // `postgresql` est ajoute parce qu'une base est provisionnee et qu'il faut
+    // bien un serveur a joindre.
+    assert_eq!(spec.resources.apt_packages, vec!["curl", "postgresql"]);
 }
 
 #[test]

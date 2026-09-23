@@ -1,0 +1,134 @@
+//! Jetons `__MAJUSCULE__` des fichiers de configuration.
+//!
+//! YunoHost remplace tout jeton de cette forme par la valeur du reglage
+//! homonyme en minuscules, **y compris dans les commentaires**. Un jeton sans
+//! reglage correspondant fait echouer l'installation avec « Variable $x wasn't
+//! initialized » — ce qui nous est arrive en ecrivant `__MAJUSCULES__` dans un
+//! commentaire a titre d'exemple.
+//!
+//! Ce controle est donc ne d'une installation reelle, et c'est le genre de
+//! defaut qu'aucune relecture ne rattrape.
+
+use std::collections::BTreeSet;
+use ynp_core::AppSpec;
+
+/// Reglages que le coeur de YunoHost fournit toujours.
+const TOUJOURS_FOURNIS: &[&str] = &["APP", "DOMAIN", "PATH", "INSTALL_DIR"];
+
+/// Reglages fournis seulement si la ressource correspondante est declaree.
+const SELON_RESSOURCE: &[(&str, &str)] = &[
+    ("PORT", "ports"),
+    ("DATA_DIR", "data_dir"),
+    ("DB_NAME", "database"),
+    ("DB_USER", "database"),
+    ("DB_PWD", "database"),
+    ("PHP_VERSION", "phpfpm"),
+    ("NODEJS_DIR", "nodejs"),
+    ("PATH_WITH_NODEJS", "nodejs"),
+    ("RUBY_DIR", "ruby"),
+    ("PATH_WITH_RUBY", "ruby"),
+    ("GO_DIR", "go"),
+    ("PATH_WITH_GO", "go"),
+];
+
+/// Reglages definis par le script d'installation lui-meme.
+const DEFINIS_PAR_LE_SCRIPT: &[&str] = &["SECRET", "MAIL_PWD"];
+
+/// Jetons presents dans un contenu, dans l'ordre d'apparition.
+pub fn extraire(contenu: &str) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    let octets = contenu.as_bytes();
+    let mut i = 0;
+
+    while i + 4 < octets.len() {
+        if octets[i] != b'_' || octets[i + 1] != b'_' {
+            i += 1;
+            continue;
+        }
+        let debut = i + 2;
+        let mut j = debut;
+        while j < octets.len()
+            && (octets[j].is_ascii_uppercase() || octets[j].is_ascii_digit() || octets[j] == b'_')
+        {
+            // Un double tiret bas ferme le jeton.
+            if octets[j] == b'_' && j + 1 < octets.len() && octets[j + 1] == b'_' {
+                break;
+            }
+            j += 1;
+        }
+        if j > debut && j + 1 < octets.len() && octets[j] == b'_' && octets[j + 1] == b'_' {
+            out.insert(contenu[debut..j].to_string());
+            i = j + 2;
+        } else {
+            i += 1;
+        }
+    }
+    out
+}
+
+/// Jetons qu'un paquet peut resoudre, d'apres ce que sa specification declare.
+pub fn disponibles(spec: &AppSpec) -> BTreeSet<String> {
+    let mut out: BTreeSet<String> = TOUJOURS_FOURNIS.iter().map(|s| s.to_string()).collect();
+    out.extend(DEFINIS_PAR_LE_SCRIPT.iter().map(|s| s.to_string()));
+
+    let actif = |ressource: &str| match ressource {
+        "ports" => spec.resources.ports,
+        "data_dir" => spec.resources.data_dir,
+        "database" => spec.resources.database.manifest_type().is_some(),
+        "phpfpm" => spec.features.phpfpm,
+        "nodejs" => spec.resources.nodejs_version.is_some(),
+        "ruby" => spec.resources.ruby_version.is_some(),
+        "go" => spec.resources.go_version.is_some(),
+        _ => false,
+    };
+    for (jeton, ressource) in SELON_RESSOURCE {
+        if actif(ressource) {
+            out.insert((*jeton).to_string());
+        }
+    }
+
+    // Les reponses aux questions d'installation deviennent des reglages.
+    for q in &spec.install.extra {
+        out.insert(q.name.to_ascii_uppercase());
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn les_jetons_sont_extraits_y_compris_dans_un_commentaire() {
+        // C'est precisement ce cas qui a fait echouer une installation.
+        let c = "# Les __MAJUSCULES__ sont remplacees\nPORT=__PORT__\n";
+        let j = extraire(c);
+        assert!(j.contains("MAJUSCULES"));
+        assert!(j.contains("PORT"));
+    }
+
+    #[test]
+    fn un_mot_sans_double_tiret_bas_n_est_pas_un_jeton() {
+        let j = extraire("UPPER=value\n_x_=1\nA__B=2\n");
+        assert!(j.is_empty(), "{j:?}");
+    }
+
+    #[test]
+    fn les_jetons_composes_sont_reconnus_entiers() {
+        let j = extraire("PATH=__PATH_WITH_NODEJS__\ndir=__INSTALL_DIR__\n");
+        assert!(j.contains("PATH_WITH_NODEJS"));
+        assert!(j.contains("INSTALL_DIR"));
+        assert!(
+            !j.contains("PATH"),
+            "le jeton long ne doit pas etre coupe : {j:?}"
+        );
+    }
+
+    #[test]
+    fn deux_jetons_colles_sont_separes() {
+        // `https://__DOMAIN____PATH__` est une ecriture courante.
+        let j = extraire("url=https://__DOMAIN____PATH__\n");
+        assert!(j.contains("DOMAIN"), "{j:?}");
+        assert!(j.contains("PATH"), "{j:?}");
+    }
+}

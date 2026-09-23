@@ -1,5 +1,6 @@
 [package]
 name = "ynp-verify"
+description = "Conformite statique du paquet genere"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -7,3 +8,9 @@ license.workspace = true
 
 [dependencies]
 ynp-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+jsonschema.workspace = true
+regex.workspace = true
+thiserror.workspace = true

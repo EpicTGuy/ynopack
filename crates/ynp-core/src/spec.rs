@@ -428,6 +428,12 @@ pub struct Docs {
     pub post_install: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub admin: Option<String>,
+    /// Texte de la licence amont, recopie tel quel dans le fichier LICENSE.
+    ///
+    /// Le linter officiel exige ce fichier. Le recopier depuis l'amont est la
+    /// seule option honnete : resumer ou reecrire une licence n'a pas de sens.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub license_text: Option<String>,
 }
 
 #[cfg(test)]

@@ -1,0 +1,7 @@
+{% if docs.license_text %}{{ docs.license_text }}{% else %}Ce paquet est distribue sous la licence {{ upstream.license }}.
+
+Le texte integral de la licence n'a pas pu etre recupere depuis le depot amont.
+Le consulter sur {{ upstream.code | default(value="le site du projet") }} et le
+recopier ici avant publication : le linter officiel refuse un LICENSE absent ou
+reduit a un renvoi.
+{% endif %}
