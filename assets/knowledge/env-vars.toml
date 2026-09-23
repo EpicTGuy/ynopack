@@ -1,0 +1,82 @@
+# Role canonique des variables de configuration.
+#
+# Reconnaitre qu'une variable nommee DATABASE_URL porte l'adresse de la base est
+# ce qui permet de cabler la configuration de l'application sur les valeurs
+# YunoHost sans rien deviner. C'est de la donnee, pas de l'intelligence : chaque
+# entree vient d'une application reelle.
+#
+# L'ordre compte : la premiere regle qui correspond gagne. Les roles les plus
+# specifiques doivent donc precer les plus generaux.
+
+[[rule]]
+role = "database_url"
+exact = [
+  "DATABASE_URL", "DATABASE_URI", "DB_URL", "DB_URI", "DB_CONNECTION_STRING",
+  "POSTGRES_URL", "POSTGRESQL_URL", "MYSQL_URL", "MONGO_URL", "MONGODB_URI",
+  "SQLALCHEMY_DATABASE_URI", "DATABASE_CONNECTION",
+]
+
+[[rule]]
+role = "database_host"
+exact = ["DB_HOST", "DATABASE_HOST", "POSTGRES_HOST", "MYSQL_HOST", "PGHOST", "DB_SERVER"]
+
+[[rule]]
+role = "database_name"
+exact = ["DB_NAME", "DATABASE_NAME", "POSTGRES_DB", "MYSQL_DATABASE", "PGDATABASE", "DB_DATABASE"]
+
+[[rule]]
+role = "database_user"
+exact = ["DB_USER", "DB_USERNAME", "DATABASE_USER", "POSTGRES_USER", "MYSQL_USER", "PGUSER"]
+
+[[rule]]
+role = "database_password"
+exact = [
+  "DB_PASSWORD", "DB_PASS", "DATABASE_PASSWORD", "POSTGRES_PASSWORD",
+  "MYSQL_PASSWORD", "MYSQL_ROOT_PASSWORD", "PGPASSWORD",
+]
+
+[[rule]]
+role = "port"
+exact = [
+  "PORT", "HTTP_PORT", "SERVER_PORT", "APP_PORT", "LISTEN_PORT", "WEB_PORT",
+  "BIND_PORT", "HTTP_LISTEN_PORT", "SERVICE_PORT",
+]
+suffix = ["_PORT"]
+
+[[rule]]
+role = "base_url"
+exact = [
+  "APP_URL", "BASE_URL", "PUBLIC_URL", "SITE_URL", "EXTERNAL_URL", "ROOT_URL",
+  "NEXTAUTH_URL", "APP_BASE_URL", "URL", "CANONICAL_URL", "SERVER_URL",
+  "PUBLIC_ORIGIN", "ORIGIN", "HOSTNAME", "DOMAIN", "APP_DOMAIN",
+]
+
+[[rule]]
+role = "admin_email"
+exact = ["ADMIN_EMAIL", "INITIAL_ADMIN_EMAIL", "DEFAULT_ADMIN_EMAIL", "SUPERUSER_EMAIL"]
+
+[[rule]]
+role = "admin_user"
+exact = ["ADMIN_USER", "ADMIN_USERNAME", "INITIAL_ADMIN_USER", "SUPERUSER_USERNAME"]
+
+[[rule]]
+role = "admin_password"
+exact = ["ADMIN_PASSWORD", "INITIAL_ADMIN_PASSWORD", "SUPERUSER_PASSWORD", "DEFAULT_ADMIN_PASSWORD"]
+
+[[rule]]
+role = "data_path"
+exact = ["DATA_DIR", "DATA_PATH", "STORAGE_PATH", "UPLOAD_DIR", "MEDIA_ROOT", "FILES_DIR", "STORAGE_DIR"]
+
+[[rule]]
+role = "smtp_host"
+exact = ["SMTP_HOST", "MAIL_HOST", "EMAIL_HOST", "MAILER_DSN"]
+
+[[rule]]
+role = "log_level"
+exact = ["LOG_LEVEL", "LOGLEVEL", "RUST_LOG", "DEBUG_LEVEL"]
+
+# Valeurs a generer aleatoirement plutot qu'a recopier depuis l'exemple amont :
+# un secret present dans un .env.example est, par construction, public.
+[[rule]]
+role = "secret"
+contains = ["SECRET", "PASSWORD", "PASSWD", "TOKEN", "PRIVATE_KEY", "API_KEY", "ENCRYPTION_KEY", "SALT"]

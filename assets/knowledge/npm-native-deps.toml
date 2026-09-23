@@ -1,0 +1,23 @@
+# Modules npm qui compilent du code natif et exigent donc des paquets Debian.
+#
+# Un `npm ci` qui echoue sur une instance YunoHost tient presque toujours a une
+# bibliotheque -dev manquante. Ces dependances n'apparaissent nulle part dans le
+# package.json : seule cette table permet de les prevoir.
+
+[deps]
+"sharp" = ["libvips-dev"]
+"canvas" = ["libcairo2-dev", "libpango1.0-dev", "libjpeg-dev", "libgif-dev", "librsvg2-dev"]
+"node-gyp" = ["build-essential", "python3"]
+"bcrypt" = ["build-essential", "python3"]
+"sqlite3" = ["libsqlite3-dev", "build-essential"]
+"better-sqlite3" = ["build-essential", "python3"]
+"pg-native" = ["libpq-dev"]
+"mysql2" = []
+"grpc" = ["build-essential"]
+"puppeteer" = ["chromium", "fonts-liberation"]
+"playwright" = ["chromium"]
+"ldapjs" = ["libldap2-dev", "libsasl2-dev"]
+"sodium-native" = ["build-essential"]
+"zeromq" = ["build-essential", "libzmq3-dev"]
+"usb" = ["libudev-dev"]
+"serialport" = ["build-essential", "libudev-dev"]

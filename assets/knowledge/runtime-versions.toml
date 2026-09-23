@@ -1,0 +1,18 @@
+# Ce que Debian bookworm fournit nativement.
+#
+# Sert a la regle PY001 : contrairement a nodejs, ruby, go et composer, Python
+# n'a pas de `[resources]` cote YunoHost. Une application exigeant un Python
+# different de celui de bookworm demande un venv ecrit a la main.
+
+[bookworm]
+php = "8.2"
+python = "3.11"
+ruby = "3.1"
+nodejs = "18.19"
+go = "1.19"
+java = "17"
+
+# Technologies pour lesquelles le coeur de YunoHost sait provisionner une
+# version arbitraire via une resource du manifest.
+[resources]
+provisionable = ["nodejs", "ruby", "go", "composer"]

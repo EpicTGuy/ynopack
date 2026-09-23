@@ -18,6 +18,7 @@ pub mod finding;
 pub mod gate;
 pub mod known;
 pub mod spec;
+pub mod tree;
 
 pub use facts::{
     BuildRecipe, ComposeFacts, ConfigRole, ConfigVar, Database, Forge, RepoFacts, SourceRef,
@@ -27,6 +28,7 @@ pub use finding::{Evidence, Feasibility, Finding, Severity, Verdict};
 pub use gate::{GateId, GateOutcome, GateReport, GateResult};
 pub use known::{Known, Unresolved};
 pub use spec::AppSpec;
+pub use tree::RepoTree;
 
 /// Seuil de score par defaut separant « faisable » de « faisable avec travail ».
 pub const DEFAULT_FEASIBILITY_THRESHOLD: u8 = 60;
