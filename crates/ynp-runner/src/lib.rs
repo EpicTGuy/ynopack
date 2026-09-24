@@ -259,7 +259,16 @@ async fn binaires_executables(
     ))
 }
 
-/// Interroge l'application sur le port que le coeur lui a reserve.
+/// Interroge l'application sur le port que le coeur lui a reserve, a l'adresse
+/// exacte que le reverse-proxy lui transmettra.
+///
+/// Le chemin compte autant que le port. nginx passe l'URL complete, chemin
+/// d'installation compris : une application qui n'ecoute qu'a la racine rend
+/// 404 sur tout le reste. Interroger « / » ne le verrait pas, et l'endpoint
+/// public non plus des que le portail protege l'application — sa redirection
+/// vers le SSO ressemble a une reponse. Constate sur yunopack lui-meme, dont
+/// l'interface etait injoignable sur `/yunopack/` alors que les trois autres
+/// controles etaient au vert.
 async fn repondre_sur_son_port(
     hote: &Hote,
     app: &str,
@@ -273,24 +282,49 @@ async fn repondre_sur_son_port(
         return Ok(chrono.etape("reponse sur le port", false, "aucun port reserve".into()));
     }
 
+    let chemin = hote
+        .executer(&format!("yunohost app setting {app} path"))
+        .await?;
+    let chemin = chemin_interroge(chemin.texte());
+
     let code = hote
         .executer(&format!(
-            "curl -s -o /dev/null -w '%{{http_code}}' --max-time 10 http://127.0.0.1:{port}/"
+            "curl -s -o /dev/null -w '%{{http_code}}' --max-time 10 http://127.0.0.1:{port}{chemin}"
         ))
         .await?;
     let c = code.texte().to_string();
-    // « 000 » est la reponse de curl quand rien n'ecoute.
-    let repond = c != "000" && !c.is_empty();
+    let adresse = format!("127.0.0.1:{port}{chemin}");
+
+    // « 000 » est la reponse de curl quand rien n'ecoute ; 404 celle d'une
+    // application qui tourne mais ignore le chemin ou elle est installee.
+    let muet = c.is_empty() || c == "000";
+    let hors_chemin = c == "404";
+    let repond = !muet && !hors_chemin;
 
     Ok(chrono.etape(
         "reponse sur le port",
         repond,
-        if repond {
-            String::new()
-        } else {
-            format!("rien n'ecoute sur 127.0.0.1:{port} — le service tourne mais ne sert pas")
+        match (muet, hors_chemin) {
+            (true, _) => {
+                format!("rien n'ecoute sur {adresse} — le service tourne mais ne sert pas")
+            }
+            (_, true) => format!(
+                "404 sur {adresse} — l'application ne sert pas le chemin ou elle est installee ; \
+                 nginx lui transmet l'URL complete, elle doit en tenir compte"
+            ),
+            _ => String::new(),
         },
     ))
+}
+
+/// Le chemin d'installation ramene a la forme interrogeable par curl.
+fn chemin_interroge(reglage: &str) -> String {
+    let net = reglage.trim().trim_matches('/');
+    if net.is_empty() {
+        "/".to_string()
+    } else {
+        format!("/{net}/")
+    }
 }
 
 /// Interroge l'adresse publique, en distinguant l'application du portail.
@@ -481,6 +515,19 @@ mod tests {
             url: "https://x/demo/".into(),
             etapes,
         }
+    }
+
+    #[test]
+    fn le_chemin_interroge_suit_celui_de_l_installation() {
+        assert_eq!(chemin_interroge("/yunopack"), "/yunopack/");
+        assert_eq!(chemin_interroge("/yunopack/"), "/yunopack/");
+        assert_eq!(chemin_interroge(" /outils/yunopack "), "/outils/yunopack/");
+    }
+
+    #[test]
+    fn une_installation_a_la_racine_interroge_la_racine() {
+        assert_eq!(chemin_interroge("/"), "/");
+        assert_eq!(chemin_interroge(""), "/");
     }
 
     #[test]
