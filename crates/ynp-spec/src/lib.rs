@@ -409,10 +409,12 @@ fn tronquer(s: &str, max: usize) -> String {
     if s.chars().count() <= max {
         return s.to_string();
     }
-    // Couper sur un mot plutot qu'au milieu, tant que cela reste lisible.
-    let court: String = s.chars().take(max).collect();
-    match court.rfind(' ') {
-        Some(i) if i > max / 2 => court[..i].to_string(),
-        _ => court,
-    }
+    // Couper sur un mot plutot qu'au milieu, et signaler la coupe : une phrase
+    // qui s'arrete net laisse croire a un texte tronque par accident.
+    let court: String = s.chars().take(max - 1).collect();
+    let coupe = match court.rfind(' ') {
+        Some(i) if i > max / 2 => &court[..i],
+        _ => court.as_str(),
+    };
+    format!("{}…", coupe.trim_end_matches([',', ';', ':', ' ']))
 }

@@ -103,6 +103,10 @@ enum Command {
         /// Preparer aussi une contribution au catalogue officiel de YunoHost.
         #[arg(long)]
         officiel: bool,
+
+        /// URL d'un depot deja publie, a cataloguer sans le repousser.
+        #[arg(long)]
+        depot: Option<String>,
     },
 
     /// Enchaine tout le pipeline, de l'URL au paquet publie.
@@ -196,7 +200,18 @@ async fn run() -> anyhow::Result<()> {
             catalogue,
             simuler,
             officiel,
-        } => publish(forge, catalogue, *simuler, *officiel, &cli).await,
+            depot,
+        } => {
+            publish(
+                forge,
+                catalogue,
+                *simuler,
+                *officiel,
+                depot.as_deref(),
+                &cli,
+            )
+            .await
+        }
         Command::Run { url, host, force } => run_pipeline(url, host.as_deref(), *force, &cli).await,
         Command::Eval { corpus, seulement } => evaluer(corpus, seulement.as_deref(), &cli).await,
         Command::Wishlist {
@@ -510,6 +525,7 @@ async fn publish(
     catalogue: &std::path::Path,
     simuler: bool,
     officiel: bool,
+    deja_publie: Option<&str>,
     cli: &Cli,
 ) -> anyhow::Result<()> {
     let spec: ynp_core::AppSpec =
@@ -525,6 +541,26 @@ async fn publish(
             "le paquet ne passe pas la verification statique — lancer `ynopack verify` \
              et corriger avant de publier"
         );
+    }
+
+    // Un paquet deja publie ailleurs n'a pas a etre repousse : on se contente
+    // de l'inscrire au catalogue et, si demande, de preparer la contribution.
+    if let Some(url) = deja_publie {
+        let manifest: serde_json::Value =
+            toml::from_str::<toml::Value>(&std::fs::read_to_string(racine.join("manifest.toml"))?)
+                .map(|v| serde_json::to_value(v).unwrap_or(serde_json::Value::Null))?;
+
+        let niveau = niveau_mesure(cli);
+        let mut cat = ynp_publish::catalogue::Catalogue::charger(catalogue)?;
+        cat.inscrire(&spec.app.id, manifest, url, "main", "HEAD", niveau);
+        cat.ecrire(catalogue)?;
+
+        println!("\n  {} inscrit au catalogue depuis {url}", spec.app.id);
+        println!("  {} — {} app(s)", catalogue.display(), cat.nombre_d_apps());
+        if officiel {
+            preparer_contribution(&spec, url, niveau, cli)?;
+        }
+        return Ok(());
     }
 
     let Some(forge) = ynp_publish::forge::Forge::depuis_environnement(alias_forge) else {
@@ -905,4 +941,16 @@ fn tronquer(s: &str, max: usize) -> String {
         return s.to_string();
     }
     format!("{}…", s.chars().take(max - 1).collect::<String>())
+}
+
+/// Niveau etabli par la derniere campagne, s'il y en a eu une.
+///
+/// Un cycle G3 complet vaut le niveau 4 : installable, fonctionnel,
+/// sauvegardable. Au-dela, seul `package_check` peut se prononcer.
+fn niveau_mesure(cli: &Cli) -> Option<u8> {
+    std::fs::read_to_string(cli.out.join("test.json"))
+        .ok()
+        .and_then(|t| serde_json::from_str::<ynp_runner::Rapport>(&t).ok())
+        .filter(ynp_runner::Rapport::reussi)
+        .map(|_| 4)
 }

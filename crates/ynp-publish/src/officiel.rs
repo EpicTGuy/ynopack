@@ -10,6 +10,9 @@
 
 use ynp_core::AppSpec;
 
+/// Adresse de l'outil, citee dans le corps de la pull request.
+const OUTIL: &str = "https://github.com/EpicTGuy/ynopack";
+
 /// Niveau minimal attendu par le catalogue officiel.
 ///
 /// En deca, YunoHost signale l'application comme de mauvaise qualite et
@@ -80,7 +83,7 @@ pub fn preparer(
          - version incluse : {}\n\
          - niveau mesuré localement : {} (installation, service, sauvegarde, restauration, \
          désinstallation sans résidu)\n\n\
-         Paquet produit par [ynopack](https://github.com/etg/yunopackage), puis relu.\n\n\
+         Paquet produit par [ynopack]({OUTIL}), puis relu.\n\n\
          ### Reste à faire avant fusion\n\n\
          - [ ] choisir une catégorie dans `categories.toml`\n\
          - [ ] déclencher la CI officielle par un commentaire `!testme`\n\
