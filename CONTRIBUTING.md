@@ -1,17 +1,16 @@
-# Règles de travail pour les agents
+# Contribuer
 
-Ce fichier fait autorité pour tout agent qui contribue au dépôt. Il est court exprès.
+Ce fichier fait autorité pour toute contribution au dépôt. Il est court exprès.
 
 ## Les trois règles qui ne se discutent pas
 
-### 1. Aucun appel à un LLM dans le code livré
+### 1. Les décisions viennent de règles, pas d'inférence
 
-Aucune dépendance vers un client de modèle, aucune clé d'API, aucun appel réseau hors GitHub et
-Forgejo. Si un champ ne peut pas être déduit, on le marque non résolu — on ne le devine pas.
+Aucun appel réseau hors GitHub et Forgejo. Si un champ ne peut pas être déduit, on le marque non
+résolu — on ne le devine pas.
 
 C'est la décision fondatrice du projet ([ADR-002](docs/adr/ADR-002-zero-llm.md)). Si un détecteur
-couvre mal un cas, la réponse est d'enrichir le détecteur ou les tables de `assets/knowledge/`,
-jamais d'ajouter un appel à un modèle.
+couvre mal un cas, la réponse est d'enrichir le détecteur ou les tables de `assets/knowledge/`.
 
 ### 2. On n'écrit pas de bash à la main
 
@@ -19,8 +18,8 @@ Les scripts d'un paquet YunoHost sont **entièrement** produits par les template
 `assets/templates/`. Un correctif sur un paquet généré se fait dans le template ou dans
 l'`AppSpec`, jamais dans le fichier de sortie.
 
-Corollaire pour l'exploitation : un agent qui traite un paquet incomplet **édite `appspec.toml`**,
-puis relance `generate` et `verify`. Il ne corrige pas `scripts/install` directement.
+Corollaire pour l'exploitation : un paquet incomplet se corrige **dans `appspec.toml`**, puis on
+relance `generate` et `verify`. On ne touche pas à `scripts/install` directement.
 
 ### 3. Toute décision passe par `AppSpec`
 
@@ -38,7 +37,7 @@ il constate `EXPOSE 3000`, et c'est `plan` qui en tire une conséquence.
 
 ## Avant de commencer une tâche
 
-1. Lire la tâche dans [BACKLOG.md](BACKLOG.md) — elles sont dimensionnées pour un agent.
+1. Lire la tâche dans [BACKLOG.md](BACKLOG.md) — chacune tient dans un crate ou un détecteur.
 2. Lire la doc YunoHost concernée dans `docs/yunohost/`. **Ne jamais travailler de mémoire** : le
    format de packaging a changé plusieurs fois, et les helpers ont été renommés en 2.1.
 3. Vérifier dans `crates/ynp-core/src/` les types qu'on va manipuler. Ils sont figés : les modifier

@@ -3,8 +3,8 @@
 `appspec.toml` est le seul endroit du pipeline où une décision de packaging est prise. En amont,
 `analyze` collecte des faits ; en aval, `generate` rend des templates sans rien décider.
 
-Conséquence pratique : **un agent n'écrit jamais de bash**. Pour corriger un paquet, il édite
-`appspec.toml`, relance `generate`, puis `verify`.
+Conséquence pratique : **on n'écrit jamais de bash à la main**. Pour corriger un paquet, on
+édite `appspec.toml`, puis on relance `generate` et `verify`.
 
 Exemple complet et à jour : [`tests/fixtures/appspec.example.toml`](../tests/fixtures/appspec.example.toml).
 Un test le relit à chaque exécution de la suite, il ne peut donc pas diverger du code.

@@ -14,7 +14,7 @@ URL ──▶ RepoFacts ──▶ Feasibility ──▶ AppSpec ──▶ arbre 
 ```
 
 Pourquoi cette contrainte. D'abord, un détecteur qui ne décide pas se teste sur un arbre de fichiers
-figé, sans réseau ni contexte : plusieurs agents peuvent travailler en parallèle sans se marcher
+figé, sans réseau ni contexte : plusieurs personnes peuvent travailler en parallèle sans se marcher
 dessus. Ensuite, la relecture humaine se concentre sur un seul fichier, `appspec.toml`, au lieu
 d'être éparpillée dans six scripts bash. Enfin, un bug se localise : une mauvaise valeur vient soit
 d'un fait mal collecté, soit d'une décision mal prise — jamais des deux à la fois.
@@ -118,7 +118,7 @@ Chaque étage écrit un artefact relisible, ce qui permet de reprendre le pipeli
 |---|---|---|---|
 | `facts.json` | JSON | `analyze` | `assess`, `plan` |
 | `report.json` | JSON | `assess` | `plan`, gate G1 |
-| `appspec.toml` | TOML | `plan` | **humain ou agent**, puis `generate` |
+| `appspec.toml` | TOML | `plan` | **relecture**, puis `generate` |
 | `<app>_ynh/` | arbre | `generate` | `verify`, `test`, `publish` |
 | `lint.json` | JSON | `verify` | gate G2 |
 

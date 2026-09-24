@@ -1,7 +1,6 @@
 # Backlog
 
-Tâches dimensionnées pour un agent : un crate, un détecteur ou une règle chacune. Lire
-[AGENTS.md](AGENTS.md) avant de commencer.
+Une tâche, un crate ou un détecteur. Lire [CONTRIBUTING.md](CONTRIBUTING.md) avant de commencer.
 
 **Convention de sortie** : `cargo fmt --all && cargo clippy --workspace --all-targets -- -D warnings
 && cargo test --workspace` passe.
@@ -13,7 +12,7 @@ Tâches dimensionnées pour un agent : un crate, un détecteur ou une règle cha
 - [x] Workspace Cargo, douze crates, profil de release
 - [x] `scripts/refresh-docs.sh` — corpus YunoHost + schémas + `example_ynh` + templates YoloGen
 - [x] `ynp-core` : `Known<T>`, `RepoFacts`, `AppSpec`, `Finding`, `GateReport` — **types figés**
-- [x] Cahier des charges, README, AGENTS.md, ADR
+- [x] Cahier des charges, README, CONTRIBUTING.md, ADR
 - [x] **L0-1** · Intégration continue GitHub Actions : fmt, clippy, test
 - [x] **L0-2** · `docs/adr/ADR-005` sur le format de sortie du CLI (humain vs `--json`)
 
@@ -21,8 +20,8 @@ Tâches dimensionnées pour un agent : un crate, un détecteur ou une règle cha
 
 ## L1 — Analyse · **livré**
 
-Dépend de L0. Les tâches L1-2 à L1-8 sont **parallélisables** : chaque détecteur est une fonction
-pure sur un arbre de fichiers, testable seule.
+Dépend de L0. Les tâches L1-2 à L1-8 sont **indépendantes** : chaque détecteur est une fonction pure sur un
+arbre de fichiers, testable seule.
 
 - [x] **L1-1** · `ynp-forge` : client GitHub (métadonnées, releases, tags, tarball), traits pour
       accueillir GitLab/Gitea. Tests avec `wiremock`, jamais d'appel réseau en test. → EXG-F-01

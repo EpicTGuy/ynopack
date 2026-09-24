@@ -48,7 +48,7 @@ jamais un paquet qui a l'air fini alors qu'il ne l'est pas.
 |---|---|---|
 | `ynopack analyze <url>` | `facts.json` | Ce qui **est** dans le dépôt, sans interprétation |
 | `ynopack assess` | `report.json` | Règles de faisabilité, verdict, score |
-| `ynopack plan` | `appspec.toml` | **Le seul point de décision** — relu par un humain ou un agent |
+| `ynopack plan` | `appspec.toml` | **Le seul point de décision** — le document qu'on relit |
 | `ynopack generate` | `<app>_ynh/` | Rendu de templates, aucune décision |
 | `ynopack verify` | `lint.json` | Schéma officiel, règles du linter, `bash -n`, jetons de configuration |
 | `ynopack test --host=dell` | `test.json` | Install réelle, service, endpoint, backup/restore, remove sans résidu |
@@ -64,7 +64,8 @@ qui ne sont pas encore au catalogue.
 Il existe aussi `ynopack-server`, qui expose le même pipeline dans un
 navigateur : on colle une URL, on suit la progression en direct.
 
-Un agent n'écrit jamais de bash : il édite `appspec.toml`, relance `generate`, puis `verify`.
+On n'édite jamais les scripts produits : on corrige `appspec.toml`, puis on relance
+`generate` et `verify`. Le paquet est intégralement regénéré à chaque fois.
 
 ## Les six gates
 
@@ -102,8 +103,8 @@ Mac ne peut pas faire tourner YunoHost. Voir [docs/50-RUNBOOK-VALIDATION.md](doc
 | [Gates](docs/40-GATES.md) | Critères et codes de sortie |
 | [Runbook de validation](docs/50-RUNBOOK-VALIDATION.md) | Machines, cycle G3, VM pour G4 |
 | [Publication](docs/60-PUBLICATION.md) | Forgejo, catalogue custom, catalogue officiel |
-| [AGENTS.md](AGENTS.md) | Règles de travail pour les agents IA |
-| [BACKLOG.md](BACKLOG.md) | Tâches découpées, prêtes à distribuer |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Conventions de contribution |
+| [BACKLOG.md](BACKLOG.md) | Tâches restantes |
 | [docs/yunohost/](docs/yunohost/) | Documentation YunoHost de référence, versionnée |
 
 ## État
