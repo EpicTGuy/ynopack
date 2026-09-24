@@ -26,7 +26,7 @@ mkdir -p "/var/log/$app"
 chown -R "$app:www-data" "/var/log/$app"
 ynh_config_add_logrotate
 
-yunohost service add "$app" --description="Ynopack" --log="/var/log/$app/$app.log"
+yunohost service add "$app" --description="Yunopack" --log="/var/log/$app/$app.log"
 
 #=================================================
 # DEMARRAGE DU SERVICE

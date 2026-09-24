@@ -1,5 +1,5 @@
 [Unit]
-Description=Ynopack
+Description=Yunopack
 After=network.target
 
 [Service]

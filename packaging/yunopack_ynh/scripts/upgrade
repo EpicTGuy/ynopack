@@ -30,7 +30,7 @@ ynh_script_progression "Mise a jour des configurations systeme..."
 ynh_config_add_nginx
 ynh_config_add_systemd
 ynh_config_add_logrotate
-yunohost service add "$app" --description="Ynopack" --log="/var/log/$app/$app.log"
+yunohost service add "$app" --description="Yunopack" --log="/var/log/$app/$app.log"
 
 #=================================================
 # REDEMARRAGE DU SERVICE

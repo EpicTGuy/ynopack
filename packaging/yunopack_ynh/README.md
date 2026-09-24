@@ -4,19 +4,19 @@ YunoHost tooling (apps_tools/readme_generator). Do not edit it by hand: change
 appspec.toml or doc/DESCRIPTION.md, then regenerate.
 -->
 
-# Ynopack pour YunoHost
+# Yunopack pour YunoHost
 
 [![Niveau d'intégration](https://apps.yunohost.org/badge/integration/yunopack)](https://ci-apps.yunohost.org/ci/apps/yunopack/)
-[![Version](https://img.shields.io/badge/version-0.1.1--ynh1-blue)](https://apps.yunohost.org/app/yunopack)
+[![Version](https://img.shields.io/badge/version-0.2.0--ynh1-blue)](https://apps.yunohost.org/app/yunopack)
 
-> *Ce paquet vous permet d'installer Ynopack rapidement et simplement sur un serveur YunoHost.*
+> *Ce paquet vous permet d'installer Yunopack rapidement et simplement sur un serveur YunoHost.*
 > *Si vous n'avez pas YunoHost, consultez [le guide](https://yunohost.org/install) pour apprendre comment l'installer.*
 
 ## Vue d'ensemble
 
-Transforme un depot Git en application YunoHost installable : analyse, verdict de faisabilite, generation, verification, installation reelle et publication.
+Transforme un depot Git en application YunoHost installable : analyse, faisabilite, generation, verification et installation reelle.
 
-**Version incluse :** 0.1.1~ynh1
+**Version incluse :** 0.2.0~ynh1
 
 ## Documentations et ressources
 
