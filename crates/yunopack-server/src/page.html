@@ -67,6 +67,12 @@
 const f = document.getElementById('f'), b = document.getElementById('b'),
       sortie = document.getElementById('sortie');
 
+// L'application peut etre servie sous un sous-chemin (/yunopack/ par exemple).
+// On deduit la racine de l'adresse courante plutot que de l'ecrire en dur :
+// une URL absolue casserait des que l'installateur choisit un autre chemin.
+const RACINE = location.pathname.endsWith('/') ? location.pathname
+                                               : location.pathname + '/';
+
 f.onsubmit = async (e) => {
   e.preventDefault();
   b.disabled = true; b.textContent = 'En cours…';
@@ -79,7 +85,7 @@ f.onsubmit = async (e) => {
 
   let reponse;
   try {
-    reponse = await (await fetch('/jobs', {
+    reponse = await (await fetch(RACINE + 'jobs', {
       method: 'POST', headers: {'content-type':'application/json'},
       body: JSON.stringify({url})
     })).json();
@@ -89,7 +95,7 @@ f.onsubmit = async (e) => {
     return;
   }
 
-  const flux = new EventSource(`/jobs/${reponse.id}/events`);
+  const flux = new EventSource(`${RACINE}jobs/${reponse.id}/events`);
   flux.onmessage = (ev) => {
     const d = JSON.parse(ev.data);
     ajouter(carte, d.etape, d.message, d.succes);

@@ -63,7 +63,7 @@ extract = true
 technology = "rust"
 database_binding = ""
 
-execstart = "__INSTALL_DIR__/yunopack-server --addr 127.0.0.1:__PORT__ --out __DATA_DIR__/travaux"
+execstart = "__INSTALL_DIR__/yunopack-server --addr 127.0.0.1:__PORT__ --out __DATA_DIR__/travaux --base __PATH__"
 
 [runtime.port_binding]
 unknown = "on ignore sous quel nom l'application attend son port d'ecoute ; la forme varie d'une application a l'autre (PORT=__PORT__, LISTEN_ADDR=127.0.0.1:__PORT__...)"

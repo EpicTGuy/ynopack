@@ -44,6 +44,25 @@ struct Options {
     /// Repertoire ou sont ecrits les artefacts de chaque travail.
     #[arg(long, env = "YNOPACK_OUT", default_value = ".yunopack/web")]
     out: PathBuf,
+
+    /// Prefixe sous lequel l'application est servie, par exemple `/yunopack`.
+    ///
+    /// Le reverse-proxy d'un serveur YunoHost transmet l'URL complete, chemin
+    /// d'installation compris. Sans ce prefixe, toutes les requetes tombent en
+    /// 404 des que l'application n'est pas installee a la racine du domaine.
+    #[arg(long, env = "YNOPACK_BASE", default_value = "/")]
+    base: String,
+}
+
+/// Ramene un prefixe a la forme attendue par `Router::nest` : commence par une
+/// barre, ne finit pas par une barre, et vaut la chaine vide a la racine.
+fn prefixe(brut: &str) -> String {
+    let taille = brut.trim().trim_matches('/');
+    if taille.is_empty() {
+        String::new()
+    } else {
+        format!("/{taille}")
+    }
 }
 
 #[tokio::main]
@@ -61,15 +80,22 @@ async fn main() -> anyhow::Result<()> {
         racine: options.out.clone(),
     };
 
-    let app = Router::new()
-        .route("/", get(page))
-        .route("/jobs", post(creer).get(lister))
-        .route("/jobs/:id", get(lire))
-        .route("/jobs/:id/events", get(evenements))
-        .with_state(etat);
+    // Les chemins sont ecrits en entier plutot que montes avec `nest` : celui-ci
+    // fait repondre `/yunopack` mais pas `/yunopack/`, et c'est precisement la
+    // seconde forme que transmet le reverse-proxy de YunoHost.
+    let base = prefixe(&options.base);
+    let mut app = Router::new()
+        .route(&format!("{base}/"), get(page))
+        .route(&format!("{base}/jobs"), post(creer).get(lister))
+        .route(&format!("{base}/jobs/:id"), get(lire))
+        .route(&format!("{base}/jobs/:id/events"), get(evenements));
+    if !base.is_empty() {
+        app = app.route(&base, get(page));
+    }
+    let app = app.with_state(etat);
 
     let ecoute = tokio::net::TcpListener::bind(&options.addr).await?;
-    tracing::info!("yunopack sur http://{}", options.addr);
+    tracing::info!("yunopack sur http://{}{}/", options.addr, base);
     axum::serve(ecoute, app).await?;
     Ok(())
 }
@@ -134,4 +160,28 @@ async fn evenements(
         .unwrap_or_else(|| futures::stream::empty().boxed());
 
     Sse::new(futures::stream::iter(passe).chain(direct))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::prefixe;
+
+    #[test]
+    fn la_racine_ne_donne_aucun_prefixe() {
+        assert_eq!(prefixe("/"), "");
+        assert_eq!(prefixe(""), "");
+    }
+
+    #[test]
+    fn un_chemin_est_ramene_a_la_forme_attendue_par_nest() {
+        assert_eq!(prefixe("/yunopack"), "/yunopack");
+        assert_eq!(prefixe("yunopack"), "/yunopack");
+        assert_eq!(prefixe("/yunopack/"), "/yunopack");
+        assert_eq!(prefixe(" /yunopack/ "), "/yunopack");
+    }
+
+    #[test]
+    fn un_chemin_a_plusieurs_segments_reste_entier() {
+        assert_eq!(prefixe("/outils/yunopack/"), "/outils/yunopack");
+    }
 }
