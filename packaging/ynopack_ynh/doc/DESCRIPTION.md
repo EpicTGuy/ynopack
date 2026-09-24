@@ -1,1 +1,1 @@
-Packager deterministe : d'une URL de depot a une application YunoHost installable. Aucun modele de langage a l'execution.
+Transforme un depot Git en application YunoHost installable : analyse, verdict de faisabilite, generation, verification, installation reelle et publication.

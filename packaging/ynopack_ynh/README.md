@@ -7,16 +7,16 @@ appspec.toml or doc/DESCRIPTION.md, then regenerate.
 # Ynopack pour YunoHost
 
 [![Niveau d'intégration](https://apps.yunohost.org/badge/integration/ynopack)](https://ci-apps.yunohost.org/ci/apps/ynopack/)
-[![Version](https://img.shields.io/badge/version-0.1.0--ynh1-blue)](https://apps.yunohost.org/app/ynopack)
+[![Version](https://img.shields.io/badge/version-0.1.1--ynh1-blue)](https://apps.yunohost.org/app/ynopack)
 
 > *Ce paquet vous permet d'installer Ynopack rapidement et simplement sur un serveur YunoHost.*
 > *Si vous n'avez pas YunoHost, consultez [le guide](https://yunohost.org/install) pour apprendre comment l'installer.*
 
 ## Vue d'ensemble
 
-Packager deterministe : d'une URL de depot a une application YunoHost installable. Aucun modele de langage a l'execution.
+Transforme un depot Git en application YunoHost installable : analyse, verdict de faisabilite, generation, verification, installation reelle et publication.
 
-**Version incluse :** 0.1.0~ynh1
+**Version incluse :** 0.1.1~ynh1
 
 ## Documentations et ressources
 

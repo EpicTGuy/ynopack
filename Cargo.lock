@@ -2408,7 +2408,7 @@ dependencies = [
 
 [[package]]
 name = "ynopack-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -2431,7 +2431,7 @@ dependencies = [
 
 [[package]]
 name = "ynopack-server"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "axum",
@@ -2456,7 +2456,7 @@ dependencies = [
 
 [[package]]
 name = "ynp-analyze"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "indexmap",
  "serde",
@@ -2468,7 +2468,7 @@ dependencies = [
 
 [[package]]
 name = "ynp-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "indexmap",
  "serde",
@@ -2479,7 +2479,7 @@ dependencies = [
 
 [[package]]
 name = "ynp-dockerfile"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "indexmap",
  "serde",
@@ -2490,7 +2490,7 @@ dependencies = [
 
 [[package]]
 name = "ynp-forge"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "flate2",
  "hex",
@@ -2509,7 +2509,7 @@ dependencies = [
 
 [[package]]
 name = "ynp-gen"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -2520,7 +2520,7 @@ dependencies = [
 
 [[package]]
 name = "ynp-publish"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "reqwest",
  "serde",
@@ -2533,7 +2533,7 @@ dependencies = [
 
 [[package]]
 name = "ynp-rules"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "ynp-analyze",
  "ynp-core",
@@ -2541,7 +2541,7 @@ dependencies = [
 
 [[package]]
 name = "ynp-runner"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -2552,7 +2552,7 @@ dependencies = [
 
 [[package]]
 name = "ynp-spec"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "indexmap",
  "toml",
@@ -2562,7 +2562,7 @@ dependencies = [
 
 [[package]]
 name = "ynp-verify"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "jsonschema",
  "regex",

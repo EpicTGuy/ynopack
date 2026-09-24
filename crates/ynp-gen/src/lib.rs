@@ -66,6 +66,12 @@ fn fichiers() -> Vec<Fichier> {
             false,
             TOUJOURS
         ),
+        // Les consignes d'exploitation, quand il y en a. YunoHost les affiche
+        // dans l'administration, la ou l'administrateur les cherchera.
+        f!("doc/ADMIN.md", "doc/ADMIN.md.tera", false, |s| s
+            .docs
+            .admin
+            .is_some()),
         f!(
             "scripts/_common.sh",
             "scripts/_common.sh.tera",
