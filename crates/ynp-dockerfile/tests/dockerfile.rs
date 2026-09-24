@@ -95,6 +95,24 @@ fn les_arguments_de_build_sont_substitues_dans_l_image_de_base() {
 }
 
 #[test]
+fn un_drapeau_de_from_n_est_pas_pris_pour_l_image() {
+    // Constate sur gotify, dont les deux etapes de construction passaient pour
+    // une image nommee « --platform=${BUILDPLATFORM} ».
+    let df = concat!(
+        "FROM --platform=${BUILDPLATFORM} node:20 AS js-builder\n",
+        "FROM --platform=$BUILDPLATFORM golang:1.22 AS builder\n",
+        "FROM debian:sid-slim\n",
+    );
+    let r = parse_dockerfile("Dockerfile", df);
+
+    assert_eq!(r.stages[0].image, "node");
+    assert_eq!(r.stages[0].tag.as_deref(), Some("20"));
+    assert_eq!(r.stages[0].alias.as_deref(), Some("js-builder"));
+    assert_eq!(r.stages[1].image, "golang");
+    assert_eq!(r.stages[2].image, "debian");
+}
+
+#[test]
 fn un_registre_prive_avec_port_n_est_pas_confondu_avec_un_tag() {
     let r = parse_dockerfile(
         "Dockerfile",

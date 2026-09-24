@@ -124,7 +124,15 @@ fn parse_from(args: &str, vars: &IndexMap<String, String>) -> StageAccu {
     let expanded = expand(args, vars);
     let toks = tokenize(&expanded);
 
-    let image_ref = toks.first().cloned().unwrap_or_default();
+    // `FROM --platform=$BUILDPLATFORM node:20 AS builder` : les drapeaux
+    // precedent l'image. Les prendre pour l'image faisait passer les etages de
+    // construction de gotify pour une image nommee « --platform=... », et
+    // perdait avec elles le runtime qu'elles annoncent.
+    let image_ref = toks
+        .iter()
+        .find(|t| !t.starts_with("--"))
+        .cloned()
+        .unwrap_or_default();
     let alias = toks
         .iter()
         .position(|t| t.eq_ignore_ascii_case("as"))
