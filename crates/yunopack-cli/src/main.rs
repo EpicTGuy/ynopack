@@ -403,8 +403,20 @@ fn strategie(c: &ynp_forge::SourceChoice) -> &'static str {
 
 /// Gate G2 : conformite statique.
 fn verify(chemin: Option<&std::path::Path>, cli: &Cli) -> anyhow::Result<()> {
-    let spec_path = cli.out.join("appspec.toml");
-    let spec: ynp_core::AppSpec = toml::from_str(&std::fs::read_to_string(&spec_path)?)?;
+    // Un paquet genere emporte son `.appspec.toml` : c'est ce qui permet de le
+    // reverifier tel quel, sans avoir rejoue `plan` dans le repertoire de
+    // travail. On ne se rabat dessus que si le repertoire de travail n'en a
+    // pas, pour qu'une session en cours garde la main.
+    let spec_path = match chemin {
+        Some(c) if !cli.out.join("appspec.toml").is_file() && c.join(".appspec.toml").is_file() => {
+            c.join(".appspec.toml")
+        }
+        _ => cli.out.join("appspec.toml"),
+    };
+    let spec: ynp_core::AppSpec = toml::from_str(
+        &std::fs::read_to_string(&spec_path)
+            .map_err(|e| anyhow::anyhow!("{} illisible : {e}", spec_path.display()))?,
+    )?;
 
     let racine = match chemin {
         Some(c) => c.to_path_buf(),
@@ -421,6 +433,9 @@ fn verify(chemin: Option<&std::path::Path>, cli: &Cli) -> anyhow::Result<()> {
     constats.extend(syntaxe_bash(&racine)?);
 
     let porte = ynp_verify::gate(&constats);
+    // `verify` peut etre lance seul sur un paquet deja ecrit ailleurs : le
+    // repertoire de travail n'existe alors pas encore.
+    std::fs::create_dir_all(&cli.out)?;
     std::fs::write(
         cli.out.join("lint.json"),
         serde_json::to_string_pretty(&constats)?,
