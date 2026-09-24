@@ -16,7 +16,7 @@
 //!
 //! Un agent (ou un humain) remplace la seconde forme par la premiere, puis
 //! relance `generate`. `verify` refuse tout paquet ou il subsiste un
-//! `FIXME(ynopack)`, ce qui garantit qu'aucun paquet devine ne sort du pipeline.
+//! `FIXME(yunopack)`, ce qui garantit qu'aucun paquet devine ne sort du pipeline.
 
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -98,7 +98,7 @@ impl<T> Known<T> {
             } else {
                 format!(" | chercher dans : {}", u.look_in.join(", "))
             };
-            format!("FIXME(ynopack): {field} non determine — {}{ou}", u.unknown)
+            format!("FIXME(yunopack): {field} non determine — {}{ou}", u.unknown)
         })
     }
 }
@@ -164,7 +164,7 @@ port = 3000
     fn le_marqueur_fixme_nomme_le_champ_et_ou_chercher() {
         let k: Known<String> = Known::unresolved("pas de CMD", &["Procfile"]);
         let m = k.fixme("execstart").unwrap();
-        assert!(m.starts_with("FIXME(ynopack): execstart"));
+        assert!(m.starts_with("FIXME(yunopack): execstart"));
         assert!(m.contains("Procfile"));
         assert!(Known::resolved("x".to_string())
             .fixme("execstart")

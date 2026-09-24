@@ -271,10 +271,10 @@ pub fn feasibility(f: &Feasibility, gates: &GateReport) -> String {
 
     // Le verdict seul ne dit pas quoi faire : on l'explicite.
     out.push_str(match f.verdict {
-        Verdict::Feasible => "\n  Prochaine etape : ynopack plan\n",
+        Verdict::Feasible => "\n  Prochaine etape : yunopack plan\n",
         Verdict::FeasibleWithWork => {
             "\n  Packageable, mais l'appspec demandera des arbitrages.\n  \
-             Prochaine etape : ynopack plan\n"
+             Prochaine etape : yunopack plan\n"
         }
         Verdict::NotFeasible => {
             "\n  Le pipeline s'arrete ici. Lever les blocages ci-dessus, ou renoncer.\n"
@@ -423,7 +423,7 @@ pub fn spec(s: &ynp_core::AppSpec) -> String {
         ));
         for (chemin, marqueur) in &manquants {
             out.push_str(&format!("\n  {chemin}\n"));
-            for l in enrouler(marqueur.trim_start_matches("FIXME(ynopack): "), 72) {
+            for l in enrouler(marqueur.trim_start_matches("FIXME(yunopack): "), 72) {
                 out.push_str(&format!("      {l}\n"));
             }
         }

@@ -25,7 +25,7 @@ les deux formes.
 Trois conséquences mécaniques :
 
 1. `assess` liste les champs non résolus et refuse en nommant ce qui manque ;
-2. `generate` dépose un `FIXME(ynopack): <champ> non déterminé — <raison> | chercher dans : <...>`
+2. `generate` dépose un `FIXME(yunopack): <champ> non déterminé — <raison> | chercher dans : <...>`
    dans le fichier concerné ;
 3. `verify` échoue tant qu'il en reste un.
 

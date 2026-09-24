@@ -1,5 +1,5 @@
 #:schema https://raw.githubusercontent.com/YunoHost/apps/main/schemas/manifest.v2.schema.json
-# Genere par ynopack. Les valeurs proviennent de appspec.toml.
+# Genere par yunopack. Les valeurs proviennent de appspec.toml.
 
 packaging_format = 2
 

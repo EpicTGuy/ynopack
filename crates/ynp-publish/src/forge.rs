@@ -125,8 +125,8 @@ pub fn pousser(
     }
     // L'identite est locale au depot : on ne touche pas a la configuration
     // globale de la machine.
-    git(&["config", "user.name", "ynopack"])?;
-    git(&["config", "user.email", "ynopack@localhost"])?;
+    git(&["config", "user.name", "yunopack"])?;
+    git(&["config", "user.email", "yunopack@localhost"])?;
 
     git(&["add", "-A"])?;
     // Un commit sans changement echoue ; ce n'est pas une erreur ici.
@@ -181,7 +181,7 @@ mod tests {
 
     #[test]
     fn un_pousser_sans_depot_git_initialise_le_depot() {
-        let paquet = std::env::temp_dir().join("ynopack-git-test");
+        let paquet = std::env::temp_dir().join("yunopack-git-test");
         let _ = std::fs::remove_dir_all(&paquet);
         std::fs::create_dir_all(&paquet).unwrap();
         std::fs::write(paquet.join("manifest.toml"), "id = \"demo\"\n").unwrap();

@@ -155,7 +155,7 @@ fn une_application_opaque_avoue_ce_qu_elle_ignore() {
 
     // Chaque manque dit ou chercher.
     for (_, marqueur) in spec.unresolved() {
-        assert!(marqueur.starts_with("FIXME(ynopack)"), "{marqueur}");
+        assert!(marqueur.starts_with("FIXME(yunopack)"), "{marqueur}");
     }
 }
 

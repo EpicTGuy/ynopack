@@ -1,5 +1,5 @@
 #!/bin/bash
-# Genere par ynopack. Symetrique du script d'installation.
+# Genere par yunopack. Symetrique du script d'installation.
 
 source ../settings/scripts/_common.sh
 source /usr/share/yunohost/helpers

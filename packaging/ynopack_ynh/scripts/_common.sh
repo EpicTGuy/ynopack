@@ -1,5 +1,5 @@
 #!/bin/bash
-# Genere par ynopack.
+# Genere par yunopack.
 
 #=================================================
 # VARIABLES ET HELPERS COMMUNS

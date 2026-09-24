@@ -21,7 +21,7 @@ pub struct Souhait {
     pub name: String,
     #[serde(default)]
     pub description: String,
-    /// Depot amont : c'est lui qu'on donnera a `ynopack`.
+    /// Depot amont : c'est lui qu'on donnera a `yunopack`.
     pub upstream: String,
     #[serde(default)]
     pub website: String,
@@ -54,7 +54,7 @@ impl Souhait {
         "autre"
     }
 
-    /// Vrai si `ynopack` sait analyser cette forge aujourd'hui.
+    /// Vrai si `yunopack` sait analyser cette forge aujourd'hui.
     pub fn analysable(&self) -> bool {
         self.forge() == "github"
     }
@@ -80,7 +80,7 @@ pub enum WishlistError {
 /// du depot amont, car les deux listes ne nomment pas toujours pareil.
 pub async fn recuperer() -> Result<Vec<Souhait>, WishlistError> {
     let client = reqwest::Client::builder()
-        .user_agent(concat!("ynopack/", env!("CARGO_PKG_VERSION")))
+        .user_agent(concat!("yunopack/", env!("CARGO_PKG_VERSION")))
         .build()?;
 
     let brut = client.get(URL).send().await?.text().await?;

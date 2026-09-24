@@ -27,7 +27,7 @@ jobs:
     # On compile dans la distribution visee, pas dans celle du coureur.
     # Les coureurs Ubuntu 24.04 fournissent la glibc 2.39, Debian bookworm la
     # 2.36 : un binaire construit sur le premier refuse de demarrer sur le
-    # second. Constate en installant ynopack sur une instance reelle — le
+    # second. Constate en installant yunopack sur une instance reelle — le
     # binaire echouait sur « GLIBC_2.39 not found ».
     container: debian:bookworm
     steps:
@@ -44,13 +44,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Compiler
-        run: cargo build --release -p ynopack-cli -p ynopack-server
+        run: cargo build --release -p yunopack-cli -p yunopack-server
 
       - name: Verifier la compatibilite glibc
         # Un binaire qui exige une glibc plus recente que celle de bookworm ne
         # demarrerait pas chez l'utilisateur. Mieux vaut echouer ici.
         run: |
-          for b in target/release/ynopack target/release/ynopack-server; do
+          for b in target/release/yunopack target/release/yunopack-server; do
             exige=$(objdump -T "$b" | grep -oE 'GLIBC_2\.[0-9]+' | sort -V | tail -1)
             echo "$b exige au plus $exige"
             plus_recent=$(printf '%s\nGLIBC_2.36\n' "$exige" | sort -V | tail -1)
@@ -64,16 +64,16 @@ jobs:
         run: |
           apt-get install -y --no-install-recommends binutils
           mkdir -p dist
-          cp target/release/ynopack target/release/ynopack-server dist/
+          cp target/release/yunopack target/release/yunopack-server dist/
           # Les templates et tables sont incorpores au binaire ; seule la
           # documentation de reference accompagne l'archive.
           cp README.md LICENSE dist/
-          tar czf "ynopack-linux-${{ matrix.arch }}.tar.gz" -C dist .
+          tar czf "yunopack-linux-${{ matrix.arch }}.tar.gz" -C dist .
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ynopack-linux-${{ matrix.arch }}
-          path: ynopack-linux-${{ matrix.arch }}.tar.gz
+          name: yunopack-linux-${{ matrix.arch }}
+          path: yunopack-linux-${{ matrix.arch }}.tar.gz
 
   publier:
     needs: binaires
@@ -84,10 +84,10 @@ jobs:
         with:
           merge-multiple: true
       - name: Sommes de controle
-        run: sha256sum ynopack-linux-*.tar.gz | tee SHA256SUMS
+        run: sha256sum yunopack-linux-*.tar.gz | tee SHA256SUMS
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            ynopack-linux-*.tar.gz
+            yunopack-linux-*.tar.gz
             SHA256SUMS
           generate_release_notes: true

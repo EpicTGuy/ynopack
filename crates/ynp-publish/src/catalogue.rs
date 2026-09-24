@@ -190,7 +190,7 @@ mod tests {
 
     #[test]
     fn un_catalogue_absent_est_cree_plutot_que_rate() {
-        let chemin = std::env::temp_dir().join("ynopack-catalogue-absent.json");
+        let chemin = std::env::temp_dir().join("yunopack-catalogue-absent.json");
         let _ = std::fs::remove_file(&chemin);
         assert_eq!(Catalogue::charger(&chemin).unwrap().nombre_d_apps(), 0);
     }
@@ -199,7 +199,7 @@ mod tests {
     fn un_catalogue_illisible_est_signale_et_non_ecrase() {
         // Repartir de zero en silence ferait disparaitre toutes les apps deja
         // publiees.
-        let chemin = std::env::temp_dir().join("ynopack-catalogue-casse.json");
+        let chemin = std::env::temp_dir().join("yunopack-catalogue-casse.json");
         std::fs::write(&chemin, "{ ceci n'est pas du json").unwrap();
         assert!(matches!(
             Catalogue::charger(&chemin),
@@ -209,7 +209,7 @@ mod tests {
 
     #[test]
     fn un_catalogue_fait_un_aller_retour_sur_disque() {
-        let chemin = std::env::temp_dir().join("ynopack-catalogue-ar.json");
+        let chemin = std::env::temp_dir().join("yunopack-catalogue-ar.json");
         let mut c = Catalogue::default();
         c.inscrire("demo", manifest(), "u", "main", "r", Some(4));
         c.ecrire(&chemin).unwrap();

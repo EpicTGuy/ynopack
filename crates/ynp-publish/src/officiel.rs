@@ -1,7 +1,7 @@
 //! Contribution au catalogue officiel de YunoHost.
 //!
 //! On prepare, on n'envoie pas. Une pull request vers un projet tiers engage
-//! l'utilisateur, pas l'outil : ynopack produit l'entree et le corps du
+//! l'utilisateur, pas l'outil : yunopack produit l'entree et le corps du
 //! message, et laisse l'ouverture a une decision humaine.
 //!
 //! La preparation est refusee tant qu'un niveau de qualite n'a pas ete mesure :
@@ -11,7 +11,7 @@
 use ynp_core::AppSpec;
 
 /// Adresse de l'outil, citee dans le corps de la pull request.
-const OUTIL: &str = "https://github.com/EpicTGuy/ynopack";
+const OUTIL: &str = "https://github.com/EpicTGuy/yunopack";
 
 /// Niveau minimal attendu par le catalogue officiel.
 ///
@@ -23,10 +23,10 @@ pub const NIVEAU_MINIMAL: u8 = 4;
 pub enum OfficielError {
     #[error(
         "niveau {mesure} : le catalogue officiel attend au moins {NIVEAU_MINIMAL}. \
-         Lancer `ynopack test` pour mesurer, ou corriger ce qui echoue."
+         Lancer `yunopack test` pour mesurer, ou corriger ce qui echoue."
     )]
     NiveauInsuffisant { mesure: u8 },
-    #[error("niveau non mesure : lancer `ynopack test --host=<hote>` avant de proposer")]
+    #[error("niveau non mesure : lancer `yunopack test --host=<hote>` avant de proposer")]
     NiveauInconnu,
     #[error(
         "le depot doit etre heberge sur GitHub pour entrer au catalogue officiel \
@@ -83,7 +83,7 @@ pub fn preparer(
          - version incluse : {}\n\
          - niveau mesuré localement : {} (installation, service, sauvegarde, restauration, \
          désinstallation sans résidu)\n\n\
-         Paquet produit par [ynopack]({OUTIL}), puis relu.\n\n\
+         Paquet produit par [yunopack]({OUTIL}), puis relu.\n\n\
          ### Reste à faire avant fusion\n\n\
          - [ ] choisir une catégorie dans `categories.toml`\n\
          - [ ] déclencher la CI officielle par un commentaire `!testme`\n\
@@ -158,7 +158,7 @@ mod tests {
     fn un_niveau_trop_bas_est_refuse_avec_la_marche_a_suivre() {
         let e = preparer(&spec(), GITHUB, Some(2)).unwrap_err();
         assert!(matches!(e, OfficielError::NiveauInsuffisant { mesure: 2 }));
-        assert!(e.to_string().contains("ynopack test"));
+        assert!(e.to_string().contains("yunopack test"));
     }
 
     #[test]

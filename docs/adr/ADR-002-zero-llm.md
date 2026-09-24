@@ -30,7 +30,7 @@ plausible mais fausse y est plus dangereuse qu'une valeur absente.
 
 **Un modèle comble les trous sans le dire.** C'est le comportement attendu d'un générateur de texte,
 et c'est précisément ce qu'il ne faut pas ici. Notre mécanisme `Known<T>` fait l'inverse : il rend
-l'absence visible, la propage jusqu'au fichier généré sous forme de `FIXME(ynopack)`, et fait
+l'absence visible, la propage jusqu'au fichier généré sous forme de `FIXME(yunopack)`, et fait
 échouer `verify` tant qu'elle subsiste.
 
 **Le déterminisme est testable.** Deux exécutions sur le même commit produisent des fichiers
@@ -50,7 +50,7 @@ C'est un compromis assumé : ces cas remontent à un humain ou à un agent, qui 
 ## Ce qui invaliderait cette décision
 
 Si le taux de couverture stagne bas **et** que les tables de connaissance plus les détecteurs ne le
-font pas progresser sur plusieurs itérations mesurées par `ynopack eval`, alors l'hypothèse
+font pas progresser sur plusieurs itérations mesurées par `yunopack eval`, alors l'hypothèse
 « l'information est présente et structurée » est fausse pour la population visée, et il faudra
 rouvrir la question.
 

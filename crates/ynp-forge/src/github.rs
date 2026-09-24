@@ -8,7 +8,7 @@ use serde::Deserialize;
 use ynp_core::facts::{Release, ReleaseAsset, RepoMeta, SourceRef};
 
 const API: &str = "https://api.github.com";
-const UA: &str = concat!("ynopack/", env!("CARGO_PKG_VERSION"));
+const UA: &str = concat!("yunopack/", env!("CARGO_PKG_VERSION"));
 
 #[derive(Debug, thiserror::Error)]
 pub enum ForgeError {

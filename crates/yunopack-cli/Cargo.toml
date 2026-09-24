@@ -1,5 +1,5 @@
 [package]
-name = "ynopack-cli"
+name = "yunopack-cli"
 description = "Interface en ligne de commande du packager"
 version.workspace = true
 edition.workspace = true
@@ -7,7 +7,7 @@ rust-version.workspace = true
 license.workspace = true
 
 [[bin]]
-name = "ynopack"
+name = "yunopack"
 path = "src/main.rs"
 
 [dependencies]

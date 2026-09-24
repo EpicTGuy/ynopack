@@ -75,9 +75,9 @@ les résultats de la CI officielle.
 Le catalogue réellement consommé par les serveurs est `https://app.yunohost.org/default/v3/apps.json`,
 reconstruit toutes les quatre heures.
 
-### Ce que fait `ynopack`
+### Ce que fait `yunopack`
 
-`ynopack publish --official` prépare la contribution : fourche, branche, entrée `apps.toml`, corps
+`yunopack publish --official` prépare la contribution : fourche, branche, entrée `apps.toml`, corps
 de la pull request. **Il n'ouvre rien sans confirmation** — une PR vers un projet tiers engage
 l'utilisateur, pas l'outil.
 

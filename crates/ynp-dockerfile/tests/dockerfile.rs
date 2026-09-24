@@ -463,7 +463,7 @@ CMD ["/final"]
 
 #[test]
 fn un_fichier_source_nomme_dockerfile_n_est_pas_un_dockerfile() {
-    // Defaut trouve en faisant analyser ynopack par lui-meme : ses fichiers
+    // Defaut trouve en faisant analyser yunopack par lui-meme : ses fichiers
     // `dockerfile.rs` etaient lus comme des Dockerfiles. Il en tirait les
     // dependances de ses propres fixtures et se croyait ecrit en Python,
     // parce qu'une fixture contient `FROM python:3.12`.

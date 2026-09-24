@@ -42,7 +42,7 @@ pub struct Logiciel {
 }
 
 impl Logiciel {
-    /// Vrai si `ynopack` sait analyser ce depot aujourd'hui.
+    /// Vrai si `yunopack` sait analyser ce depot aujourd'hui.
     pub fn analysable(&self) -> bool {
         self.source_code_url.contains("github.com")
     }
@@ -91,7 +91,7 @@ impl Catalogue {
     /// Telecharge le catalogue et marque ce qui est deja package.
     pub async fn charger() -> Result<Self, AlternativesError> {
         let client = reqwest::Client::builder()
-            .user_agent(concat!("ynopack/", env!("CARGO_PKG_VERSION")))
+            .user_agent(concat!("yunopack/", env!("CARGO_PKG_VERSION")))
             .build()?;
 
         let octets = client.get(ARCHIVE).send().await?.bytes().await?;

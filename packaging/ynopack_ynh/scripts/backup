@@ -1,5 +1,5 @@
 #!/bin/bash
-# Genere par ynopack.
+# Genere par yunopack.
 
 source ../settings/scripts/_common.sh
 source /usr/share/yunohost/helpers

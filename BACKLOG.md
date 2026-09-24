@@ -39,7 +39,7 @@ arbre de fichiers, testable seule.
 - [x] **L1-8** · Détecteur `health` : archivé, inactivité, absence de release
 - [x] **L1-9** · Tables `assets/knowledge/` : `apk-to-deb.toml`, `env-vars.toml`,
       `runtime-versions.toml`, `unsupported-services.toml`
-- [x] **L1-10** · `ynopack analyze <url>` → `facts.json`
+- [x] **L1-10** · `yunopack analyze <url>` → `facts.json`
 - [x] **L1-11** · **Sélection des binaires préconstruits par architecture.** Constaté en comparant
       aux paquets officiels : `gotify_ynh`, `memos_ynh` et `miniflux_ynh` téléchargent tous des
       assets de release (`amd64.url`, `arm64.url`, …) plutôt que l'archive des sources, ce qui
@@ -55,7 +55,7 @@ arbre de fichiers, testable seule.
 - [x] **L2-3** · Règles majeures et mineures : `PY001`, `BUILD001`, `ARCH001`, `PORT001`, `MAINT001`
 - [x] **L2-4** · Règles informatives : `DB001`, `SSO001`
 - [x] **L2-5** · Gates G0 et G1
-- [x] **L2-6** · `ynopack assess` → rapport lisible en terminal et `--json`
+- [x] **L2-6** · `yunopack assess` → rapport lisible en terminal et `--json`
 
 ## L3 — Génération · **livré**
 
@@ -68,8 +68,8 @@ arbre de fichiers, testable seule.
 - [x] **L3-5** · Templates `conf/` : nginx, systemd, fichier de conf de l'app
 - [x] **L3-6** · Templates `doc/` et `tests.toml`
 - [x] **L3-7** · `README.md.tera` aligné sur `apps_tools/readme_generator` → EXG-F-24
-- [x] **L3-8** · Injection des marqueurs `FIXME(ynopack)` dans les fichiers concernés
-- [x] **L3-9** · `ynopack plan` et `ynopack generate`, snapshots `insta`
+- [x] **L3-8** · Injection des marqueurs `FIXME(yunopack)` dans les fichiers concernés
+- [x] **L3-9** · `yunopack plan` et `yunopack generate`, snapshots `insta`
 
 ## L4 — Vérification statique · **livré**
 
@@ -77,8 +77,8 @@ arbre de fichiers, testable seule.
 - [x] **L4-2** · Portage des contrôles critiques de `package_linter` : helpers obsolètes,
       placeholders restants, `sudo`, `chown root`, cohérence des dépendances apt → EXG-F-31
 - [x] **L4-3** · `bash -n` et `shellcheck` quand il est disponible
-- [x] **L4-4** · Échec sur `FIXME(ynopack)` résiduel → EXG-F-32
-- [x] **L4-5** · Gate G2, `ynopack verify`
+- [x] **L4-4** · Échec sur `FIXME(yunopack)` résiduel → EXG-F-32
+- [x] **L4-5** · Gate G2, `yunopack verify`
 - [x] **L4-6** · Test différentiel : faire tourner le vrai `package_linter` et comparer les verdicts
 
 ## L5 — Validation dynamique · **livré**
@@ -87,7 +87,7 @@ arbre de fichiers, testable seule.
 - [x] **L5-2** · Cycle G3 sur `dell` : install, `curl` sur l'endpoint, backup/restore, remove → EXG-F-33
 - [x] **L5-3** · Contrôle des résidus après remove : utilisateur système, `$install_dir`, conf
       nginx, base → EXG-F-34
-- [x] **L5-4** · `ynopack test --host=<alias>`, gate G3
+- [x] **L5-4** · `yunopack test --host=<alias>`, gate G3
 - [x] **L5-5** *(optionnel)* · `scripts/provision-runner.sh` : VM Debian + Incus sur `hom-e`.
       **Écrit mais jamais exécuté** — à relire avant de s'y fier.
 - [ ] **L5-6** *(optionnel)* · Pilotage de `package_check`, analyse du niveau 0-8, gate G4 → EXG-F-35
@@ -96,19 +96,19 @@ arbre de fichiers, testable seule.
 
 - [x] **L6-1** · `ynp-publish` : création du dépôt Forgejo et push → EXG-F-40
 - [x] **L6-2** · Catalogue custom : `apps.toml` → `apps.json`, inspiré de `apps_tools/list_builder.py` → EXG-F-41
-- [x] **L6-3** · Gate G5, `ynopack publish`
+- [x] **L6-3** · Gate G5, `yunopack publish`
 - [x] **L6-4** *(optionnel)* · Préparation de PR vers le catalogue officiel, sous condition de G4 → EXG-F-42
-- [x] **L6-5** · `ynopack run` : pipeline complet, arrêt à la première gate en échec → EXG-F-50, EXG-F-51
+- [x] **L6-5** · `yunopack run` : pipeline complet, arrêt à la première gate en échec → EXG-F-50, EXG-F-51
 
 ## L7 — Interface web · **livré**
 
-- [x] **L7-1** · `ynopack-server` : `POST /jobs`, file d'attente, état persistant
+- [x] **L7-1** · `yunopack-server` : `POST /jobs`, file d'attente, état persistant
 - [x] **L7-2** · Progression en SSE
 - [x] **L7-3** · Page « coller un lien » → rapport → paquet → lien du dépôt → EXG-F-52
 
 ## Transverse
 
-- [x] **T-1** · `ynopack eval --corpus` : comparaison aux paquets YunoHost existants, matrice de
+- [x] **T-1** · `yunopack eval --corpus` : comparaison aux paquets YunoHost existants, matrice de
       précision par champ. **À démarrer dès L1** — sans cette mesure, on ne sait pas si les
       détecteurs progressent. → EXG-F-53
 - [x] **T-2** · `tests/corpus.toml` : échelle de canaris, une difficulté nouvelle à chaque barreau.

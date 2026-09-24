@@ -1,4 +1,4 @@
-//! Types partages du pipeline YunoPackage.
+//! Types partages du pipeline yunopack.
 //!
 //! Le pipeline est une chaine de transformations, chacune avec un contrat de
 //! donnees explicite :

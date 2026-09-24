@@ -1,7 +1,7 @@
 //! Harnais d'evaluation : notre paquet face au paquet officiel.
 //!
 //! Il existe plus de sept cents paquets YunoHost ecrits a la main. Les
-//! comparer a ce que produit ynopack, champ par champ, est la seule mesure
+//! comparer a ce que produit yunopack, champ par champ, est la seule mesure
 //! honnete du progres des detecteurs.
 //!
 //! Un ecart n'est pas forcement une erreur : le paquet officiel peut avoir

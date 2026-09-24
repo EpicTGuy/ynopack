@@ -1,4 +1,4 @@
-# Cahier des charges — YunoPackage
+# Cahier des charges — yunopack
 
 > Statut : approuvé · Version 1.0 · Cible YunoHost 12.1.x / Debian bookworm
 
@@ -18,7 +18,7 @@ Un outil autonome qui, à partir d'une seule URL de dépôt, décide si l'applic
 produit le paquet, le valide jusqu'à l'installation réelle, et le publie installable.
 
 ```
-ynopack run https://github.com/foo/bar --host=dell
+yunopack run https://github.com/foo/bar --host=dell
 ```
 
 ## 3. Périmètre
@@ -68,7 +68,7 @@ ynopack run https://github.com/foo/bar --host=dell
 | Id | Exigence | Critère d'acceptation |
 |---|---|---|
 | EXG-F-20 | Produire un `appspec.toml` relisible et éditable, seul point de décision du pipeline | Le fichier fait un aller-retour TOML sans perte |
-| EXG-F-21 | Marquer tout champ non déductible comme non résolu, avec sa raison et où chercher | Une app opaque produit des `FIXME(ynopack)`, jamais une valeur inventée |
+| EXG-F-21 | Marquer tout champ non déductible comme non résolu, avec sa raison et où chercher | Une app opaque produit des `FIXME(yunopack)`, jamais une valeur inventée |
 | EXG-F-22 | Générer l'arborescence complète du paquet : `manifest.toml`, `scripts/` (install, remove, upgrade, backup, restore, change_url, `_common.sh`), `conf/`, `doc/`, `tests.toml`, `README.md` | Le paquet généré pour l'app canonique est structurellement identique à `example_ynh` |
 | EXG-F-23 | N'employer que les helpers 2.1 | Aucun helper obsolète détecté par le linter officiel |
 | EXG-F-24 | Générer le `README.md` selon le générateur officiel, pas à la main | Le rendu est aligné avec `apps_tools/readme_generator` |
@@ -79,7 +79,7 @@ ynopack run https://github.com/foo/bar --host=dell
 |---|---|---|
 | EXG-F-30 | Valider le `manifest.toml` contre le schéma JSON officiel | Un manifest volontairement invalide est rejeté avec le chemin fautif |
 | EXG-F-31 | Reproduire les contrôles critiques de `package_linter` | Aucun désaccord avec le linter officiel sur le corpus |
-| EXG-F-32 | Refuser tout paquet contenant un `FIXME(ynopack)` résiduel | La gate G2 échoue et nomme chaque champ manquant |
+| EXG-F-32 | Refuser tout paquet contenant un `FIXME(yunopack)` résiduel | La gate G2 échoue et nomme chaque champ manquant |
 | EXG-F-33 | Installer réellement le paquet sur un hôte YunoHost distant, vérifier l'endpoint HTTP, la sauvegarde/restauration, puis la désinstallation sans résidu | Le cycle complet passe sur `dell` pour l'app canari |
 | EXG-F-34 | Contrôler l'absence de résidus après désinstallation : utilisateur système, `$install_dir`, conf nginx, base de données | Un paquet qui laisse une trace fait échouer la gate G3 |
 | EXG-F-35 | Piloter `package_check` en VM isolée et remonter le niveau 0-8 *(optionnel)* | Le niveau remonté correspond à celui du journal de `package_check` |
@@ -99,7 +99,7 @@ ynopack run https://github.com/foo/bar --host=dell
 | EXG-F-50 | CLI couvrant chaque étage séparément, plus un `run` qui les enchaîne | Chaque sous-commande s'exécute seule à partir de l'artefact de l'étage précédent |
 | EXG-F-51 | Code de sortie désignant la gate en échec | Un script appelant sait où ça a cassé sans analyser la sortie |
 | EXG-F-52 | Serveur HTTP : coller une URL, suivre la progression, récupérer le résultat | Une URL collée aboutit au rapport puis au lien du dépôt publié |
-| EXG-F-53 | Harnais d'évaluation comparant les paquets générés aux paquets YunoHost existants | `ynopack eval` sort une matrice de précision par champ |
+| EXG-F-53 | Harnais d'évaluation comparant les paquets générés aux paquets YunoHost existants | `yunopack eval` sort une matrice de précision par champ |
 
 ## 5. Exigences non fonctionnelles
 
@@ -131,11 +131,11 @@ Relevées dans la documentation officielle versionnée sous `docs/yunohost/`. No
 
 Le projet est considéré livré quand :
 
-1. `ynopack run <url> --host=dell` produit, pour au moins **trois applications réelles de stacks
+1. `yunopack run <url> --host=dell` produit, pour au moins **trois applications réelles de stacks
    différentes**, un paquet passant les gates G0 à G3 et installé sur l'instance de test.
-2. `ynopack assess` refuse, avec la règle nommée, au moins **trois applications réellement non
+2. `yunopack assess` refuse, avec la règle nommée, au moins **trois applications réellement non
    packageables** (runtime Docker, base non supportée, absence de source stable).
-3. `ynopack eval` publie une matrice de précision par champ sur le corpus de référence.
+3. `yunopack eval` publie une matrice de précision par champ sur le corpus de référence.
 4. Un paquet publié s'installe depuis le catalogue custom sur une instance vierge.
 5. `cargo fmt --check && cargo clippy -- -D warnings && cargo test` passe.
 

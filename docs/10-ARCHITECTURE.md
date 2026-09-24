@@ -36,8 +36,8 @@ constate `EXPOSE 3000` ; c'est `plan` qui en tire une conséquence.
 | `ynp-verify` | Schéma JSON, contrôles du linter, `shellcheck` | core |
 | `ynp-runner` | Orchestration SSH de l'hôte de test | core |
 | `ynp-publish` | Forgejo, catalogue custom, catalogue officiel | core, forge |
-| `ynopack-cli` | Interface en ligne de commande | tous |
-| `ynopack-server` | HTTP, file d'attente, SSE, interface web | tous |
+| `yunopack-cli` | Interface en ligne de commande | tous |
+| `yunopack-server` | HTTP, file d'attente, SSE, interface web | tous |
 
 `ynp-core` n'a volontairement aucune dépendance métier. C'est ce qui permet de le figer tôt et de
 laisser les autres crates avancer indépendamment.
@@ -64,7 +64,7 @@ execstart = { unknown = "aucun CMD", look_in = ["Procfile"] }          # à comp
 Trois conséquences mécaniques, et c'est ce qui rend l'absence de LLM tenable :
 
 1. `assess` compte les champs non résolus et refuse en nommant précisément ce qui manque ;
-2. `generate` dépose un marqueur `FIXME(ynopack)` dans le fichier concerné ;
+2. `generate` dépose un marqueur `FIXME(yunopack)` dans le fichier concerné ;
 3. `verify` échoue tant qu'il en reste un.
 
 Détail volontaire : le `Default` d'un champ textuel est *non résolu*, jamais la chaîne vide. Oublier

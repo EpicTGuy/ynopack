@@ -1,4 +1,4 @@
-//! `ynopack` — packager d'applications pour YunoHost.
+//! `yunopack` — packager d'applications pour YunoHost.
 //!
 //! Chaque sous-commande correspond a un etage du pipeline et ecrit son artefact,
 //! ce qui permet de reprendre le travail en cours de route ou de corriger la
@@ -12,7 +12,7 @@ use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(
-    name = "ynopack",
+    name = "yunopack",
     version,
     about = "Colle une URL de depot, recupere une application YunoHost installable",
     long_about = None,
@@ -22,7 +22,7 @@ struct Cli {
     command: Command,
 
     /// Repertoire de travail ou sont ecrits les artefacts.
-    #[arg(long, short = 'o', global = true, default_value = ".ynopack")]
+    #[arg(long, short = 'o', global = true, default_value = ".yunopack")]
     out: PathBuf,
 
     /// Sortie JSON au lieu du rapport lisible.
@@ -274,7 +274,7 @@ async fn assess(
             let path = cli.out.join("facts.json");
             let text = std::fs::read_to_string(&path).map_err(|e| {
                 anyhow::anyhow!(
-                    "{} illisible ({e}) — lancer d'abord `ynopack analyze <url>`",
+                    "{} illisible ({e}) — lancer d'abord `yunopack analyze <url>`",
                     path.display()
                 )
             })?;
@@ -327,7 +327,7 @@ async fn plan(url: Option<&str>, force: bool, cli: &Cli) -> anyhow::Result<ynp_c
     if !manquants.is_empty() && !force {
         eprintln!(
             "\n{} champ(s) restent a completer dans {}.\n\
-             Les renseigner, puis relancer `ynopack generate`.",
+             Les renseigner, puis relancer `yunopack generate`.",
             manquants.len(),
             path.display()
         );
@@ -341,7 +341,7 @@ fn generate(force: bool, cli: &Cli) -> anyhow::Result<()> {
     let chemin = cli.out.join("appspec.toml");
     let texte = std::fs::read_to_string(&chemin).map_err(|e| {
         anyhow::anyhow!(
-            "{} illisible ({e}) — lancer d'abord `ynopack plan <url>`",
+            "{} illisible ({e}) — lancer d'abord `yunopack plan <url>`",
             chemin.display()
         )
     })?;
@@ -384,7 +384,7 @@ fn generate(force: bool, cli: &Cli) -> anyhow::Result<()> {
             println!("\nAucun marqueur a completer.");
         } else {
             println!(
-                "\n{} marqueur(s) FIXME deposes — `ynopack verify` refusera le paquet\n\
+                "\n{} marqueur(s) FIXME deposes — `yunopack verify` refusera le paquet\n\
                  tant qu'ils subsistent.",
                 genere.a_completer.len()
             );
@@ -412,7 +412,7 @@ fn verify(chemin: Option<&std::path::Path>, cli: &Cli) -> anyhow::Result<()> {
     };
     if !racine.is_dir() {
         anyhow::bail!(
-            "{} introuvable — lancer d'abord `ynopack generate`",
+            "{} introuvable — lancer d'abord `yunopack generate`",
             racine.display()
         );
     }
@@ -487,7 +487,7 @@ async fn test(
     let racine = cli.out.join(format!("{}_ynh", spec.app.id));
     if !racine.is_dir() {
         anyhow::bail!(
-            "{} introuvable — lancer d'abord `ynopack generate`",
+            "{} introuvable — lancer d'abord `yunopack generate`",
             racine.display()
         );
     }
@@ -538,7 +538,7 @@ async fn publish(
     let constats = ynp_verify::verify(&racine, &spec)?;
     if ynp_verify::gate(&constats).blocks_pipeline() {
         anyhow::bail!(
-            "le paquet ne passe pas la verification statique — lancer `ynopack verify` \
+            "le paquet ne passe pas la verification statique — lancer `yunopack verify` \
              et corriger avant de publier"
         );
     }
@@ -626,7 +626,7 @@ async fn publish(
     );
     match niveau {
         Some(n) => println!("  niveau     {n} (cycle G3 complet)"),
-        None => println!("  niveau     0 — lancer `ynopack test` pour le mesurer"),
+        None => println!("  niveau     0 — lancer `yunopack test` pour le mesurer"),
     }
     println!(
         "\n  Pour l'installer :  yunohost app install {}",
@@ -864,7 +864,7 @@ async fn wishlist(analysables: bool, cherche: Option<&str>, limite: usize) -> an
              `--analysables` les masque."
         );
     }
-    println!("\n  Pour en traiter une :  ynopack run <depot amont>");
+    println!("\n  Pour en traiter une :  yunopack run <depot amont>");
     Ok(())
 }
 
@@ -930,7 +930,7 @@ async fn alternatives(terme: &str, tout: bool, limite: usize) -> anyhow::Result<
 
     println!(
         "\n  ✓ deja au catalogue   · forge non prise en charge   ! licence a verifier\n\n  \
-         Pour en packager une :  ynopack run <depot source>"
+         Pour en packager une :  yunopack run <depot source>"
     );
     Ok(())
 }

@@ -1,7 +1,7 @@
 # appspec.toml — le seul point de decision du pipeline.
 #
-# Produit par `ynopack plan`, relu et corrige a la main ou par un agent, puis
-# consomme par `ynopack generate`. Tout champ que l'analyse n'a pas pu deduire
+# Produit par `yunopack plan`, relu et corrige a la main ou par un agent, puis
+# consomme par `yunopack generate`. Tout champ que l'analyse n'a pas pu deduire
 # apparait sous la forme { unknown = "...", look_in = [...] } : il faut le
 # remplacer par une valeur avant que `verify` accepte le paquet.
 

@@ -139,7 +139,7 @@ impl Verdict {
     }
 }
 
-/// Sortie de `ynopack assess`.
+/// Sortie de `yunopack assess`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Feasibility {
     pub verdict: Verdict,

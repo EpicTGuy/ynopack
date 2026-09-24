@@ -1,4 +1,4 @@
-# Configuration de {{ app.name }}, generee par ynopack.
+# Configuration de {{ app.name }}, generee par yunopack.
 #
 # Attention : YunoHost substitue tout jeton entoure de deux tirets bas, y
 # compris dans les commentaires. En ecrire un ici pour l'exemple fait echouer

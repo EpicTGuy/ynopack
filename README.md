@@ -1,13 +1,13 @@
-# YunoPackage
+# yunopack
 
 **Colle une URL GitHub, récupère une application YunoHost installable.**
 
-YunoPackage analyse un dépôt, décide s'il est packageable pour YunoHost — avec des raisons
+yunopack analyse un dépôt, décide s'il est packageable pour YunoHost — avec des raisons
 explicites quand il refuse —, génère le paquet, le valide jusqu'à l'installation réelle sur un
 serveur, puis le publie.
 
 ```console
-$ ynopack run https://github.com/foo/bar --host=dell
+$ yunopack run https://github.com/foo/bar --host=dell
 
 G0 Legal & policy .................. ok   AGPL-3.0, dépôt actif
 G1 Faisabilité ..................... ok   score 85/100 — 1 majeur, 2 infos
@@ -26,7 +26,7 @@ ses lignes `apt-get install` donnent ses dépendances ; son `EXPOSE` donne son
 port ; son `CMD` donne sa commande de démarrage. Un `docker-compose.yml` ajoute
 la base de données, les volumes et la configuration.
 
-ynopack lit ces fichiers et en tire un `appspec.toml` — le document où toutes
+yunopack lit ces fichiers et en tire un `appspec.toml` — le document où toutes
 les décisions de packaging sont réunies, et le seul qu'on relise. Le paquet est
 ensuite produit mécaniquement à partir de là.
 
@@ -46,22 +46,22 @@ jamais un paquet qui a l'air fini alors qu'il ne l'est pas.
 
 | Commande | Produit | Rôle |
 |---|---|---|
-| `ynopack analyze <url>` | `facts.json` | Ce qui **est** dans le dépôt, sans interprétation |
-| `ynopack assess` | `report.json` | Règles de faisabilité, verdict, score |
-| `ynopack plan` | `appspec.toml` | **Le seul point de décision** — le document qu'on relit |
-| `ynopack generate` | `<app>_ynh/` | Rendu de templates, aucune décision |
-| `ynopack verify` | `lint.json` | Schéma officiel, règles du linter, `bash -n`, jetons de configuration |
-| `ynopack test --host=dell` | `test.json` | Install réelle, service, endpoint, backup/restore, remove sans résidu |
-| `ynopack publish` | URL du dépôt | Forgejo + entrée de catalogue |
-| `ynopack run <url>` | tout | Enchaîne les étapes, s'arrête à la première gate en échec |
-| `ynopack eval` | matrice | Compare les paquets produits à ceux du catalogue officiel |
+| `yunopack analyze <url>` | `facts.json` | Ce qui **est** dans le dépôt, sans interprétation |
+| `yunopack assess` | `report.json` | Règles de faisabilité, verdict, score |
+| `yunopack plan` | `appspec.toml` | **Le seul point de décision** — le document qu'on relit |
+| `yunopack generate` | `<app>_ynh/` | Rendu de templates, aucune décision |
+| `yunopack verify` | `lint.json` | Schéma officiel, règles du linter, `bash -n`, jetons de configuration |
+| `yunopack test --host=dell` | `test.json` | Install réelle, service, endpoint, backup/restore, remove sans résidu |
+| `yunopack publish` | URL du dépôt | Forgejo + entrée de catalogue |
+| `yunopack run <url>` | tout | Enchaîne les étapes, s'arrête à la première gate en échec |
+| `yunopack eval` | matrice | Compare les paquets produits à ceux du catalogue officiel |
 
 Deux commandes servent à trouver quoi packager plutôt qu'à le faire :
-`ynopack wishlist` liste ce que la communauté YunoHost attend, et
-`ynopack alternatives <nom>` propose les logiciels auto-hébergeables voisins
+`yunopack wishlist` liste ce que la communauté YunoHost attend, et
+`yunopack alternatives <nom>` propose les logiciels auto-hébergeables voisins
 qui ne sont pas encore au catalogue.
 
-Il existe aussi `ynopack-server`, qui expose le même pipeline dans un
+Il existe aussi `yunopack-server`, qui expose le même pipeline dans un
 navigateur : on colle une URL, on suit la progression en direct.
 
 On n'édite jamais les scripts produits : on corrige `appspec.toml`, puis on relance
@@ -86,7 +86,7 @@ Le pipeline s'arrête à la première qui échoue, et le code de sortie désigne
 ```bash
 git clone <ce dépôt> && cd yunopackage
 cargo build --release
-./target/release/ynopack --help
+./target/release/yunopack --help
 ```
 
 Pour la validation dynamique, un hôte Debian avec YunoHost accessible en SSH est nécessaire — le
@@ -121,7 +121,7 @@ Ce que la validation sur des applications réelles établit aujourd'hui :
   sauvegarde, restauration, désinstallation sans le moindre résidu — passe en une centaine de secondes ;
 - l'accord avec les paquets écrits à la main est de **85 %** sur le corpus d'évaluation, et les
   écarts restants sont des arbitrages, pas des erreurs ;
-- ynopack se package lui-même, et le paquet obtenu passe le même cycle sur
+- yunopack se package lui-même, et le paquet obtenu passe le même cycle sur
   l'instance de test.
 
 La gate G4 (`package_check`, niveau 0-8) reste optionnelle : elle demande une VM dédiée, et la CI

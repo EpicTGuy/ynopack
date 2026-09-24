@@ -1,9 +1,9 @@
 #:schema https://raw.githubusercontent.com/YunoHost/apps/main/schemas/manifest.v2.schema.json
-# Genere par ynopack. Les valeurs proviennent de appspec.toml.
+# Genere par yunopack. Les valeurs proviennent de appspec.toml.
 
 packaging_format = 2
 
-id = "ynopack"
+id = "yunopack"
 name = "Ynopack"
 description.en = "Transforme un depot Git en application YunoHost installable : analyse, verdict de faisabilite, generation, verification, installation reelle et"
 
@@ -15,7 +15,7 @@ maintainers = []
 
 [upstream]
 license = "AGPL-3.0-only"
-code = "https://github.com/EpicTGuy/ynopack"
+code = "https://github.com/EpicTGuy/yunopack"
 
 [integration]
 yunohost = ">= 12.1.17"
@@ -35,7 +35,7 @@ ram.runtime = "50M"
 
     [install.path]
     type = "path"
-    default = "/ynopack"
+    default = "/yunopack"
 
     [install.init_main_permission]
     type = "group"
@@ -46,19 +46,19 @@ ram.runtime = "50M"
     [resources.sources]
 
     [resources.sources.main]
-    arm64.url = "https://github.com/EpicTGuy/ynopack/releases/download/v0.1.1/ynopack-linux-arm64.tar.gz"
+    arm64.url = "https://github.com/EpicTGuy/yunopack/releases/download/v0.1.1/yunopack-linux-arm64.tar.gz"
     arm64.sha256 = "6612131fa6ea9164a3ef753c8d3bbb0bbb3cdf61d15d6c19f4f109dd9c1f0b0a"
-    amd64.url = "https://github.com/EpicTGuy/ynopack/releases/download/v0.1.1/ynopack-linux-amd64.tar.gz"
+    amd64.url = "https://github.com/EpicTGuy/yunopack/releases/download/v0.1.1/yunopack-linux-amd64.tar.gz"
     amd64.sha256 = "40bffefe3ad5b68651bb044f87887646f8f5d3f78ac3283687338a590aaa682c"
     in_subdir = false
 
     autoupdate.strategy = "latest_github_release"
     # Chaine litterale : le motif est une expression reguliere, ses
     # contre-obliques ne doivent pas etre interpretees comme des echappements.
-    autoupdate.asset.arm64 = '^ynopack-linux-arm64\.tar\.gz$'
+    autoupdate.asset.arm64 = '^yunopack-linux-arm64\.tar\.gz$'
     # Chaine litterale : le motif est une expression reguliere, ses
     # contre-obliques ne doivent pas etre interpretees comme des echappements.
-    autoupdate.asset.amd64 = '^ynopack-linux-amd64\.tar\.gz$'
+    autoupdate.asset.amd64 = '^yunopack-linux-amd64\.tar\.gz$'
 
     [resources.system_user]
 

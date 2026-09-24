@@ -33,7 +33,7 @@ Quatre contrôles :
 1. `manifest.toml` valide contre `assets/schemas/manifest.v2.schema.json` ;
 2. contrôles portés de `package_linter` — helpers obsolètes, placeholders, `sudo`, `chown root` ;
 3. `bash -n` sur chaque script, et `shellcheck` si disponible ;
-4. **aucun `FIXME(ynopack)` résiduel.**
+4. **aucun `FIXME(yunopack)` résiduel.**
 
 Le quatrième point est le garde-fou anti-bluff : un champ non déterminé fait échouer la gate au lieu
 de passer inaperçu.
@@ -76,7 +76,7 @@ l'installation depuis un répertoire local.
 Un script appelant sait ainsi *où* ça a cassé sans analyser la sortie :
 
 ```bash
-ynopack run "$url" --host=dell
+yunopack run "$url" --host=dell
 case $? in
   0)  echo "publié" ;;
   11) echo "non packageable — voir report.json" ;;

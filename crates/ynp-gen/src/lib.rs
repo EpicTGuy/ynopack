@@ -5,7 +5,7 @@
 //! paquet genere se fait dans le template ou dans la specification, jamais dans
 //! le fichier de sortie.
 //!
-//! Les templates sont incorpores au binaire : `ynopack` doit pouvoir generer un
+//! Les templates sont incorpores au binaire : `yunopack` doit pouvoir generer un
 //! paquet sur une machine qui n'a recu que l'executable.
 
 pub mod context;
@@ -110,7 +110,7 @@ pub struct Genere {
     pub racine: PathBuf,
     pub fichiers: Vec<String>,
     /// Champs restes a completer, presents dans les fichiers sous forme de
-    /// marqueurs `FIXME(ynopack)`. `verify` refusera le paquet tant qu'il en
+    /// marqueurs `FIXME(yunopack)`. `verify` refusera le paquet tant qu'il en
     /// subsiste un.
     pub a_completer: Vec<String>,
 }

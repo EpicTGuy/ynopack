@@ -17,7 +17,7 @@
 set -euo pipefail
 
 HOTE="${1:-hom-e}"
-NOM_VM="${NOM_VM:-ynopack-runner}"
+NOM_VM="${NOM_VM:-yunopack-runner}"
 VCPU="${VCPU:-4}"
 RAM_MO="${RAM_MO:-8192}"
 DISQUE_GO="${DISQUE_GO:-60}"
@@ -80,6 +80,6 @@ VM creee. Il reste a faire, une fois dedans (ssh runner@<ip>) :
   git clone https://github.com/YunoHost/package_check
   cd package_check && ./package_check.sh <chemin-du-paquet>
 
-Declarer ensuite l'alias dans ~/.ssh/config pour que `ynopack test --full`
+Declarer ensuite l'alias dans ~/.ssh/config pour que `yunopack test --full`
 puisse s'y adresser.
 SUITE

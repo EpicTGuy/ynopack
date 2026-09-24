@@ -1,6 +1,6 @@
 [package]
 name = "ynp-core"
-description = "Types partages du pipeline YunoPackage : RepoFacts, AppSpec, Finding, Gate"
+description = "Types partages du pipeline yunopack : RepoFacts, AppSpec, Finding, Gate"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

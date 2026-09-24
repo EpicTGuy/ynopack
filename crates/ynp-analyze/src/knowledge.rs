@@ -1,6 +1,6 @@
 //! Chargement des tables de correspondance.
 //!
-//! Elles sont incorporees au binaire : `ynopack` doit pouvoir tourner sur un
+//! Elles sont incorporees au binaire : `yunopack` doit pouvoir tourner sur un
 //! hote de test qui n'a recu que l'executable, sans arborescence de donnees a
 //! cote. Les fichiers restent lisibles et modifiables dans `assets/knowledge/`.
 

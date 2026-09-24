@@ -125,7 +125,7 @@ pub async fn run_g3(
     let url = format!("https://{domaine}{chemin}/");
 
     let mut etapes = Vec::new();
-    let distant = format!("/tmp/ynopack/{app}_ynh");
+    let distant = format!("/tmp/yunopack/{app}_ynh");
 
     // Une installation residuelle d'une campagne precedente fausserait tout.
     let _ = hote
@@ -208,7 +208,7 @@ async fn verifier_le_service(
     }
 
     // Un binaire compile ailleurs peut exiger une bibliotheque absente de la
-    // cible. Constate sur ynopack lui-meme : ses binaires, construits sur
+    // cible. Constate sur yunopack lui-meme : ses binaires, construits sur
     // Ubuntu 24.04, reclamaient la glibc 2.39 quand bookworm n'a que la 2.36.
     // Le service demarrait quand meme — l'un des deux binaires suffisait — et
     // rien ne signalait que l'autre etait inutilisable.
@@ -297,7 +297,7 @@ async fn repondre_sur_son_port(
 ///
 /// Une redirection vers `/yunohost/sso` signifie que le portail a intercepte
 /// la requete : cela prouve que nginx est configure, pas que l'application
-/// repond. Constate en installant ynopack, dont l'endpoint rendait 302 alors
+/// repond. Constate en installant yunopack, dont l'endpoint rendait 302 alors
 /// que son binaire ne pouvait meme pas demarrer.
 async fn endpoint_public(hote: &Hote, url: &str, chrono: &mut Chrono) -> Result<Etape, SshError> {
     let reponse = hote
@@ -329,7 +329,7 @@ async fn sauvegarde_restauration(
     chrono: &mut Chrono,
 ) -> Result<Vec<Etape>, SshError> {
     let mut etapes = Vec::new();
-    let archive = format!("ynopack_{app}");
+    let archive = format!("yunopack_{app}");
 
     // Une archive laissee par une campagne interrompue ferait echouer
     // celle-ci sur « une archive de ce nom existe deja ».
@@ -619,7 +619,7 @@ mod binaires {
 
     #[test]
     fn un_binaire_dont_les_dependances_manquent_fait_echouer_la_porte() {
-        // Cas reel : les binaires de ynopack, construits sur Ubuntu 24.04,
+        // Cas reel : les binaires de yunopack, construits sur Ubuntu 24.04,
         // reclamaient la glibc 2.39 quand Debian bookworm n'a que la 2.36.
         // Le service demarrait — l'un des deux binaires suffisait — et rien
         // ne signalait que l'autre etait inutilisable.

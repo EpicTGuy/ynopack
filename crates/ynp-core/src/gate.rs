@@ -109,7 +109,7 @@ pub struct GateResult {
     pub outcome: GateOutcome,
 }
 
-/// Trace complete d'un `ynopack run`.
+/// Trace complete d'un `yunopack run`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GateReport {
     pub results: Vec<GateResult>,

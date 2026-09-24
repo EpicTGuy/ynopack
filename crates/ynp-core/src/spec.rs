@@ -104,7 +104,7 @@ impl AppSpec {
         // les ressources etaient creees, et le service ne demarrait pas faute
         // de savoir joindre sa base.
         // Le port peut aussi etre transmis en ligne de commande plutot que par
-        // un fichier de configuration. C'est le cas de ynopack lui-meme, dont
+        // un fichier de configuration. C'est le cas de yunopack lui-meme, dont
         // le serveur prend `--addr` : exiger alors une ligne de configuration
         // reclamerait un fichier qui n'aurait aucune raison d'exister.
         let port_en_ligne_de_commande = self
@@ -505,7 +505,7 @@ mod tests {
         let u = s.unresolved();
         assert_eq!(u.len(), 1);
         assert_eq!(u[0].0, "runtime.execstart");
-        assert!(u[0].1.contains("FIXME(ynopack)"));
+        assert!(u[0].1.contains("FIXME(yunopack)"));
     }
 
     #[test]
@@ -597,7 +597,7 @@ mod port_en_ligne_de_commande {
 
     #[test]
     fn un_port_passe_en_argument_dispense_de_ligne_de_configuration() {
-        // Cas de ynopack lui-meme : son serveur prend `--addr`. Reclamer une
+        // Cas de yunopack lui-meme : son serveur prend `--addr`. Reclamer une
         // ligne de configuration exigerait un fichier sans raison d'etre.
         let s = spec_avec("__INSTALL_DIR__/serveur --addr 127.0.0.1:__PORT__");
         assert!(s.is_complete(), "champs manquants : {:?}", s.unresolved());

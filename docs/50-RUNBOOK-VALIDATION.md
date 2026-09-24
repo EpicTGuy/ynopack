@@ -42,12 +42,12 @@ que le paquet à tester.
 `python3` est présent, ce qui permet d'y faire tourner le vrai `package_linter` pour le test
 différentiel de la tâche L4-6.
 
-### Cycle exécuté par `ynopack test --host=dell`
+### Cycle exécuté par `yunopack test --host=dell`
 
 ```bash
-rsync -a ./<app>_ynh/ dell:/tmp/ynopack/<app>_ynh/
+rsync -a ./<app>_ynh/ dell:/tmp/yunopack/<app>_ynh/
 
-ssh dell yunohost app install /tmp/ynopack/<app>_ynh \
+ssh dell yunohost app install /tmp/yunopack/<app>_ynh \
       --debug --force \
       -a "domain=test.local&path=/<app>&init_main_permission=visitors"
 
@@ -81,7 +81,7 @@ L'installation est réversible par `yunohost app remove`. En cas d'échec au mil
 ssh dell yunohost app remove <app> --purge
 ```
 
-`ynopack test --snapshot` prend en plus un `yunohost backup create --system` avant la campagne. Sur
+`yunopack test --snapshot` prend en plus un `yunohost backup create --system` avant la campagne. Sur
 une machine déclarée environnement de test, ce n'est pas indispensable ; sur toute autre, c'est obligatoire.
 
 ### Dépannage

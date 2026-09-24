@@ -207,6 +207,6 @@ mod tests {
             sha256(b""),
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         );
-        assert_eq!(sha256(b"ynopack").len(), 64);
+        assert_eq!(sha256(b"yunopack").len(), 64);
     }
 }

@@ -1,7 +1,7 @@
 //! Mise a plat de l'`AppSpec` pour les templates.
 //!
 //! Les templates ne manipulent jamais de `Known<T>` : chaque champ leur arrive
-//! soit resolu, soit sous forme de marqueur `FIXME(ynopack)`. La decision
+//! soit resolu, soit sous forme de marqueur `FIXME(yunopack)`. La decision
 //! d'accepter ou non un paquet incomplet appartient a l'appelant, pas au rendu.
 
 use serde_json::{json, Value};
@@ -15,7 +15,7 @@ pub fn build(spec: &AppSpec) -> (Value, Vec<String>) {
         match valeur {
             Some(v) => v.clone(),
             None => {
-                let m = format!("FIXME(ynopack): {champ} a completer");
+                let m = format!("FIXME(yunopack): {champ} a completer");
                 fixmes.push(champ.to_string());
                 m
             }
@@ -218,7 +218,7 @@ mod tests {
         assert!(c["upstream"]["license"]
             .as_str()
             .unwrap()
-            .starts_with("FIXME(ynopack)"));
+            .starts_with("FIXME(yunopack)"));
     }
 
     #[test]

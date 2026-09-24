@@ -352,7 +352,7 @@ fn marqueurs_restants(racine: &Path) -> Result<Vec<Finding>, VerifyError> {
             continue;
         };
         for (numero, ligne) in contenu.lines().enumerate() {
-            if ligne.contains("FIXME(ynopack)") {
+            if ligne.contains("FIXME(yunopack)") {
                 let relatif = chemin
                     .strip_prefix(racine)
                     .unwrap_or(&chemin)

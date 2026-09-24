@@ -47,7 +47,7 @@ fn spec() -> AppSpec {
 
 /// Construit un paquet minimal mais valide, dans un repertoire temporaire.
 fn paquet_sain(nom: &str) -> PathBuf {
-    let racine = std::env::temp_dir().join(format!("ynopack-test-{nom}"));
+    let racine = std::env::temp_dir().join(format!("yunopack-test-{nom}"));
     let _ = fs::remove_dir_all(&racine);
     fs::create_dir_all(racine.join("scripts")).unwrap();
     fs::create_dir_all(racine.join("conf")).unwrap();
@@ -195,7 +195,7 @@ fn un_marqueur_fixme_restant_est_bloquant() {
     let racine = paquet_sain("fixme");
     fs::write(
         racine.join("conf/systemd.service"),
-        "ExecStart=FIXME(ynopack): runtime.execstart non determine\n",
+        "ExecStart=FIXME(yunopack): runtime.execstart non determine\n",
     )
     .unwrap();
 

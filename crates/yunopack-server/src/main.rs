@@ -15,7 +15,7 @@ use serde::Deserialize;
 use std::convert::Infallible;
 use std::path::PathBuf;
 use tokio_stream::wrappers::BroadcastStream;
-use ynopack_server::travaux::Registre;
+use yunopack_server::travaux::Registre;
 
 #[derive(Clone)]
 struct Etat {
@@ -32,7 +32,7 @@ struct Demande {
 /// l'aide : surprenant pour qui decouvre la commande, et genant dans un script.
 #[derive(Parser)]
 #[command(
-    name = "ynopack-server",
+    name = "yunopack-server",
     version,
     about = "Interface web du packager : coller une URL, suivre le pipeline"
 )]
@@ -42,7 +42,7 @@ struct Options {
     addr: String,
 
     /// Repertoire ou sont ecrits les artefacts de chaque travail.
-    #[arg(long, env = "YNOPACK_OUT", default_value = ".ynopack/web")]
+    #[arg(long, env = "YNOPACK_OUT", default_value = ".yunopack/web")]
     out: PathBuf,
 }
 
@@ -51,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "ynopack_server=info".into()),
+                .unwrap_or_else(|_| "yunopack_server=info".into()),
         )
         .init();
 
@@ -69,7 +69,7 @@ async fn main() -> anyhow::Result<()> {
         .with_state(etat);
 
     let ecoute = tokio::net::TcpListener::bind(&options.addr).await?;
-    tracing::info!("ynopack sur http://{}", options.addr);
+    tracing::info!("yunopack sur http://{}", options.addr);
     axum::serve(ecoute, app).await?;
     Ok(())
 }
@@ -82,7 +82,7 @@ async fn creer(State(etat): State<Etat>, Json(d): Json<Demande>) -> Json<serde_j
     let id = etat.registre.creer(&d.url);
     // Le pipeline tourne en tache de fond : la requete rend la main tout de
     // suite, le client suit la progression par le flux d'evenements.
-    tokio::spawn(ynopack_server::pipeline::executer(
+    tokio::spawn(yunopack_server::pipeline::executer(
         etat.registre.clone(),
         id.clone(),
         d.url,
