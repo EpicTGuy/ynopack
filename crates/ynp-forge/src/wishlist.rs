@@ -47,7 +47,9 @@ impl Souhait {
             ("framagit.org", "gitlab"),
             ("salsa.debian.org", "gitlab"),
             ("0xacab.org", "gitlab"),
-            ("git.sr.ht", "sourcehut"),
+            // Sourcehut s'ecrit aussi bien `sr.ht` que `git.sr.ht` selon les
+            // fiches ; ne reconnaitre que la seconde en laissait passer trois.
+            ("sr.ht", "sourcehut"),
             ("bitbucket.org", "bitbucket"),
         ] {
             if self.upstream.contains(motif) {
