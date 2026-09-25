@@ -151,8 +151,16 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
 .pourquoi ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .pourquoi li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:baseline}
 .pourquoi .rm{color:var(--mute);font-size:12px;display:block;margin-top:2px}
+.gouv{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+.gouv-t{font:12px var(--mono);color:var(--mute);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
+.gouv ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.gouv li{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:10px;align-items:baseline;font-size:13px}
+.gouv .q{font-weight:600;overflow-wrap:anywhere}
+.gouv .p{color:var(--mute);font-size:12px}
+@media (max-width:520px){.gouv li{grid-template-columns:minmax(0,1fr)}}
 .pourquoi .quand{color:var(--mute);font-size:12px;margin:10px 0 0;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
 .lic{border:1px solid var(--line);border-radius:4px;padding:0 5px}
+.votes{margin-left:8px;font:12px var(--mono);color:var(--acc);font-weight:400}
 .etiq{border-radius:4px;padding:0 6px;border:1px solid currentColor;font-size:11px;white-space:nowrap}
 .etiq.pack{color:var(--acc)}
 .etiq.mort{color:var(--err)}
@@ -167,8 +175,6 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
 .secours{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--mute);font-size:13px}
 .empty{color:var(--mute);padding:18px 0;font-size:14px}
 .more{margin-top:16px}
-footer{border-top:1px solid var(--line);font:12px var(--mono);color:var(--mute)}
-footer .wrap{padding-top:16px;padding-bottom:24px;display:flex;flex-wrap:wrap;gap:4px 16px;justify-content:space-between}
 @media (max-width:520px){.wrap{padding:0 16px}.tag,.sub{display:none}.item{grid-template-columns:minmax(0,1fr)}.item .btn{justify-self:start;margin-top:6px}.btn.go{padding:0 14px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
@@ -194,18 +200,19 @@ footer .wrap{padding-top:16px;padding-bottom:24px;display:flex;flex-wrap:wrap;ga
 <main class="wrap">
   <section id="tab-run" role="tabpanel">
     <h1>Empaqueter un dépôt</h1>
-    <p class="lead">yunopack lit ce que le projet décrit de lui-même — Dockerfile, docker-compose.yml, fichiers de projet — et en déduit un paquet. Rien n'est exécuté. Quand une information manque, il s'arrête et vous la demande.</p>
+    <p class="lead">Lit ce que le projet décrit déjà — Dockerfile, compose, fichiers de projet. Ce qu'il ne peut pas déduire, il le demande.</p>
     <form id="form" novalidate>
-      <label class="lbl" for="url">adresse du dépôt</label>
+      <label class="lbl" for="url">adresse du dépôt, ou nom du logiciel</label>
       <div class="row">
-        <input id="url" name="url" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://github.com/auteur/projet" required>
+        <input id="url" name="url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://github.com/auteur/projet — ou « nextcloud »" required>
         <button class="btn go" id="go" type="submit">Empaqueter</button>
       </div>
       <p class="hint" id="form-hint" aria-live="polite"></p>
     </form>
+    <ul class="items" id="trouvailles" hidden></ul>
 
     <div class="pipe" aria-live="polite">
-      <div class="pipe-h" id="pipe-h"><span id="pipe-t"><strong>5 étapes</strong> · chacune peut arrêter la suite</span><span id="clock"></span></div>
+      <div class="pipe-h" id="pipe-h"><span id="pipe-t"><strong>5 étapes</strong></span><span id="clock"></span></div>
       <div class="rail" id="rail" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
       <ol class="steps" id="steps"></ol>
       <div id="outcome"></div>
@@ -214,7 +221,7 @@ footer .wrap{padding-top:16px;padding-bottom:24px;display:flex;flex-wrap:wrap;ga
 
   <section id="tab-wish" role="tabpanel" hidden>
     <div class="lh"><h1>Liste de souhaits</h1><span class="c" id="wish-c"></span></div>
-    <p class="lead">Les applications que la communauté YunoHost attend, celles déjà au catalogue retirées. Choisissez-en une pour lancer le pipeline sur son dépôt.</p>
+    <p class="lead">Ce que la communauté YunoHost attend, du plus demandé au moins.</p>
     <label class="lbl" for="wish-q">filtrer</label>
     <input id="wish-q" type="search" autocomplete="off" spellcheck="false" placeholder="nom ou description">
     <ul class="items" id="wish-list"></ul>
@@ -223,7 +230,7 @@ footer .wrap{padding-top:16px;padding-bottom:24px;display:flex;flex-wrap:wrap;ga
 
   <section id="tab-alt" role="tabpanel" hidden>
     <h1>Alternatives</h1>
-    <p class="lead">Les logiciels auto-hébergeables qui remplacent un service donné et ne sont pas encore au catalogue YunoHost.</p>
+    <p class="lead">Les logiciels auto-hébergeables proches d'un autre.</p>
     <form id="alt-form" novalidate>
       <label class="lbl" for="alt-q">logiciel à remplacer</label>
       <div class="row suggest">
@@ -238,8 +245,6 @@ footer .wrap{padding-top:16px;padding-bottom:24px;display:flex;flex-wrap:wrap;ga
     <div class="secours" id="alt-secours" hidden></div>
   </section>
 </main>
-
-<footer><div class="wrap"><span>yunopack · lit les Dockerfiles, n'en exécute aucun</span><span>projet indépendant, non officiel YunoHost</span></div></footer>
 
 <script>
 (() => {
@@ -347,7 +352,7 @@ function setState(i, s) {
 function header() {
   const hd = $('#pipe-h'); hd.className = 'pipe-h';
   const t = $('#pipe-t'); t.textContent = '';
-  if (!run) { t.append(h('strong', {text: '5 étapes'}), ' · chacune peut arrêter la suite'); $('#clock').textContent = ''; return; }
+  if (!run) { t.append(h('strong', {text: '5 étapes'})); $('#clock').textContent = ''; return; }
   const cur = run.state.findIndex(s => s === 'running' || s === 'fail' || s === 'waiting');
   if (run.result === 'ok') { hd.classList.add('ok'); t.append(h('strong', {text: '5/5'}), ' · paquet conforme'); }
   else if (run.result === 'fail') { hd.classList.add('fail'); t.append(h('strong', {text: 'arrêt ' + (run.failAt + 1) + '/5'}), ' · ' + STAGES[run.failAt][1].toLowerCase()); }
@@ -383,7 +388,7 @@ function renderAsk(arbitrages) {
 
   const form = h('form', {class: 'ask'},
     h('p', {class: 'ask-t', text: arbitrages.length + (arbitrages.length > 1 ? ' champs à trancher' : ' champ à trancher')}),
-    h('p', {class: 'ask-i', text: "Ces valeurs ne se déduisent pas du dépôt. Les propositions sont classées de la mieux fondée à la moins ; chacune dit sur quoi elle repose. Vous pouvez aussi écrire la vôtre."}));
+    h('p', {class: 'ask-i', text: "Non déductibles du dépôt. Propositions classées par solidité ; saisie libre possible."}));
 
   const saisies = {};
   for (const a of arbitrages) form.append(champ(a, saisies));
@@ -501,7 +506,7 @@ function finish(result, at) {
     for (let j = at + 1; j < STAGES.length; j++) setState(j, 'skipped');
     const url = run.url;
     $('#outcome').append(h('div', {class: 'stop'},
-      h('span', {text: "Arrêté à l'étape " + (at + 1) + "/5. Les suivantes n'ont pas été lancées."}),
+      h('span', {text: "Arrêté à l'étape " + (at + 1) + '/5.'}),
       h('button', {class: 'btn sm plain', type: 'button', text: 'Relancer', onclick: () => start(url)})));
   } else renderSuccess();
   header(); busy(false);
@@ -548,7 +553,7 @@ function publierBtn(id, nom) {
                          title: 'vérification de la configuration…'});
   fetch(API.forge).then(r => r.json()).then(f => {
     if (!f.configuree) {
-      b.title = 'aucune forge configurée sur ce serveur — il manque ' + (f.manque || 'la configuration');
+      b.title = 'aucune forge configurée — il manque ' + (f.manque || 'la configuration');
       return;
     }
     b.disabled = false;
@@ -572,16 +577,14 @@ function suite(nom) {
   if (!a) return;
   a.replaceChildren(
     h('p', {class: 'note', text:
-      "Ce paquet est conforme sur le plan statique — il n'a pas encore été installé. " +
-      "yunopack ne l'installe pas ici : un paquet non relu s'exécute en root, et ce serveur " +
-      "n'est pas jetable. Le faire tester dans un conteneur jetable est l'étape suivante."}),
+      "Conforme statiquement, pas encore installé. Un paquet non relu s'exécute en root : à tester dans un conteneur jetable."}),
     h('div', {class: 'acts'},
       h('a', {class: 'btn sm plain', target: '_blank', rel: 'noopener noreferrer',
               href: 'https://doc.yunohost.org/packaging/packaging_apps_testing',
-              text: 'Comment faire tester le paquet'}),
+              text: 'Documentation'}),
       h('a', {class: 'btn sm plain', target: '_blank', rel: 'noopener noreferrer',
               href: 'https://ci-apps-dev.yunohost.org/',
-              text: 'CI publique YunoHost'})));
+              text: 'CI YunoHost'})));
 }
 
 function publie(url, nom) {
@@ -591,8 +594,7 @@ function publie(url, nom) {
     h('span', {text: 'Publié : '}),
     h('a', {href: url, target: '_blank', rel: 'noopener noreferrer', text: url}),
     h('p', {class: 'note', text:
-      "Pour le faire tester : ouvrir une demande d'intégration sur YunoHost/apps et y écrire " +
-      "« !testme » — la CI l'installe alors dans un conteneur jetable et rend le niveau 0 à 8."})));
+      "Ouvrir une PR sur YunoHost/apps et y écrire « !testme » : la CI l'installe en conteneur jetable et rend le niveau 0 à 8."})));
 }
 
 function busy(b) { const g = $('#go'); g.disabled = b; g.textContent = b ? 'En cours…' : 'Empaqueter'; }
@@ -641,6 +643,7 @@ async function start(url) {
   url = String(url || '').trim();
   const hint = $('#form-hint');
   if (!isRepo(url)) { hint.className = 'hint err'; hint.textContent = 'Adresse de dépôt attendue : https://… ou git@…'; $('#url').focus(); return; }
+  $('#trouvailles').hidden = true;
   hint.className = 'hint'; hint.textContent = '';
   if (run && run.close) run.close();
   reset();
@@ -662,7 +665,59 @@ async function start(url) {
   run.id = id;
   brancher();
 }
-$('#form').addEventListener('submit', e => { e.preventDefault(); start($('#url').value); });
+/* Le champ accepte une adresse ou un nom. Coller une URL suppose de l'avoir
+   déjà trouvée ; beaucoup de gens connaissent le nom de l'outil qu'ils veulent
+   et pas l'adresse de son dépôt. */
+$('#form').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = $('#url').value.trim();
+  if (isRepo(v)) { $('#trouvailles').hidden = true; start(v); }
+  else chercherDepot(v);
+});
+
+async function chercherDepot(terme) {
+  const hint = $('#form-hint'), ul = $('#trouvailles');
+  if (terme.length < 2) {
+    hint.className = 'hint err';
+    hint.textContent = 'Une adresse, ou deux lettres au moins.';
+    return;
+  }
+  hint.className = 'hint'; hint.textContent = 'recherche de « ' + terme + ' »…';
+  ul.hidden = false;
+  ul.replaceChildren(h('li', {class: 'empty', text: 'recherche…'}));
+
+  let d;
+  try { d = await (await fetch(RACINE + 'recherche?q=' + encodeURIComponent(terme))).json(); }
+  catch (e) { hint.className = 'hint err'; hint.textContent = String(e); ul.hidden = true; return; }
+
+  const list = Array.isArray(d) ? d : [];
+  if (!list.length) {
+    hint.className = 'hint err';
+    hint.textContent = 'Aucun dépôt pour « ' + terme + ' ».';
+    ul.hidden = true;
+    return;
+  }
+  hint.textContent = list.length + ' dépôt(s).';
+  ul.replaceChildren(...list.map(t => {
+    const b = badge(t.depot);
+    const choisir = h('button', {class: 'btn sm ghost', type: 'button', text: 'Empaqueter',
+      onclick: () => { ul.hidden = true; hint.textContent = ''; start(t.depot); }});
+    const li = h('li', {class: 'item'},
+      icone(t.depot),
+      h('div', {},
+        h('div', {class: 'nm', text: t.nom || '—'}),
+        t.description ? h('div', {class: 'ds', text: t.description}) : null,
+        h('div', {class: 'mt'},
+          t.etoiles ? h('span', {text: '★ ' + nf.format(t.etoiles)}) : null,
+          h('span', {class: 'lic', text: t.origine}),
+          t.deja_package ? h('span', {class: 'etiq pack', text: 'déjà au catalogue'}) : null,
+          repoLink(t.depot))),
+      b || h('span'),
+      choisir);
+    if (b) observer(b, t.depot);
+    return li;
+  }));
+}
 
 /* ——— Faisabilite : cache cote serveur, demande a la demande ———
    Evaluer un depot coute trois appels a l'API GitHub, qui en accorde soixante
@@ -714,6 +769,28 @@ function majBadge(b) {
   b.onclick = () => basculerDetail(b, f);
 }
 
+/* Ce qu'on peut établir de la conduite d'un projet sans rien deviner.
+
+   Aucune base libre n'encode la gouvernance d'un logiciel : personne ne
+   maintient un champ « ce projet est piloté par une société ». Ces faits-là,
+   eux, sont lisibles par une machine, et chacun en tire ses conclusions. */
+function gouvernance(f) {
+  const g = f.gouvernance || {};
+  const traits = [];
+  if (f.archive) traits.push(['archivé par son auteur', 'plus aucun correctif']);
+  if (g.fourche_de) traits.push(['fourche de ' + g.fourche_de, 'le projet d\u2019origine a pu diverger']);
+  if (g.proprietaire_collectif === true) traits.push(['dépôt d\u2019organisation', 'porté par un collectif']);
+  if (g.proprietaire_collectif === false) traits.push(['dépôt personnel', 'tient à une seule personne']);
+  if (g.chartes && g.chartes.length) traits.push([g.chartes.join(', '), 'règles écrites publiées par le projet']);
+  else traits.push(['aucune règle écrite', 'ni gouvernance, ni code de conduite']);
+  if (f.etoiles) traits.push([nf.format(f.etoiles) + ' étoiles', 'audience']);
+
+  return h('div', {class: 'gouv'},
+    h('div', {class: 'gouv-t', text: 'Conduite du projet'}),
+    h('ul', {}, traits.map(([quoi, pourquoi]) =>
+      h('li', {}, h('span', {class: 'q', text: quoi}), h('span', {class: 'p', text: pourquoi})))));
+}
+
 /* L'age d'une evaluation, parce qu'une evaluation ancienne peut avoir ete
    depassee par une mise a jour amont. Verifier automatiquement couterait un
    appel d'API par depot, ce que le quota interdit sur cinq cents lignes : on
@@ -745,7 +822,9 @@ function basculerDetail(b, f) {
       planifier();
     }});
   item.append(h('div', {class: 'pourquoi'},
-    h('ul', {}, f.bloquants.map(m => motif(m, true)), f.reserves.map(m => motif(m, false))),
+    h('ul', {}, f.bloquants.map(m => motif(m, true)), f.reserves.map(m => motif(m, false)),
+                (f.remarques || []).map(m => motif(m, false))),
+    gouvernance(f),
     h('div', {class: 'quand'},
       h('span', {text: 'évalué sur ' + (f.reference || 'la source retenue') +
         (f.evalue_le ? ', ' + age(f.evalue_le) : '')}),
@@ -826,17 +905,33 @@ function loadWish() {
 function renderWish() {
   const q = norm($('#wish-q').value);
   const f = wish.filter(a => !q || norm((a.name || '') + ' ' + (a.description || '')).includes(q));
-  $('#wish-c').textContent = q ? f.length + ' / ' + wish.length : wish.length + ' applications';
+  /* Une demande dont l'application est arrivée au catalogue devrait être
+     retirée de la liste mère. La signaler est le seul moyen de le voir. */
+  const perimes = wish.filter(a => a.deja_package).length;
+  $('#wish-c').textContent = q
+    ? f.length + ' / ' + wish.length
+    : wish.length + ' demandes' + (perimes ? ' · ' + perimes + ' déjà au catalogue' : '');
   const ul = $('#wish-list');
   ul.replaceChildren(...f.slice(0, wishLimit).map(a => {
-    const b = a.analysable ? badge(a.repo) : null;
+    const b = a.analysable && !a.deja_package ? badge(a.repo) : null;
     const li = h('li', {class: 'item'},
       a.repo ? icone(a.repo) : h('span', {class: 'ico'}),
-      h('div', {}, h('div', {class: 'nm', text: a.name || '—'}), a.description ? h('div', {class: 'ds', text: a.description}) : null,
-        h('div', {class: 'mt'}, repoLink(a.repo) || h('span', {text: 'pas de dépôt renseigné'}),
-          a.en_cours ? h('span', {text: 'paquet déjà en cours ailleurs'}) : null)),
+      h('div', {},
+        h('div', {class: 'nm'}, a.name || '—',
+          a.votes ? h('span', {class: 'votes', text: '♥ ' + a.votes}) : null),
+        a.description ? h('div', {class: 'ds', text: a.description}) : null,
+        h('div', {class: 'mt'}, repoLink(a.repo) || h('span', {text: 'pas de dépôt'}),
+          a.en_cours ? h('span', {text: 'paquet en cours ailleurs'}) : null,
+          a.deja_package
+            ? h('a', {class: 'etiq pack', target: '_blank', rel: 'noopener noreferrer',
+                      href: 'https://apps.yunohost.org/app/' + encodeURIComponent(a.id_yunohost),
+                      title: 'la demande peut être retirée de la liste',
+                      text: 'déjà au catalogue'})
+            : null)),
       b || h('span'),
-      packBtn(a.repo, a.analysable));
+      a.deja_package
+        ? h('button', {class: 'btn sm plain', type: 'button', text: 'déjà disponible', disabled: true})
+        : packBtn(a.repo, a.analysable));
     if (b) observer(b, a.repo);
     return li;
   }));
@@ -926,10 +1021,10 @@ function chercherAlt() {
   /* Quand nos résultats ne conviennent pas, autant envoyer chercher ailleurs
      plutôt que de laisser l'utilisateur sans rien. */
   secours.replaceChildren(
-    h('span', {text: 'Rien de convaincant ?'}),
+    h('span', {text: 'Ailleurs :'}),
     h('a', {class: 'btn sm plain', target: '_blank', rel: 'noopener noreferrer',
             href: 'https://alternativeto.net/browse/search/?q=' + encodeURIComponent(q),
-            text: 'Chercher « ' + q + ' » sur AlternativeTo'}));
+            text: 'AlternativeTo'}));
 
   fetch(API.alternatives(q)).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(d => {

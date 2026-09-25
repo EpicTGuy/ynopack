@@ -39,6 +39,10 @@ pub struct Evaluation {
     pub archive: bool,
     #[serde(default)]
     pub etoiles: u32,
+    /// Ce qui renseigne sur la conduite du projet. Aucune base libre ne
+    /// l'encode ; ces faits-la, eux, sont lisibles par une machine.
+    #[serde(default)]
+    pub gouvernance: Gouvernance,
     /// Technologie et source retenues, utiles a l'affichage.
     #[serde(default)]
     pub technologie: String,
@@ -49,6 +53,20 @@ pub struct Evaluation {
     #[serde(default)]
     pub pushed_at: String,
     pub evalue_le: String,
+}
+
+/// Ce qu'on peut etablir de la conduite d'un projet sans rien deviner.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Gouvernance {
+    /// Depot dont celui-ci est une fourche, ex. `go-gitea/gitea`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fourche_de: Option<String>,
+    /// Le depot appartient a une organisation plutot qu'a une personne.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proprietaire_collectif: Option<bool>,
+    /// Le projet s'est donne des regles ecrites, et lesquelles.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub chartes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -74,7 +92,10 @@ pub struct Echec {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "etat", rename_all = "snake_case")]
 pub enum Fiche {
-    Evaluee(Evaluation),
+    // Une evaluation reussie pese plusieurs fois l'echec qu'elle remplace ;
+    // la mettre derriere un pointeur evite que chaque fiche, meme vide, en
+    // occupe la taille. Elles vivent en lot dans le cache.
+    Evaluee(Box<Evaluation>),
     Echouee(Echec),
 }
 
@@ -216,7 +237,7 @@ mod tests {
     }
 
     fn evaluation(depot: &str, pushed: &str) -> Fiche {
-        Fiche::Evaluee(Evaluation {
+        Fiche::Evaluee(Box::new(Evaluation {
             depot: depot.into(),
             url: format!("https://github.com/{depot}"),
             verdict: "FAISABLE".into(),
@@ -226,11 +247,12 @@ mod tests {
             remarques: Vec::new(),
             archive: false,
             etoiles: 0,
+            gouvernance: Gouvernance::default(),
             technologie: "Go".into(),
             reference: "v1".into(),
             pushed_at: pushed.into(),
             evalue_le: maintenant(),
-        })
+        }))
     }
 
     #[test]

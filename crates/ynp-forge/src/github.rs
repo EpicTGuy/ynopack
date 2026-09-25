@@ -14,8 +14,10 @@ const UA: &str = concat!("yunopack/", env!("CARGO_PKG_VERSION"));
 pub enum ForgeError {
     #[error("depot introuvable : {0}")]
     NotFound(String),
-    #[error("quota d'API GitHub epuise — definir GITHUB_TOKEN pour le relever")]
-    RateLimited,
+    /// La forge refuse de repondre pour cause de quota. Le nom de la variable
+    /// a definir depend d'elle : le dire evite de chercher au mauvais endroit.
+    #[error("quota d'API epuise sur {forge} — definir {variable} pour le relever")]
+    RateLimited { forge: String, variable: String },
     #[error("reponse inattendue de la forge ({status}) : {body}")]
     Unexpected { status: u16, body: String },
     #[error("reseau : {0}")]
@@ -51,7 +53,10 @@ impl GitHub {
             404 => Err(ForgeError::NotFound(path.to_string())),
             // 403 sans jeton est presque toujours le quota ; le distinguer
             // evite a l'utilisateur de chercher un probleme de droits.
-            403 | 429 => Err(ForgeError::RateLimited),
+            403 | 429 => Err(ForgeError::RateLimited {
+                forge: "github.com".into(),
+                variable: "GITHUB_TOKEN".into(),
+            }),
             other => Err(ForgeError::Unexpected {
                 status: other,
                 body: truncate(&body),
@@ -85,6 +90,9 @@ impl GitHub {
                 // GitHub rend « NOASSERTION » quand il voit un fichier de
                 // licence qu'il ne sait pas identifier : ce n'est pas un SPDX.
                 .filter(|s| s != "NOASSERTION"),
+            fourche_de: raw.parent.map(|p| p.full_name),
+            proprietaire_collectif: raw.owner.map(|o| o.r#type == "Organization"),
+            contributeurs: None,
         })
     }
 
@@ -145,7 +153,10 @@ impl GitHub {
         if !status.is_success() {
             return match status.as_u16() {
                 404 => Err(ForgeError::NotFound(url.to_string())),
-                403 | 429 => Err(ForgeError::RateLimited),
+                403 | 429 => Err(ForgeError::RateLimited {
+                    forge: "github.com".into(),
+                    variable: "GITHUB_TOKEN".into(),
+                }),
                 other => Err(ForgeError::Unexpected {
                     status: other,
                     body: url.to_string(),
@@ -184,6 +195,21 @@ struct RawRepo {
     archived: bool,
     pushed_at: Option<String>,
     license: Option<RawLicense>,
+    /// Present uniquement quand le depot est une fourche.
+    parent: Option<RawParent>,
+    owner: Option<RawOwner>,
+}
+
+#[derive(Deserialize)]
+struct RawParent {
+    full_name: String,
+}
+
+#[derive(Deserialize)]
+struct RawOwner {
+    /// `User` ou `Organization`.
+    #[serde(default)]
+    r#type: String,
 }
 
 #[derive(Deserialize)]

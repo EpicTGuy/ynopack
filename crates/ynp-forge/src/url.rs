@@ -32,15 +32,27 @@ pub fn parse(input: &str) -> Result<SourceRef, UrlError> {
         .next()
         .ok_or_else(|| UrlError::Unrecognized(raw.into()))?
         .to_lowercase();
-    let owner = parts
-        .next()
-        .ok_or_else(|| UrlError::Unrecognized(raw.into()))?
-        .to_string();
-    let repo = parts
-        .next()
-        .ok_or_else(|| UrlError::Unrecognized(raw.into()))?
-        .trim_end_matches(".git")
-        .to_string();
+    // GitLab imbrique les groupes : `framasoft/framaspace/argos` est un seul
+    // projet, pas un projet `framaspace` du groupe `framasoft`. Le separateur
+    // `/-/` marque la fin du chemin et le debut de la navigation ; a defaut,
+    // les mots-cles de chemin des autres forges jouent le meme role.
+    let segments: Vec<&str> = parts
+        .take_while(|s| {
+            !matches!(
+                *s,
+                "-" | "tree" | "blob" | "src" | "commit" | "releases" | "archive"
+            )
+        })
+        .collect();
+
+    let (dernier, chemin) = segments
+        .split_last()
+        .ok_or_else(|| UrlError::Unrecognized(raw.into()))?;
+    if chemin.is_empty() {
+        return Err(UrlError::Unrecognized(raw.into()));
+    }
+    let owner = chemin.join("/");
+    let repo = dernier.trim_end_matches(".git").to_string();
 
     if owner.is_empty() || repo.is_empty() {
         return Err(UrlError::Unrecognized(raw.into()));
@@ -52,19 +64,17 @@ pub fn parse(input: &str) -> Result<SourceRef, UrlError> {
         h if h.contains("codeberg") => Forge::Forgejo,
         h if h.contains("forgejo") => Forge::Forgejo,
         h if h.contains("gitea") => Forge::Gitea,
+        // Instances GitLab connues de la liste de souhaits de YunoHost. Les
+        // autres sont reconnues en interrogeant l'instance.
+        "framagit.org" | "salsa.debian.org" | "0xacab.org" | "git.laquadrature.net" => {
+            Forge::GitLab
+        }
         // Une instance auto-hebergee ne se reconnait pas a son nom de domaine :
         // `git.exemple.fr` peut heberger n'importe quelle forge. La deviner
         // serait le contraire de ce que fait cet outil partout ailleurs. C'est
         // `fetch` qui interroge l'instance pour le savoir.
         _ => Forge::Inconnue,
     };
-
-    if forge == Forge::GitLab {
-        // GitLab a une API differente de celles de GitHub et de Gitea : le
-        // support viendra, mais annoncer un succes qu'on ne tient pas serait
-        // pire que de refuser.
-        return Err(UrlError::UnsupportedForge(host));
-    }
 
     Ok(SourceRef {
         forge,
@@ -99,20 +109,41 @@ mod tests {
     }
 
     #[test]
-    fn une_forge_non_encore_prise_en_charge_est_annoncee_comme_telle() {
-        // Mieux vaut un refus clair qu'un succes qu'on ne tient pas.
-        assert!(matches!(
-            parse("https://gitlab.com/owner/repo"),
-            Err(UrlError::UnsupportedForge(_))
-        ));
-        // Les hotes inconnus ne sont plus refuses a l'analyse de l'URL : c'est
-        // `fetch` qui tranche apres avoir interroge l'instance.
+    fn les_instances_gitlab_connues_sont_reconnues() {
         for u in [
+            "https://gitlab.com/owner/repo",
             "https://framagit.org/owner/repo",
-            "https://git.sr.ht/~owner/repo",
+            "https://salsa.debian.org/owner/repo",
+            "https://0xacab.org/owner/repo",
         ] {
-            assert_eq!(parse(u).unwrap().forge, Forge::Inconnue, "{u}");
+            assert_eq!(parse(u).unwrap().forge, Forge::GitLab, "{u}");
         }
+    }
+
+    #[test]
+    fn un_groupe_imbrique_reste_entier() {
+        // Ne garder que deux segments designerait un autre projet, ou aucun.
+        let s = parse("https://framagit.org/framasoft/framaspace/argos").unwrap();
+        assert_eq!(s.owner, "framasoft/framaspace");
+        assert_eq!(s.repo, "argos");
+    }
+
+    #[test]
+    fn la_navigation_gitlab_est_coupee_au_separateur() {
+        let s = parse("https://framagit.org/framasoft/framadate/-/tree/main/app").unwrap();
+        assert_eq!(
+            (s.owner.as_str(), s.repo.as_str()),
+            ("framasoft", "framadate")
+        );
+    }
+
+    #[test]
+    fn un_hote_inconnu_reste_a_determiner() {
+        // C'est `fetch` qui tranche, apres avoir interroge l'instance.
+        assert_eq!(
+            parse("https://git.sr.ht/~owner/repo").unwrap().forge,
+            Forge::Inconnue
+        );
     }
 
     #[test]

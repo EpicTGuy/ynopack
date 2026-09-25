@@ -9,7 +9,7 @@
 //! le resultat. La liste se remplit au fil de la navigation, et le quota
 //! epuise n'empeche pas de lire ce qui est deja connu.
 
-use crate::cache::{maintenant, Cache, Echec, Evaluation, Fiche, Motif};
+use crate::cache::{maintenant, Cache, Echec, Evaluation, Fiche, Gouvernance, Motif};
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
@@ -176,6 +176,29 @@ pub async fn evaluer(url: &str) -> Fiche {
     let archive = recupere.forge.meta.archived;
     let etoiles = recupere.forge.meta.stars;
     let reference = recupere.choice.reference.clone();
+
+    // Des regles ecrites ne garantissent rien, mais leur absence sur un projet
+    // de taille se remarque. C'est un fait, pas un jugement.
+    let chartes: Vec<String> = [
+        "GOVERNANCE.md",
+        "CODE_OF_CONDUCT.md",
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+    ]
+    .iter()
+    .filter(|f| {
+        recupere.tree.has(f)
+            || recupere.tree.has(&format!(".github/{f}"))
+            || recupere.tree.has(&format!("docs/{f}"))
+    })
+    .map(|f| f.to_string())
+    .collect();
+
+    let gouvernance = Gouvernance {
+        fourche_de: recupere.forge.meta.fourche_de.clone(),
+        proprietaire_collectif: recupere.forge.meta.proprietaire_collectif,
+        chartes,
+    };
     let faits = ynp_analyze::analyze(recupere.forge, &recupere.tree);
     let technologie = faits.stack.primary.to_string();
 
@@ -195,7 +218,7 @@ pub async fn evaluer(url: &str) -> Fiche {
             .collect()
     };
 
-    Fiche::Evaluee(Evaluation {
+    Fiche::Evaluee(Box::new(Evaluation {
         depot,
         url: url.to_string(),
         verdict: faisabilite.verdict.label().to_string(),
@@ -205,11 +228,12 @@ pub async fn evaluer(url: &str) -> Fiche {
         remarques: motifs(ynp_core::Severity::Minor),
         archive,
         etoiles,
+        gouvernance,
         technologie,
         reference,
         pushed_at,
         evalue_le: maintenant(),
-    })
+    }))
 }
 
 /// L'icone d'un projet : l'avatar du compte qui heberge le depot.

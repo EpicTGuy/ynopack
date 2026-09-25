@@ -9,7 +9,9 @@ pub mod archive;
 pub mod client;
 pub mod gitea;
 pub mod github;
+pub mod gitlab;
 pub mod prebuilt;
+pub mod recherche;
 pub mod sources;
 pub mod url;
 pub mod wishlist;
@@ -66,16 +68,28 @@ pub async fn fetch(repo_url: &str) -> Result<Fetched, FetchError> {
     // compiler sur la machine cible — ce que font tous les paquets YunoHost de
     // reference. Leur somme de controle demande un telechargement chacun ;
     // c'est le prix d'un paquet qui s'installe sur une petite instance.
-    let mut prebuilt = releases
+    let prebuilt = releases
         .iter()
         .find(|r| r.tag == choice.reference)
         .map(prebuilt::select)
         .unwrap_or_default();
 
-    for asset in &mut prebuilt {
-        let bytes = client.download(&asset.url).await?;
-        asset.sha256 = sources::sha256(&bytes);
+    // Un binaire qu'on ne peut pas telecharger — retire par l'amont, servi
+    // par un stockage tiers qui refuse, protege par un quota — n'est pas une
+    // raison d'abandonner l'analyse. On l'ecarte : le paquet se construira
+    // depuis les sources, ce qui est moins bien mais reste juste. Constate sur
+    // gitlab-runner, dont les assets sont servis hors de la forge.
+    let mut retenus = Vec::new();
+    for mut asset in prebuilt {
+        match client.download(&asset.url).await {
+            Ok(bytes) => {
+                asset.sha256 = sources::sha256(&bytes);
+                retenus.push(asset);
+            }
+            Err(e) => tracing::warn!("binaire {} ignore : {e}", asset.name),
+        }
     }
+    let prebuilt = retenus;
 
     let selection = ynp_core::facts::SourceSelection {
         reference: choice.reference.clone(),

@@ -119,6 +119,23 @@ pub struct RepoMeta {
     /// Texte integral du fichier de licence amont, que le paquet doit inclure.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub license_text: Option<String>,
+
+    // --- Ce qui renseigne sur la conduite du projet ---
+    //
+    // Aucune base libre n'encode la gouvernance d'un logiciel. Ces quatre
+    // faits, eux, sont lisibles par une machine et disent quelque chose de
+    // reel : qui tient le depot, s'il descend d'un autre, et si le projet
+    // s'est donne des regles ecrites. A chacun d'en tirer ses conclusions.
+    /// Depot dont celui-ci est une fourche, ex. `go-gitea/gitea` pour Forgejo.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fourche_de: Option<String>,
+    /// Vrai si le depot appartient a une organisation plutot qu'a une
+    /// personne. Un projet porte par un seul compte n'a pas le meme avenir.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proprietaire_collectif: Option<bool>,
+    /// Nombre de contributeurs distincts, quand la forge le rend.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub contributeurs: Option<u32>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

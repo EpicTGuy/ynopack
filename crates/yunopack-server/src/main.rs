@@ -113,6 +113,7 @@ async fn main() -> anyhow::Result<()> {
         .route(&format!("{base}/wishlist"), get(souhaits))
         .route(&format!("{base}/alternatives"), get(alternatives))
         .route(&format!("{base}/suggestions"), get(suggestions))
+        .route(&format!("{base}/recherche"), get(recherche))
         .route(
             &format!("{base}/evaluations"),
             get(evaluations).post(evaluer),
@@ -188,6 +189,9 @@ async fn souhaits() -> (StatusCode, Json<serde_json::Value>) {
                         "repo": s.upstream,
                         "analysable": s.analysable(),
                         "en_cours": s.en_cours(),
+                        "votes": s.votes,
+                        "deja_package": s.deja_package,
+                        "id_yunohost": s.id_yunohost,
                     })
                 })
                 .collect();
@@ -270,6 +274,56 @@ async fn alternatives(
         })
         .collect();
     (StatusCode::OK, Json(serde_json::json!(items)))
+}
+
+/// Cherche un logiciel par son nom, et rend les depots qui correspondent.
+///
+/// Coller une URL suppose de l'avoir deja trouvee. Beaucoup de gens
+/// connaissent le nom de l'outil qu'ils veulent, pas l'adresse de son depot.
+/// Les catalogues locaux repondent en premier — sans quota, avec description
+/// et licence — puis les forges, pour ce qu'ils ignorent.
+async fn recherche(
+    State(etat): State<Etat>,
+    axum::extract::Query(r): axum::extract::Query<Recherche>,
+) -> Json<serde_json::Value> {
+    let terme = r.q.trim();
+    if terme.len() < 2 {
+        return Json(serde_json::json!([]));
+    }
+
+    let mut out: Vec<serde_json::Value> = Vec::new();
+    let mut vus: Vec<String> = Vec::new();
+
+    if let Ok(c) = catalogue_externe(&etat).await {
+        for l in c.chercher(terme).into_iter().take(15) {
+            if l.source_code_url.is_empty() {
+                continue;
+            }
+            vus.push(l.source_code_url.clone());
+            out.push(serde_json::json!({
+                "nom": l.name,
+                "description": l.description,
+                "depot": l.source_code_url,
+                "origine": "catalogue",
+                "etoiles": l.stargazers_count,
+                "deja_package": l.deja_package,
+                "id_yunohost": l.id_yunohost,
+            }));
+        }
+    }
+
+    for t in ynp_forge::recherche::sur_les_forges(terme, &vus).await {
+        out.push(serde_json::json!({
+            "nom": t.nom,
+            "description": t.description,
+            "depot": t.depot,
+            "origine": t.origine,
+            "etoiles": t.etoiles,
+            "deja_package": false,
+        }));
+    }
+
+    Json(serde_json::json!(out))
 }
 
 /// Les noms du catalogue externe, pour l'autocompletion.

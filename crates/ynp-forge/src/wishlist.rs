@@ -13,6 +13,9 @@ use std::collections::BTreeMap;
 
 const URL: &str = "https://raw.githubusercontent.com/YunoHost/apps/main/wishlist.toml";
 const URL_CATALOGUE: &str = "https://raw.githubusercontent.com/YunoHost/apps/main/apps.toml";
+/// Page ou la communaute vote. Les votes n'existent nulle part ailleurs :
+/// `wishlist.toml` ne les porte pas, et le magasin n'a pas d'API qui les rende.
+const URL_VOTES: &str = "https://apps.yunohost.org/wishlist";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Souhait {
@@ -35,6 +38,14 @@ pub struct Souhait {
     /// S'y attaquer ferait donc doublon.
     #[serde(default)]
     pub draft: Option<String>,
+    /// Votes de la communaute. C'est la seule mesure de la demande reelle.
+    #[serde(default)]
+    pub votes: u32,
+    /// L'application est deja au catalogue : la demande peut etre retiree.
+    #[serde(default)]
+    pub deja_package: bool,
+    #[serde(default)]
+    pub id_yunohost: String,
 }
 
 impl Souhait {
@@ -98,33 +109,94 @@ pub async fn recuperer() -> Result<Vec<Souhait>, WishlistError> {
     let table: BTreeMap<String, SouhaitBrut> = toml::from_str(&brut)?;
 
     let deja = deja_packagees(&client).await.unwrap_or_default();
+    let votes = votes(&client).await.unwrap_or_default();
 
-    Ok(table
+    let mut out: Vec<Souhait> = table
         .into_iter()
-        .map(|(id, s)| Souhait {
-            id,
-            name: s.name,
-            description: s.description,
-            upstream: s.upstream,
-            website: s.website,
-            added_date: s.added_date,
-            draft: s.draft,
+        .map(|(id, s)| {
+            let par_depot = deja.get(&normaliser(&s.upstream));
+            let par_id = deja.get(&id);
+            let trouve = par_depot.or(par_id);
+            Souhait {
+                votes: votes.get(&id).copied().unwrap_or(0),
+                deja_package: trouve.is_some(),
+                id_yunohost: trouve.cloned().unwrap_or_default(),
+                id,
+                name: s.name,
+                description: s.description,
+                upstream: s.upstream,
+                website: s.website,
+                added_date: s.added_date,
+                draft: s.draft,
+            }
         })
-        .filter(|s| !deja.contains(&s.id) && !deja.contains(&normaliser(&s.upstream)))
-        .collect())
+        .collect();
+
+    // Les plus demandees d'abord. L'ordre alphabetique de `wishlist.toml` ne
+    // dit rien de ce que les gens attendent vraiment.
+    out.sort_by(|a, b| {
+        b.votes
+            .cmp(&a.votes)
+            .then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+    });
+    Ok(out)
 }
 
-/// Identifiants et depots des applications deja au catalogue.
-async fn deja_packagees(client: &reqwest::Client) -> Result<Vec<String>, WishlistError> {
+/// Votes par identifiant, lus sur la page publique.
+///
+/// Aucune API ne les rend : ni `wishlist.toml`, ni le magasin. La page reste
+/// la seule source, et la lire est fragile — une refonte du gabarit y mettrait
+/// fin. C'est pourquoi un echec n'en est pas un : sans votes, la liste reste
+/// utilisable, simplement moins bien triee.
+async fn votes(client: &reqwest::Client) -> Result<BTreeMap<String, u32>, WishlistError> {
+    let html = client.get(URL_VOTES).send().await?.text().await?;
+    Ok(extraire_votes(&html))
+}
+
+/// Chaque entree porte un lien `/app/<id>/star` suivi du compte.
+fn extraire_votes(html: &str) -> BTreeMap<String, u32> {
+    let mut out = BTreeMap::new();
+    for bloc in html.split("href=\"/app/").skip(1) {
+        let Some((id, reste)) = bloc.split_once("/star\"") else {
+            continue;
+        };
+        if id.is_empty() || id.contains('"') || id.contains('<') {
+            continue;
+        }
+        // Le premier nombre qui suit est le compte affiche ; le second est
+        // celui qu'afficherait un clic, et ne nous interesse pas.
+        let Some(apres) = reste
+            .split_once("<span")
+            .and_then(|(_, r)| r.split_once('>'))
+        else {
+            continue;
+        };
+        let nombre: String = apres
+            .1
+            .trim()
+            .chars()
+            .take_while(char::is_ascii_digit)
+            .collect();
+        if let Ok(n) = nombre.parse::<u32>() {
+            out.insert(id.to_string(), n);
+        }
+    }
+    out
+}
+
+/// Cle de rapprochement -> identifiant de l'application au catalogue.
+async fn deja_packagees(
+    client: &reqwest::Client,
+) -> Result<BTreeMap<String, String>, WishlistError> {
     let brut = client.get(URL_CATALOGUE).send().await?.text().await?;
     let table: BTreeMap<String, toml::Value> = toml::from_str(&brut)?;
 
-    let mut out = Vec::new();
+    let mut out = BTreeMap::new();
     for (id, entree) in table {
-        out.push(id);
+        out.insert(id.clone(), id.clone());
         if let Some(url) = entree.get("url").and_then(|u| u.as_str()) {
             // `foo_ynh` sur la forge correspond a l'app `foo`.
-            out.push(normaliser(url.trim_end_matches("_ynh")));
+            out.insert(normaliser(url.trim_end_matches("_ynh")), id.clone());
         }
     }
     Ok(out)
@@ -160,6 +232,57 @@ struct SouhaitBrut {
 }
 
 #[cfg(test)]
+mod votes_et_perimes {
+    use super::*;
+
+    /// Extrait reel de la page, reduit a une entree.
+    const PAGE: &str = r#"
+      <td class="text-center">
+        <a role="button" title="Star this app" href="/app/bigbluebutton/star" class="btn-sm">
+            <span class="inline-block ">94</span>
+            <span class="hidden ">95</span>
+            <i class="fa fa-star-o inline-block "></i>
+        </a>
+      </td>
+      <td>
+        <a role="button" href="/app/anubis/star" class="btn-sm">
+            <span class="inline-block ">51</span>
+            <span class="hidden ">52</span>
+        </a>
+      </td>
+    "#;
+
+    #[test]
+    fn les_votes_se_lisent_sur_la_page_publique() {
+        // Aucune API ne les rend : ni wishlist.toml, ni le magasin.
+        let v = extraire_votes(PAGE);
+        assert_eq!(v.get("bigbluebutton"), Some(&94));
+        assert_eq!(v.get("anubis"), Some(&51));
+        assert_eq!(v.len(), 2);
+    }
+
+    #[test]
+    fn c_est_le_compte_affiche_qui_est_retenu_pas_celui_d_apres_le_clic() {
+        // Le second nombre est ce qu'afficherait un vote de plus.
+        assert_eq!(extraire_votes(PAGE).get("bigbluebutton"), Some(&94));
+    }
+
+    #[test]
+    fn une_page_refondue_ne_fait_pas_echouer_la_liste() {
+        // La lecture d'un gabarit HTML est fragile par nature : sans votes, la
+        // liste reste utilisable, simplement moins bien triee.
+        assert!(extraire_votes("<html><body>rien ici</body></html>").is_empty());
+        assert!(extraire_votes("").is_empty());
+    }
+
+    #[test]
+    fn un_lien_malforme_est_ignore_sans_paniquer() {
+        assert!(extraire_votes(r#"href="/app//star"><span >3</span>"#).is_empty());
+        assert!(extraire_votes(r#"href="/app/x/star">pas de nombre"#).is_empty());
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -172,6 +295,9 @@ mod tests {
             website: String::new(),
             added_date: 0,
             draft: None,
+            votes: 0,
+            deja_package: false,
+            id_yunohost: String::new(),
         }
     }
 

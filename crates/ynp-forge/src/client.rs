@@ -11,11 +11,13 @@
 
 use crate::gitea::Gitea;
 use crate::github::{ForgeError, GitHub};
+use crate::gitlab::GitLab;
 use ynp_core::facts::{Forge, Release, RepoMeta, SourceRef};
 
 pub enum Client {
     GitHub(GitHub),
     Gitea(Gitea),
+    GitLab(GitLab),
 }
 
 impl Client {
@@ -26,19 +28,21 @@ impl Client {
         match source.forge {
             Forge::GitHub => Ok(Client::GitHub(GitHub::new()?)),
             Forge::Gitea | Forge::Forgejo => Ok(Client::Gitea(Gitea::new(&hote)?)),
-            Forge::GitLab => Err(ForgeError::Unexpected {
-                status: 0,
-                body: format!("{hote} : l'API GitLab n'est pas encore prise en charge"),
-            }),
+            Forge::GitLab => Ok(Client::GitLab(GitLab::new(&hote)?)),
             Forge::Inconnue => {
+                // Gitea d'abord : sa reponse est franche et sans
+                // authentification. GitLab ensuite, teste sur le projet
+                // lui-meme puisque ses points generiques demandent un jeton.
                 if est_une_instance_gitea(&hote).await {
                     Ok(Client::Gitea(Gitea::new(&hote)?))
+                } else if est_une_instance_gitlab(&hote, source).await {
+                    Ok(Client::GitLab(GitLab::new(&hote)?))
                 } else {
                     Err(ForgeError::Unexpected {
                         status: 0,
                         body: format!(
-                            "{hote} : forge non reconnue — GitHub, Gitea et Forgejo \
-                             (dont Codeberg) sont pris en charge"
+                            "{hote} : forge non reconnue — GitHub, GitLab, Gitea et \
+                             Forgejo (dont Codeberg) sont pris en charge"
                         ),
                     })
                 }
@@ -50,6 +54,7 @@ impl Client {
         match self {
             Client::GitHub(c) => c.repo(source).await,
             Client::Gitea(c) => c.repo(source).await,
+            Client::GitLab(c) => c.repo(source).await,
         }
     }
 
@@ -57,6 +62,7 @@ impl Client {
         match self {
             Client::GitHub(c) => c.releases(source).await,
             Client::Gitea(c) => c.releases(source).await,
+            Client::GitLab(c) => c.releases(source).await,
         }
     }
 
@@ -64,6 +70,7 @@ impl Client {
         match self {
             Client::GitHub(c) => c.tags(source).await,
             Client::Gitea(c) => c.tags(source).await,
+            Client::GitLab(c) => c.tags(source).await,
         }
     }
 
@@ -71,6 +78,7 @@ impl Client {
         match self {
             Client::GitHub(c) => c.download(url).await,
             Client::Gitea(c) => c.download(url).await,
+            Client::GitLab(c) => c.download(url).await,
         }
     }
 
@@ -78,6 +86,7 @@ impl Client {
         match self {
             Client::GitHub(_) => crate::github::archive_url(source, reference),
             Client::Gitea(c) => crate::gitea::archive_url(c.hote(), source, reference),
+            Client::GitLab(c) => crate::gitlab::archive_url(c.hote(), source, reference),
         }
     }
 }
@@ -121,6 +130,32 @@ async fn est_une_instance_gitea(hote: &str) -> bool {
         .is_ok_and(|t| t.contains("\"version\"") && t.len() < 512)
 }
 
+/// Vrai si l'instance repond a l'API de GitLab pour ce projet.
+///
+/// Les points generiques de GitLab (`/api/v4/version`, `/api/v4/metadata`)
+/// exigent un jeton ; interroger le projet lui-meme est le seul test qui
+/// fonctionne sans authentification sur un projet public.
+async fn est_une_instance_gitlab(hote: &str, source: &SourceRef) -> bool {
+    let Ok(client) = reqwest::Client::builder()
+        .user_agent(concat!("yunopack/", env!("CARGO_PKG_VERSION")))
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+    else {
+        return false;
+    };
+    let url = format!(
+        "https://{hote}/api/v4/projects/{}",
+        crate::gitlab::chemin_encode(source)
+    );
+    let Ok(r) = client.get(url).send().await else {
+        return false;
+    };
+    r.status().is_success()
+        && r.text()
+            .await
+            .is_ok_and(|t| t.contains("\"path_with_namespace\""))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,16 +173,24 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn gitlab_est_refuse_avec_une_raison_lisible() {
-        let s = SourceRef {
-            forge: Forge::GitLab,
-            owner: "a".into(),
-            repo: "b".into(),
-            url: "https://gitlab.com/a/b".into(),
-            default_branch: None,
-            commit: None,
-        };
-        let e = Client::pour(&s).await.err().expect("doit refuser");
-        assert!(e.to_string().contains("GitLab"), "{e}");
+    async fn chaque_forge_reconnue_donne_son_client() {
+        let cas = [
+            (Forge::GitHub, "https://github.com/a/b"),
+            (Forge::GitLab, "https://framagit.org/a/b"),
+            (Forge::Forgejo, "https://codeberg.org/a/b"),
+            (Forge::Gitea, "https://gitea.com/a/b"),
+        ];
+        for (forge, url) in cas {
+            let s = SourceRef {
+                forge,
+                owner: "a".into(),
+                repo: "b".into(),
+                url: url.into(),
+                default_branch: None,
+                commit: None,
+            };
+            // Aucun appel reseau : la forge est deja connue.
+            assert!(Client::pour(&s).await.is_ok(), "{url}");
+        }
     }
 }

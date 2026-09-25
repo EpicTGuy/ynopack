@@ -51,7 +51,10 @@ impl Gitea {
         match status.as_u16() {
             200 => Ok(body),
             404 => Err(ForgeError::NotFound(chemin.to_string())),
-            403 | 429 => Err(ForgeError::RateLimited),
+            403 | 429 => Err(ForgeError::RateLimited {
+                forge: self.hote.clone(),
+                variable: "FORGEJO_TOKEN".into(),
+            }),
             other => Err(ForgeError::Unexpected {
                 status: other,
                 body: body.chars().take(200).collect(),
@@ -83,6 +86,12 @@ impl Gitea {
             // L'API ne rend aucun identifiant SPDX. La licence sera lue dans
             // l'arborescence, comme pour un depot GitHub sans licence reconnue.
             license_spdx: None,
+            fourche_de: raw.parent.map(|p| p.full_name),
+            // Gitea distingue `user` et `organization` sur le proprietaire.
+            proprietaire_collectif: raw
+                .owner
+                .map(|o| o.r#type.eq_ignore_ascii_case("organization")),
+            contributeurs: None,
         })
     }
 
@@ -130,7 +139,10 @@ impl Gitea {
         if !status.is_success() {
             return match status.as_u16() {
                 404 => Err(ForgeError::NotFound(url.to_string())),
-                403 | 429 => Err(ForgeError::RateLimited),
+                403 | 429 => Err(ForgeError::RateLimited {
+                    forge: self.hote.clone(),
+                    variable: "FORGEJO_TOKEN".into(),
+                }),
                 other => Err(ForgeError::Unexpected {
                     status: other,
                     body: url.to_string(),
@@ -167,6 +179,19 @@ struct RawRepo {
     #[serde(default)]
     archived: bool,
     updated_at: Option<String>,
+    parent: Option<RawParent>,
+    owner: Option<RawOwner>,
+}
+
+#[derive(Deserialize)]
+struct RawParent {
+    full_name: String,
+}
+
+#[derive(Deserialize)]
+struct RawOwner {
+    #[serde(default)]
+    r#type: String,
 }
 
 #[derive(Deserialize)]
