@@ -284,7 +284,9 @@ fn tous_les_scripts(racine: &Path) -> Result<Vec<Finding>, VerifyError> {
             .unwrap_or_default()
             .to_string_lossy()
             .to_string();
-        let contenu = lire(&chemin)?;
+        let Some(contenu) = lire_si_texte(&chemin)? else {
+            continue;
+        };
         out.extend(scripts::verifier(&format!("scripts/{nom}"), &contenu));
     }
     Ok(out)
@@ -310,7 +312,9 @@ fn jetons(racine: &Path, spec: &AppSpec) -> Result<Vec<Finding>, VerifyError> {
             .unwrap_or_default()
             .to_string_lossy()
             .to_string();
-        let contenu = lire(&chemin)?;
+        let Some(contenu) = lire_si_texte(&chemin)? else {
+            continue;
+        };
 
         for jeton in placeholders::extraire(&contenu) {
             if fournis.contains(&jeton) {
@@ -397,11 +401,22 @@ fn fichiers_texte(racine: &Path) -> Vec<std::path::PathBuf> {
     out
 }
 
-fn lire(chemin: &Path) -> Result<String, VerifyError> {
-    std::fs::read_to_string(chemin).map_err(|source| VerifyError::Lecture {
-        chemin: chemin.display().to_string(),
-        source,
-    })
+/// Le contenu textuel d'un fichier, ou rien s'il est binaire.
+///
+/// Un paquet contient legitimement des octets qui ne sont pas du texte — un
+/// logo, une image de documentation. Les verifications de ce module portent
+/// sur du texte ; les leur soumettre faisait echouer tout le paquet sur un
+/// « stream did not contain valid UTF-8 », ce qui n'apprend rien a personne.
+/// Une erreur d'acces, elle, reste une erreur.
+fn lire_si_texte(chemin: &Path) -> Result<Option<String>, VerifyError> {
+    match std::fs::read_to_string(chemin) {
+        Ok(t) => Ok(Some(t)),
+        Err(e) if e.kind() == std::io::ErrorKind::InvalidData => Ok(None),
+        Err(source) => Err(VerifyError::Lecture {
+            chemin: chemin.display().to_string(),
+            source,
+        }),
+    }
 }
 
 /// Gate G2 : le paquet est-il conforme ?
@@ -443,5 +458,34 @@ mod schema_incorpore {
         for champ in ["packaging_format", "id", "version", "resources"] {
             assert!(noms.contains(&champ), "{champ} devrait etre obligatoire");
         }
+    }
+}
+
+#[cfg(test)]
+mod fichiers_binaires {
+    use super::*;
+
+    #[test]
+    fn un_fichier_binaire_est_ignore_plutot_que_fatal() {
+        // Un paquet contient legitimement un logo. Le soumettre aux
+        // verifications de texte faisait echouer tout le paquet.
+        let d = std::env::temp_dir().join(format!("ynp-bin-{}", std::process::id()));
+        std::fs::create_dir_all(&d).unwrap();
+        let png = d.join("logo.png");
+        std::fs::write(&png, [0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a, 0xff]).unwrap();
+
+        assert!(matches!(lire_si_texte(&png), Ok(None)));
+
+        let txt = d.join("conf.env");
+        std::fs::write(&txt, "PORT=__PORT__\n").unwrap();
+        assert_eq!(
+            lire_si_texte(&txt).unwrap().as_deref(),
+            Some("PORT=__PORT__\n")
+        );
+
+        // Un fichier absent reste une erreur : l'ignorer masquerait un paquet
+        // incomplet.
+        assert!(lire_si_texte(&d.join("absent")).is_err());
+        let _ = std::fs::remove_dir_all(&d);
     }
 }
