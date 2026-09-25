@@ -2,383 +2,626 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
 <title>yunopack</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%232b6b4f' fill-rule='evenodd' d='M3.5 0H12.5L16 3.5V12.5L12.5 16H3.5L0 12.5V3.5Z M5 5.5L6.8 3.7L11.1 8L6.8 12.3L5 10.5L7.5 8Z'/%3E%3C/svg%3E">
 <style>
-  :root {
-    color-scheme: light dark;
-    --fond: #fbfaf8; --texte: #1c1b19; --doux: #6b6862;
-    --trait: #e0ddd6; --accent: #2b6b4f; --alerte: #a33; --carte: #fff;
-    --choix: #f4f2ee;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root { --fond:#16171a; --texte:#e8e6e1; --doux:#9a968e;
-            --trait:#2c2e33; --accent:#6fbf95; --alerte:#e4756b; --carte:#1d1f23;
-            --choix:#232629; }
-  }
-  * { box-sizing: border-box; }
-  body { margin:0; padding:2rem 1rem 4rem; background:var(--fond); color:var(--texte);
-         font:15px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
-  main { max-width: 46rem; margin: 0 auto; }
-  h1 { font-size:1.6rem; margin:0 0 .3rem; letter-spacing:-.02em; }
-  .sous { color:var(--doux); margin:0 0 2rem; }
-  form.recherche { display:flex; gap:.6rem; flex-wrap:wrap; margin-bottom:2rem; }
-  input, select, textarea {
-    padding:.7rem .9rem; border:1px solid var(--trait); border-radius:.45rem;
-    background:var(--carte); color:var(--texte); font:inherit; max-width:100%; }
-  form.recherche input { flex:1 1 20rem; }
-  input:focus, select:focus, textarea:focus { outline:2px solid var(--accent); outline-offset:1px; }
-  button { padding:.7rem 1.3rem; border:0; border-radius:.45rem; background:var(--accent);
-           color:#fff; font:inherit; font-weight:600; cursor:pointer; }
-  button:disabled { opacity:.5; cursor:default; }
-  button.discret { background:transparent; color:var(--accent); border:1px solid var(--trait);
-                   padding:.45rem .8rem; font-weight:500; font-size:.88rem; }
-  .carte { background:var(--carte); border:1px solid var(--trait); border-radius:.6rem;
-           padding:1.1rem 1.3rem; margin-bottom:1rem; }
-  .carte h2 { font-size:.95rem; margin:0 0 .8rem; font-weight:600; word-break:break-all; }
-  .carte h2 .etat { color:var(--doux); font-weight:400; }
-  .etape { display:flex; gap:.7rem; padding:.3rem 0; align-items:baseline; }
-  .etape b { flex:0 0 7.5rem; font-weight:600; font-size:.82rem; color:var(--doux);
-             text-transform:uppercase; letter-spacing:.04em; }
-  .etape span { flex:1; min-width:0; overflow-wrap:anywhere; }
-  .ok b { color:var(--accent); }
-  .ko { color:var(--alerte); } .ko b { color:var(--alerte); }
-  footer { margin-top:3rem; color:var(--doux); font-size:.85rem; }
-  code { background:var(--choix); padding:.1rem .35rem; border-radius:.25rem; font-size:.9em;
-         overflow-wrap:anywhere; }
+:root{color-scheme:light dark;--bg:#fbfaf8;--fg:#1c1b19;--mute:#6b6862;--line:#e0ddd6;--panel:#f2f0eb;--acc:#2b6b4f;--acc-fg:#fbfaf8;--acc-bg:#eaf1ec;--err:#a33;--err-bg:#f9eeec;
+--mono:ui-monospace,"SF Mono","Cascadia Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI","Noto Sans","Helvetica Neue",sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#16171a;--fg:#e8e6e1;--mute:#9a968e;--line:#2c2e33;--panel:#1d1f23;--acc:#6fbf95;--acc-fg:#16171a;--acc-bg:#18251e;--err:#e4756b;--err-bg:#2a1c1b}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--sans)}
+a{color:var(--acc);text-underline-offset:2px}a:hover{color:var(--fg)}
+code{font-family:var(--mono)}
+[hidden]{display:none!important}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header{border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:center;gap:12px;padding:20px 0 14px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none}
+.brand svg{width:24px;height:24px;color:var(--acc);display:block;flex:none}
+.brand b{font:600 17px/1 var(--mono);letter-spacing:-.01em}
+.tag{margin-left:auto;color:var(--mute);font:13px var(--mono)}
+nav{display:flex;gap:24px;overflow-x:auto;scrollbar-width:none}
+nav button{appearance:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 0 10px;font:14px var(--sans);color:var(--mute);cursor:pointer;white-space:nowrap}
+nav button:hover{color:var(--fg)}
+nav button[aria-selected=true]{color:var(--fg);border-color:var(--acc)}
+nav .n{font:12px var(--mono);color:var(--mute);margin-left:6px}
+main{padding:28px 0 56px}
+h1{font-size:20px;line-height:1.3;margin:0}
+.lead{color:var(--mute);margin:4px 0 20px;max-width:62ch;text-wrap:pretty}
+.lbl{display:block;font:12px var(--mono);color:var(--mute);margin:0 0 6px}
+.row{display:flex;gap:8px}
+input,select{flex:1;width:100%;min-width:0;height:44px;padding:0 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg);font:14px var(--mono)}
+input::placeholder{color:var(--mute)}
+input:focus,select:focus{outline:2px solid var(--acc);outline-offset:-1px;border-color:transparent}
+.btn{appearance:none;height:44px;padding:0 18px;border-radius:6px;border:1px solid var(--acc);background:var(--acc);color:var(--acc-fg);font:600 14px var(--sans);cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{filter:brightness(1.08);color:var(--acc-fg)}
+.btn:disabled{opacity:.5;cursor:default;filter:none}
+.btn.ghost{background:transparent;color:var(--acc)}
+.btn.ghost:hover{background:var(--acc-bg);filter:none}
+.btn.sm{height:34px;padding:0 12px;font-size:13px}
+.btn.plain{border-color:var(--line);background:transparent;color:var(--fg)}
+.hint{margin:8px 0 0;color:var(--mute);font-size:13px}
+.hint.err{color:var(--err)}
+.pipe{margin-top:32px}
+.pipe-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font:13px var(--mono);color:var(--mute);margin-bottom:8px}
+.pipe-h strong{color:var(--fg);font-weight:600}
+#pipe-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pipe-h.ok strong{color:var(--acc)}.pipe-h.fail strong{color:var(--err)}
+.rail{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:24px}
+.rail i{height:4px;border-radius:2px;background:var(--line)}
+.rail i[data-s=ok]{background:var(--acc)}
+.rail i[data-s=running]{background:var(--acc);animation:pulse 1.2s ease-in-out infinite}
+.rail i[data-s=waiting]{background:var(--acc);opacity:.45}
+.rail i[data-s=fail]{background:var(--err)}
+@keyframes pulse{50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+ol.steps{list-style:none;margin:0;padding:0}
+.step{position:relative;display:grid;grid-template-columns:24px minmax(0,1fr);gap:0 14px;padding-bottom:22px}
+.step:last-child{padding-bottom:0}
+.step:not(:last-child)::before{content:"";position:absolute;left:11.5px;top:30px;bottom:6px;width:1px;background:var(--line)}
+.step[data-s=ok]:not(:last-child)::before{background:var(--acc)}
+.mk{position:relative;width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font:600 11px/1 var(--mono);color:var(--mute);background:var(--bg)}
+.step[data-s=running] .mk{color:var(--acc);border-color:transparent}
+.step[data-s=running] .mk::after{content:"";position:absolute;inset:-1.5px;border-radius:50%;border:1.5px solid var(--line);border-top-color:var(--acc);animation:spin .9s linear infinite}
+.step[data-s=ok] .mk{background:var(--acc);border-color:var(--acc);color:var(--acc-fg)}
+.step[data-s=waiting] .mk{border-color:var(--acc);color:var(--acc)}
+.step[data-s=fail] .mk{background:var(--err);border-color:var(--err);color:var(--bg)}
+.step[data-s=skipped] .mk{border-style:dashed}
+.hd{display:flex;align-items:baseline;gap:10px;min-height:24px;flex-wrap:wrap}
+.nm{font-weight:600}
+.step[data-s=pending] .nm,.step[data-s=skipped] .nm{color:var(--mute);font-weight:500}
+.sub{color:var(--mute);font-size:13px}
+.st{margin-left:auto;font:12px var(--mono);color:var(--mute);white-space:nowrap}
+.step[data-s=running] .st,.step[data-s=ok] .st,.step[data-s=waiting] .st{color:var(--acc)}
+.step[data-s=fail] .st{color:var(--err)}
+.sum{font:13px/1.5 var(--mono);margin-top:2px;overflow-wrap:anywhere}
+.sum:empty{display:none}
+.step[data-s=ok] .sum.final{font-weight:600}
+.log{margin-top:6px}
+.log summary{cursor:pointer;font:12px var(--mono);color:var(--mute);list-style:none;display:inline-flex;gap:6px;user-select:none}
+.log summary::-webkit-details-marker{display:none}
+.log summary::before{content:"▸"}
+.log[open] summary::before{content:"▾"}
+.log summary:hover{color:var(--fg)}
+.log ol{list-style:none;margin:6px 0 0;padding:8px 12px;background:var(--panel);border-radius:6px;font:12px/1.65 var(--mono)}
+.log li{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;overflow-wrap:anywhere}
+.log time{color:var(--mute)}
+.why{margin-top:10px;border:1px solid var(--err);border-radius:6px;background:var(--err-bg);padding:12px 14px}
+.why-t{margin:0 0 8px;font-weight:600;color:var(--err)}
+.why ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.why li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:baseline;font-size:14px}
+.code{font:600 12px/1.6 var(--mono);padding:0 6px;border-radius:4px;background:var(--bg);border:1px solid var(--line);color:var(--fg);white-space:nowrap}
+.why .note{margin:10px 0 0;color:var(--mute);font-size:13px;text-wrap:pretty}
 
-  /* Formulaire d'arbitrage */
-  .decision { margin-top:1.1rem; border-top:1px solid var(--trait); padding-top:1.1rem; }
-  .decision > p { margin:0 0 1.2rem; color:var(--doux); font-size:.9rem; }
-  .champ { margin-bottom:1.6rem; }
-  .champ > label { display:block; font-weight:600; font-size:.9rem; margin-bottom:.2rem;
-                   font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
-  .pourquoi { color:var(--doux); font-size:.88rem; margin:0 0 .3rem; }
-  .ou { color:var(--doux); font-size:.82rem; margin:0 0 .7rem; font-style:italic; }
-  .propositions { display:flex; flex-direction:column; gap:.3rem; margin-bottom:.7rem; }
-  .proposition { display:flex; gap:.6rem; align-items:flex-start; padding:.5rem .7rem;
-                 border:1px solid var(--trait); border-radius:.4rem; cursor:pointer;
-                 background:var(--fond); }
-  .proposition:hover { border-color:var(--accent); }
-  .proposition input { margin:.35rem 0 0; padding:0; flex:0 0 auto; }
-  .proposition .v { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86rem;
-                    overflow-wrap:anywhere; white-space:pre-wrap; }
-  .proposition .w { color:var(--doux); font-size:.8rem; }
-  .libre { width:100%; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.86rem; }
-  .erreur { color:var(--alerte); font-size:.88rem; margin:.6rem 0 0; }
-  .fini { margin-top:1rem; display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; }
+/* Arbitrages : ce que le depot ne dit pas, et qu'on demande plutot que d'inventer. */
+.ask{margin-top:12px;border:1px solid var(--acc);border-radius:6px;background:var(--acc-bg);padding:14px 16px}
+.ask-t{margin:0 0 4px;font-weight:600;color:var(--acc)}
+.ask-i{margin:0 0 16px;color:var(--mute);font-size:13px;text-wrap:pretty}
+.fld{margin-bottom:18px}
+.fld:last-of-type{margin-bottom:14px}
+.fld > .k{font:600 13px var(--mono);display:block;margin-bottom:2px}
+.fld .why-not{margin:0 0 2px;color:var(--mute);font-size:13px;text-wrap:pretty}
+.fld .look{margin:0 0 8px;color:var(--mute);font-size:12px;font-style:italic}
+.opts{display:grid;gap:4px;margin-bottom:8px}
+.opt{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:8px 10px;border:1px solid var(--line);border-radius:5px;background:var(--bg);cursor:pointer}
+.opt:hover{border-color:var(--acc)}
+.opt:has(input:checked){border-color:var(--acc);box-shadow:inset 0 0 0 1px var(--acc)}
+.opt input{flex:none;width:auto;height:auto;margin:5px 0 0;padding:0;min-width:0}
+.opt .v{display:block;font:13px/1.5 var(--mono);overflow-wrap:anywhere;white-space:pre-wrap}
+.opt .w{display:block;color:var(--mute);font-size:12px;margin-top:1px}
+.fld .free{height:38px;font-size:13px}
+.out{margin-top:28px;border:1px solid var(--acc);border-radius:8px;padding:18px;background:var(--acc-bg)}
+.out h2{margin:0;font-size:17px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.out h2 code{font-size:15px;color:var(--acc)}
+.out .meta{font:13px var(--mono);color:var(--mute);margin:4px 0 14px}
+.cmd{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 6px 6px 12px;font:13px var(--mono)}
+.cmd code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;padding:4px 0}
+.cmd code::before{content:"$ ";color:var(--mute)}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.stop{margin-top:24px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:16px;font:13px var(--mono);color:var(--mute)}
+.lh{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.lh .c{font:13px var(--mono);color:var(--mute);white-space:nowrap}
+ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--line)}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;padding:14px 0;border-bottom:1px solid var(--line);align-items:center}
+.item .ds{color:var(--mute);font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:1px}
+.item .mt{display:flex;flex-wrap:wrap;gap:4px 12px;font:12px var(--mono);color:var(--mute);margin-top:4px;min-width:0}
+.item .mt a{color:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.item .mt a:hover{color:var(--fg)}
+.lic{border:1px solid var(--line);border-radius:4px;padding:0 5px}
+.empty{color:var(--mute);padding:18px 0;font-size:14px}
+.more{margin-top:16px}
+footer{border-top:1px solid var(--line);font:12px var(--mono);color:var(--mute)}
+footer .wrap{padding-top:16px;padding-bottom:24px;display:flex;flex-wrap:wrap;gap:4px 16px;justify-content:space-between}
+@media (max-width:520px){.wrap{padding:0 16px}.tag,.sub{display:none}.item{grid-template-columns:minmax(0,1fr)}.item .btn{justify-self:start;margin-top:6px}.btn.go{padding:0 14px}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
 <body>
-<main>
-  <h1>yunopack</h1>
-  <p class="sous">Collez l'adresse d'un dépôt. L'outil dit s'il est packageable pour
-     YunoHost — et pourquoi, quand il ne l'est pas.</p>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <a class="brand" href="#" data-tab="run" aria-label="yunopack — accueil">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M5 0H19L24 5V19L19 24H5L0 19V5Z M5.5 8.2L7.5 6.2L13.3 12L7.5 17.8L5.5 15.8L9.3 12Z M14 15.4H19V18.2H14Z"/></svg>
+        <b>yunopack</b>
+      </a>
+      <span class="tag">dépôt git → paquet YunoHost</span>
+    </div>
+    <nav role="tablist" aria-label="Sections">
+      <button role="tab" data-tab="run" aria-selected="true">Empaqueter</button>
+      <button role="tab" data-tab="wish" aria-selected="false">Liste de souhaits<span class="n" id="wish-n"></span></button>
+      <button role="tab" data-tab="alt" aria-selected="false">Alternatives</button>
+    </nav>
+  </div>
+</header>
 
-  <form class="recherche" id="f">
-    <input id="url" type="url" required placeholder="https://github.com/miniflux/v2"
-           autocomplete="off" spellcheck="false">
-    <button id="b" type="submit">Analyser</button>
-  </form>
+<main class="wrap">
+  <section id="tab-run" role="tabpanel">
+    <h1>Empaqueter un dépôt</h1>
+    <p class="lead">yunopack lit ce que le projet décrit de lui-même — Dockerfile, docker-compose.yml, fichiers de projet — et en déduit un paquet. Rien n'est exécuté. Quand une information manque, il s'arrête et vous la demande.</p>
+    <form id="form" novalidate>
+      <label class="lbl" for="url">adresse du dépôt</label>
+      <div class="row">
+        <input id="url" name="url" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://github.com/auteur/projet" required>
+        <button class="btn go" id="go" type="submit">Empaqueter</button>
+      </div>
+      <p class="hint" id="form-hint" aria-live="polite"></p>
+    </form>
 
-  <div id="sortie"></div>
+    <div class="pipe" aria-live="polite">
+      <div class="pipe-h" id="pipe-h"><span id="pipe-t"><strong>5 étapes</strong> · chacune peut arrêter la suite</span><span id="clock"></span></div>
+      <div class="rail" id="rail" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      <ol class="steps" id="steps"></ol>
+      <div id="outcome"></div>
+    </div>
+  </section>
 
-  <footer>
-    L'outil s'appuie sur ce que le dépôt décrit déjà — image de base,
-    dépendances, port, commande de démarrage. Ce qu'il ne peut pas déduire, il
-    le demande plutôt que de l'inventer.
-  </footer>
+  <section id="tab-wish" role="tabpanel" hidden>
+    <div class="lh"><h1>Liste de souhaits</h1><span class="c" id="wish-c"></span></div>
+    <p class="lead">Les applications que la communauté YunoHost attend, celles déjà au catalogue retirées. Choisissez-en une pour lancer le pipeline sur son dépôt.</p>
+    <label class="lbl" for="wish-q">filtrer</label>
+    <input id="wish-q" type="search" autocomplete="off" spellcheck="false" placeholder="nom ou description">
+    <ul class="items" id="wish-list"></ul>
+    <div class="more" id="wish-more"></div>
+  </section>
+
+  <section id="tab-alt" role="tabpanel" hidden>
+    <h1>Alternatives</h1>
+    <p class="lead">Les logiciels auto-hébergeables qui remplacent un service donné et ne sont pas encore au catalogue YunoHost.</p>
+    <form id="alt-form" novalidate>
+      <label class="lbl" for="alt-q">logiciel à remplacer</label>
+      <div class="row">
+        <input id="alt-q" type="search" autocomplete="off" spellcheck="false" placeholder="Nextcloud, Miniflux, Grafana…">
+        <button class="btn" type="submit">Chercher</button>
+      </div>
+    </form>
+    <ul class="items" id="alt-list" hidden></ul>
+  </section>
 </main>
 
+<footer><div class="wrap"><span>yunopack · lit les Dockerfiles, n'en exécute aucun</span><span>projet indépendant, non officiel YunoHost</span></div></footer>
+
 <script>
-const f = document.getElementById('f'), b = document.getElementById('b'),
-      sortie = document.getElementById('sortie');
+(() => {
+'use strict';
 
-// L'application peut etre servie sous un sous-chemin (/yunopack/ par exemple).
-// On deduit la racine de l'adresse courante plutot que de l'ecrire en dur :
-// une URL absolue casserait des que l'installateur choisit un autre chemin.
-const RACINE = location.pathname.endsWith('/') ? location.pathname
-                                               : location.pathname + '/';
-
-f.onsubmit = async (e) => {
-  e.preventDefault();
-  occupe(true);
-
-  const url = document.getElementById('url').value;
-  const carte = document.createElement('div');
-  carte.className = 'carte';
-  carte.innerHTML = `<h2>${echapper(url)} <span class="etat">— en attente</span></h2>`;
-  sortie.prepend(carte);
-
-  let reponse;
-  try {
-    reponse = await (await fetch(RACINE + 'jobs', {
-      method: 'POST', headers: {'content-type':'application/json'},
-      body: JSON.stringify({url})
-    })).json();
-  } catch (err) {
-    ajouter(carte, 'erreur', String(err), false);
-    occupe(false);
-    return;
-  }
-
-  suivre(carte, reponse.id);
+/* L'application peut etre servie sous un sous-chemin (/yunopack/ par exemple).
+   La racine se deduit de l'adresse courante : une URL absolue casserait des
+   que l'installateur choisit un autre chemin. */
+const RACINE = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
+const API = {
+  jobs: RACINE + 'jobs',
+  job: id => `${RACINE}jobs/${id}`,
+  events: id => `${RACINE}jobs/${id}/events`,
+  reponses: id => `${RACINE}jobs/${id}/reponses`,
+  paquet: id => `${RACINE}jobs/${id}/paquet.tar.gz`,
+  wishlist: RACINE + 'wishlist',
+  alternatives: q => RACINE + 'alternatives?q=' + encodeURIComponent(q)
 };
 
-/// Branche la carte sur le flux d'evenements du travail.
-///
-/// Rappele apres chaque reprise : le journal deja constitue est rejoue par le
-/// serveur, d'ou le vidage des etapes pour ne pas les afficher deux fois.
-function suivre(carte, id) {
-  carte.querySelectorAll('.etape, .decision, .fini').forEach(e => e.remove());
+const STAGES = [
+  ['analyse', 'Analyse', 'lecture du dépôt'],
+  ['faisabilite', 'Faisabilité', 'verdict et score'],
+  ['specification', 'Spécification', 'arbitrages de packaging'],
+  ['generation', 'Génération', 'écriture du paquet'],
+  ['verification', 'Vérification', 'conformité']
+];
+/* Une demande de decision se rattache a la specification : c'est la qu'un
+   arbitrage se rend, et c'est la que le pipeline s'est arrete. */
+const RATTACHE = {decision: 'specification', fin: null};
+const LABEL = {pending: 'en attente', running: 'en cours', waiting: 'à vous', ok: 'terminé', fail: 'échec', skipped: 'non lancée'};
 
-  const flux = new EventSource(`${RACINE}jobs/${id}/events`);
-  flux.onmessage = async (ev) => {
-    const d = JSON.parse(ev.data);
-    ajouter(carte, d.etape, d.message, d.succes);
+/* Rien de ce qui vient du serveur ne passe par innerHTML : tout est insere en textContent. */
+const $ = s => document.querySelector(s);
+function h(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in props || {}) {
+    const v = props[k];
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v === true ? '' : String(v));
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return e;
+}
+function safeUrl(u) {
+  try { const x = new URL(String(u), location.href); return /^https?:$/.test(x.protocol) ? x.href : null; } catch { return null; }
+}
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const stageIndex = s => STAGES.findIndex(([k]) => k === norm(s));
+const fmtT = ms => { const s = Math.max(0, Math.round(ms / 1000)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+const fmtRel = ms => '+' + (ms / 1000).toFixed(1) + 's';
+const nf = new Intl.NumberFormat('fr-FR', {notation: 'compact', maximumFractionDigits: 1});
+const isRepo = u => /^(https?:\/\/|git@)[^\s]+$/i.test(u.trim());
 
-    if (d.arbitrages && d.arbitrages.length) {
-      // Le journal rejoué contient les demandes déjà satisfaites : sans cette
-      // vérification, répondre faisait réapparaître le même formulaire.
-      // L'état du travail fait foi, pas l'événement.
-      if (!await attendUneDecision(id)) return;
-      flux.close();
-      etat(carte, '— une décision vous revient');
-      formulaire(carte, id, d.arbitrages);
-      occupe(false);
-      return;
-    }
-    if (d.termine) {
-      flux.close();
-      etat(carte, d.succes ? '— terminé' : '— arrêté');
-      if (d.succes) conclusion(carte, id, d.paquet, d.message);
-      occupe(false);
-    }
-  };
-  flux.onerror = () => { flux.close(); occupe(false); };
+/* ——— Onglets ——— */
+const tabs = ['run', 'wish', 'alt'];
+const HASH = {run: '', wish: 'souhaits', alt: 'alternatives'};
+function show(t, push) {
+  tabs.forEach(x => { $('#tab-' + x).hidden = x !== t; });
+  document.querySelectorAll('nav button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t));
+  if (push) history.replaceState(null, '', HASH[t] ? '#' + HASH[t] : location.pathname + location.search);
+  if (t === 'wish') loadWish();
+  if (t === 'alt') setTimeout(() => $('#alt-q').focus(), 0);
+}
+document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); show(b.dataset.tab, true); }));
+const fromHash = () => show(Object.keys(HASH).find(k => HASH[k] && '#' + HASH[k] === location.hash) || 'run');
+
+/* ——— Pipeline ——— */
+const stepsEl = $('#steps'), railEls = [...$('#rail').children];
+const refs = STAGES.map(([k, name, sub], i) => {
+  const mk = h('span', {class: 'mk', text: i + 1});
+  const st = h('span', {class: 'st', text: LABEL.pending});
+  const sum = h('div', {class: 'sum'});
+  const logN = h('span');
+  const logOl = h('ol');
+  const log = h('details', {class: 'log', hidden: true}, h('summary', {}, 'journal', logN), logOl);
+  const why = h('div');
+  const li = h('li', {class: 'step', 'data-s': 'pending'}, mk,
+    h('div', {}, h('div', {class: 'hd'}, h('span', {class: 'nm', text: name}), h('span', {class: 'sub', text: sub}), st), sum, why, log));
+  stepsEl.append(li);
+  return {li, mk, st, sum, log, logN, logOl, why};
+});
+
+let run = null, ticker = null;
+function reset() {
+  refs.forEach((r, i) => {
+    setState(i, 'pending');
+    r.sum.textContent = ''; r.sum.className = 'sum';
+    r.logOl.textContent = ''; r.log.hidden = true; r.log.open = false; r.why.textContent = '';
+  });
+  $('#outcome').textContent = '';
+  clearInterval(ticker);
+}
+function setState(i, s) {
+  const r = refs[i];
+  r.li.dataset.s = s; railEls[i].dataset.s = s;
+  r.st.textContent = LABEL[s];
+  r.mk.textContent = s === 'ok' ? '✓' : s === 'fail' ? '✕' : s === 'skipped' ? '–' : s === 'waiting' ? '?' : i + 1;
+  if (run) run.state[i] = s;
+}
+function header() {
+  const hd = $('#pipe-h'); hd.className = 'pipe-h';
+  const t = $('#pipe-t'); t.textContent = '';
+  if (!run) { t.append(h('strong', {text: '5 étapes'}), ' · chacune peut arrêter la suite'); $('#clock').textContent = ''; return; }
+  const cur = run.state.findIndex(s => s === 'running' || s === 'fail' || s === 'waiting');
+  if (run.result === 'ok') { hd.classList.add('ok'); t.append(h('strong', {text: '5/5'}), ' · paquet conforme'); }
+  else if (run.result === 'fail') { hd.classList.add('fail'); t.append(h('strong', {text: 'arrêt ' + (run.failAt + 1) + '/5'}), ' · ' + STAGES[run.failAt][1].toLowerCase()); }
+  else if (run.waiting) t.append(h('strong', {text: 'en attente'}), ' · une décision vous revient');
+  else if (cur >= 0) t.append(h('strong', {text: 'étape ' + (cur + 1) + '/5'}), ' · ' + STAGES[cur][1].toLowerCase());
+  else t.append(h('strong', {text: 'connexion…'}));
+  $('#clock').textContent = fmtT((run.end || Date.now()) - run.t0);
 }
 
-async function attendUneDecision(id) {
-  try {
-    const t = await (await fetch(`${RACINE}jobs/${id}`)).json();
-    return t.etat === 'en_attente_de_decision';
-  } catch (e) {
-    // Serveur injoignable : mieux vaut montrer le formulaire que rien.
-    return true;
-  }
+/* Un echec porte souvent une liste de codes de regle : les detacher les rend
+   lisibles, et le code reste affiche pour qu'on puisse le chercher. */
+function renderFailure(i, msg) {
+  const m = String(msg || '');
+  const nonFaisable = /^\s*non\s+faisable\s*[—:-]\s*/i.test(m);
+  const body = m.replace(/^\s*(non\s+faisable|paquet\s+non\s+conforme)\s*[—:-]\s*/i, '');
+  const items = body.split(/\s*;\s*/).filter(Boolean).map(x => {
+    const c = x.match(/^([A-Z][A-Z_]*\d+)\s*:\s*(.+)$/);
+    return c ? {code: c[1], text: c[2]} : {text: x};
+  });
+  const r = refs[i];
+  r.sum.textContent = '';
+  r.why.append(h('div', {class: 'why', role: 'alert'},
+    h('p', {class: 'why-t', text: nonFaisable ? 'Non faisable' : 'Échec'}),
+    h('ul', {}, items.map(it => h('li', {}, it.code ? h('code', {class: 'code', text: it.code}) : h('span'), h('span', {text: it.text}))))));
 }
 
-/// Le formulaire des champs que le dépôt ne permet pas de déterminer.
-function formulaire(carte, id, arbitrages) {
-  const bloc = document.createElement('form');
-  bloc.className = 'decision';
-  bloc.innerHTML =
-    '<p>Ces champs ne se déduisent pas du dépôt. Les propositions sont classées ' +
-    'de la mieux fondée à la moins ; chacune dit sur quoi elle repose.</p>';
+/* ——— Arbitrages ——— */
+function renderAsk(arbitrages) {
+  const i = stageIndex('specification');
+  setState(i, 'waiting');
+  const r = refs[i];
+  r.why.textContent = '';
 
-  for (const a of arbitrages) {
-    bloc.appendChild(champ(a));
-  }
+  const form = h('form', {class: 'ask'},
+    h('p', {class: 'ask-t', text: arbitrages.length + (arbitrages.length > 1 ? ' champs à trancher' : ' champ à trancher')}),
+    h('p', {class: 'ask-i', text: "Ces valeurs ne se déduisent pas du dépôt. Les propositions sont classées de la mieux fondée à la moins ; chacune dit sur quoi elle repose. Vous pouvez aussi écrire la vôtre."}));
 
-  const envoyer = document.createElement('button');
-  envoyer.type = 'submit';
-  envoyer.textContent = 'Continuer';
-  bloc.appendChild(envoyer);
+  const saisies = {};
+  for (const a of arbitrages) form.append(champ(a, saisies));
 
-  const erreur = document.createElement('p');
-  erreur.className = 'erreur';
-  erreur.hidden = true;
-  bloc.appendChild(erreur);
+  const envoyer = h('button', {class: 'btn sm', type: 'submit', text: 'Continuer'});
+  const erreur = h('p', {class: 'hint err', hidden: true, role: 'alert'});
+  form.append(h('div', {class: 'acts'}, envoyer), erreur);
 
-  bloc.onsubmit = async (e) => {
+  form.addEventListener('submit', async e => {
     e.preventDefault();
-    erreur.hidden = true;
-    envoyer.disabled = true;
-
+    erreur.hidden = true; envoyer.disabled = true;
     const reponses = {};
     for (const a of arbitrages) {
-      const v = bloc.querySelector(`[data-libre="${cssEchappe(a.champ)}"]`).value.trim();
-      if (!v) {
-        erreur.textContent = `${a.champ} : une valeur est nécessaire.`;
-        erreur.hidden = false;
-        envoyer.disabled = false;
-        return;
-      }
+      const v = saisies[a.champ].value.trim();
+      if (!v) { erreur.textContent = a.champ + ' : une valeur est nécessaire.'; erreur.hidden = false; envoyer.disabled = false; return; }
       reponses[a.champ] = v;
     }
-
-    let r;
+    let res;
     try {
-      r = await fetch(`${RACINE}jobs/${id}/reponses`, {
-        method: 'POST', headers: {'content-type':'application/json'},
-        body: JSON.stringify(reponses)
-      });
+      res = await fetch(API.reponses(run.id), {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(reponses)});
     } catch (err) {
-      erreur.textContent = String(err);
-      erreur.hidden = false;
-      envoyer.disabled = false;
-      return;
+      erreur.textContent = String(err); erreur.hidden = false; envoyer.disabled = false; return;
     }
-    if (!r.ok) {
-      const corps = await r.json().catch(() => ({}));
-      erreur.textContent = corps.erreur || `le serveur a refusé (${r.status})`;
-      erreur.hidden = false;
-      envoyer.disabled = false;
-      return;
+    if (!res.ok) {
+      const c = await res.json().catch(() => ({}));
+      erreur.textContent = c.erreur || 'le serveur a refusé (' + res.status + ')';
+      erreur.hidden = false; envoyer.disabled = false; return;
     }
+    run.waiting = false;
+    form.remove();
+    setState(i, 'running');
+    busy(true); header();
+    brancher();
+  });
 
-    occupe(true);
-    suivre(carte, id);
-  };
-
-  carte.appendChild(bloc);
+  r.why.append(form);
 }
 
-/// Un champ : sa raison, où chercher, les propositions, et la saisie libre.
-///
-/// La saisie libre reste toujours ouverte, même quand des propositions
-/// existent : aucune liste ne couvre tous les cas, et celui qui connaît son
-/// application ne doit pas être contraint de choisir dans la nôtre.
-function champ(a) {
-  const d = document.createElement('div');
-  d.className = 'champ';
+/* Un champ : sa raison, ou chercher, les propositions, la saisie libre.
+   La saisie reste ouverte meme quand des propositions existent : aucune liste
+   ne couvre tous les cas, et celui qui connait son application ne doit pas
+   etre contraint de choisir dans la notre. */
+function champ(a, saisies) {
+  const d = h('div', {class: 'fld'}, h('span', {class: 'k', text: a.champ}));
+  if (a.raison) d.append(h('p', {class: 'why-not', text: a.raison}));
+  if (a.ou_chercher && a.ou_chercher.length) d.append(h('p', {class: 'look', text: 'chercher dans : ' + a.ou_chercher.join(', ')}));
 
-  const titre = document.createElement('label');
-  titre.textContent = a.champ;
-  d.appendChild(titre);
-
-  if (a.raison) {
-    const p = document.createElement('p');
-    p.className = 'pourquoi';
-    p.textContent = a.raison;
-    d.appendChild(p);
-  }
-  if (a.ou_chercher && a.ou_chercher.length) {
-    const p = document.createElement('p');
-    p.className = 'ou';
-    p.textContent = 'chercher dans : ' + a.ou_chercher.join(', ');
-    d.appendChild(p);
-  }
-
-  // Liste fermée : un menu, pas un champ libre — écrire autre chose serait
-  // refusé par le serveur, autant ne pas le proposer.
   if (a.choix && a.choix.length) {
-    const menu = document.createElement('select');
-    menu.dataset.libre = a.champ;
-    menu.className = 'libre';
-    for (const c of a.choix) {
-      const o = document.createElement('option');
-      o.value = c; o.textContent = c;
-      menu.appendChild(o);
-    }
-    d.appendChild(menu);
+    const menu = h('select', {class: 'free'}, a.choix.map(c => h('option', {value: c, text: c})));
+    saisies[a.champ] = menu;
+    d.append(menu);
     return d;
   }
 
-  const saisie = document.createElement('input');
-  saisie.type = 'text';
-  saisie.className = 'libre';
-  saisie.dataset.libre = a.champ;
-  saisie.placeholder = 'valeur';
-  saisie.autocomplete = 'off';
-  saisie.spellcheck = false;
+  const libre = h('input', {class: 'free', type: 'text', autocomplete: 'off', spellcheck: 'false', placeholder: 'valeur'});
+  saisies[a.champ] = libre;
 
   if (a.candidats && a.candidats.length) {
-    const liste = document.createElement('div');
-    liste.className = 'propositions';
-    a.candidats.forEach((c, i) => {
-      const l = document.createElement('label');
-      l.className = 'proposition';
-      const radio = document.createElement('input');
-      radio.type = 'radio';
-      radio.name = 'p:' + a.champ;
-      radio.checked = i === 0;
-      radio.onchange = () => { saisie.value = c.value; };
-      const texte = document.createElement('span');
-      const v = document.createElement('div');
-      v.className = 'v'; v.textContent = c.value;
-      const w = document.createElement('div');
-      w.className = 'w'; w.textContent = c.why;
-      texte.appendChild(v); texte.appendChild(w);
-      l.appendChild(radio); l.appendChild(texte);
-      liste.appendChild(l);
-    });
-    d.appendChild(liste);
-    saisie.value = a.candidats[0].value;
+    d.append(h('div', {class: 'opts'}, a.candidats.map((c, i) => h('label', {class: 'opt'},
+      h('input', {type: 'radio', name: 'p:' + a.champ, checked: i === 0, onchange: () => { libre.value = c.value; }}),
+      h('span', {}, h('span', {class: 'v', text: c.value}), h('span', {class: 'w', text: c.why}))))));
+    libre.value = a.candidats[0].value;
   }
-
-  d.appendChild(saisie);
+  d.append(libre);
   return d;
 }
 
-/// Ce qu'on peut faire du paquet une fois qu'il est prêt.
-function conclusion(carte, id, nom, message) {
-  const bloc = document.createElement('div');
-  bloc.className = 'fini';
+/* ——— Flux d'evenements ——— */
+function onEvent(ev) {
+  if (!run || run.result || !ev || typeof ev !== 'object') return;
+  const etape = String(ev.etape || '');
+  const msg = ev.message != null ? String(ev.message) : '';
 
-  const bouton = document.createElement('button');
-  bouton.type = 'button';
-  bouton.textContent = 'Télécharger le paquet';
-  bouton.onclick = () => { location.href = `${RACINE}jobs/${id}/paquet.tar.gz`; };
-  bloc.appendChild(bouton);
+  if (ev.paquet) run.pkg = String(ev.paquet);
 
-  // Le chemin sur le serveur est directement installable : c'est le plus
-  // court chemin pour qui fait tourner yunopack sur son propre YunoHost.
-  const chemin = (message || '').replace(/^paquet pret : /, '');
-  if (chemin) {
-    const copier = document.createElement('button');
-    copier.type = 'button';
-    copier.className = 'discret';
-    copier.textContent = 'Copier la commande d\u2019installation';
-    copier.onclick = async () => {
-      try {
-        await navigator.clipboard.writeText(`yunohost app install ${chemin}`);
-        copier.textContent = 'Commande copiée';
-      } catch (e) {
-        copier.textContent = `yunohost app install ${chemin}`;
-      }
-    };
-    bloc.appendChild(copier);
+  const cible = RATTACHE[etape] !== undefined ? RATTACHE[etape] : etape;
+  const i = cible == null ? -1 : stageIndex(cible);
+
+  if (i >= 0) {
+    for (let j = 0; j < i; j++) if (run.state[j] === 'running' || run.state[j] === 'pending') setState(j, 'ok');
+    if (run.state[i] === 'pending') setState(i, 'running');
+    const r = refs[i];
+    if (msg) {
+      r.logOl.append(h('li', {}, h('time', {text: fmtRel(Date.now() - run.t0)}), h('span', {text: msg})));
+      const n = r.logOl.children.length;
+      r.logN.textContent = ' · ' + n + (n > 1 ? ' lignes' : ' ligne');
+      r.log.hidden = n < 2;
+      r.sum.textContent = msg;
+      r.sum.className = 'sum' + (ev.termine ? ' final' : '');
+      const g = msg.match(/(\d+)\s+fichiers?/); if (i === 3 && g) run.files = +g[1];
+      const f = msg.match(/^(\d[\d\s]*) fichiers/); if (i === 0 && f) run.lus = f[1];
+    }
+    if (etape === 'verification' && !ev.termine) { /* l'etape reste en cours */ }
   }
-  if (nom) {
-    const n = document.createElement('code');
-    n.textContent = nom;
-    bloc.appendChild(n);
+
+  if (ev.termine) {
+    if (ev.succes !== false) { STAGES.forEach((_, j) => { if (run.state[j] !== 'ok') setState(j, 'ok'); }); finish('ok'); }
+    else {
+      let at = i >= 0 ? i : run.state.findIndex(s => s === 'running');
+      if (at < 0) at = 0;
+      setState(at, 'fail');
+      renderFailure(at, msg);
+      finish('fail', at);
+    }
   }
-  carte.appendChild(bloc);
+  header();
 }
 
-function ajouter(carte, etape, message, succes) {
-  const l = document.createElement('div');
-  l.className = 'etape ' + (succes ? 'ok' : 'ko');
-  const b = document.createElement('b');
-  b.textContent = etape;
-  const s = document.createElement('span');
-  s.textContent = message;
-  l.appendChild(b); l.appendChild(s);
-  carte.appendChild(l);
+function finish(result, at) {
+  if (!run || run.result) return;
+  run.result = result; run.end = Date.now(); run.failAt = at;
+  clearInterval(ticker);
+  if (run.close) run.close();
+  if (result === 'fail') {
+    for (let j = at + 1; j < STAGES.length; j++) setState(j, 'skipped');
+    const url = run.url;
+    $('#outcome').append(h('div', {class: 'stop'},
+      h('span', {text: "Arrêté à l'étape " + (at + 1) + "/5. Les suivantes n'ont pas été lancées."}),
+      h('button', {class: 'btn sm plain', type: 'button', text: 'Relancer', onclick: () => start(url)})));
+  } else renderSuccess();
+  header(); busy(false);
 }
 
-function etat(carte, texte) {
-  carte.querySelector('.etat').textContent = texte;
+function pkgName() {
+  if (run.pkg) return run.pkg;
+  const last = run.url.replace(/\.git$/, '').replace(/\/+$/, '').split(/[\/:]/).pop() || 'app';
+  return last.toLowerCase().replace(/[^a-z0-9]+/g, '_') + '_ynh';
+}
+function renderSuccess() {
+  const name = pkgName();
+  /* Le chemin sur le serveur s'installe directement : c'est le plus court
+     chemin pour qui fait tourner yunopack sur son propre YunoHost. */
+  const chemin = (run.chemin || './' + name);
+  const cmd = 'sudo yunohost app install ' + chemin;
+  const copyBtn = h('button', {class: 'btn sm ghost', type: 'button', text: 'Copier'});
+  copyBtn.addEventListener('click', () => {
+    (navigator.clipboard ? navigator.clipboard.writeText(cmd) : Promise.reject()).then(
+      () => { copyBtn.textContent = 'Copié'; setTimeout(() => copyBtn.textContent = 'Copier', 1600); },
+      () => { copyBtn.textContent = 'Sélectionnez'; });
+  });
+  const meta = [run.files ? run.files + ' fichiers' : null, 'conforme', 'en ' + fmtT(run.end - run.t0)].filter(Boolean).join(' · ');
+  $('#outcome').append(h('div', {class: 'out'},
+    h('h2', {}, 'Paquet prêt', h('code', {text: name})),
+    h('div', {class: 'meta', text: meta}),
+    h('div', {class: 'cmd'}, h('code', {text: cmd}), copyBtn),
+    h('div', {class: 'acts'},
+      h('a', {class: 'btn', href: API.paquet(run.id), download: name + '.tar.gz', text: 'Télécharger le paquet'}),
+      h('button', {class: 'btn plain', type: 'button', text: 'Autre dépôt', onclick: () => { reset(); run = null; header(); const u = $('#url'); u.value = ''; u.focus(); }}))));
 }
 
-function occupe(oui) {
-  b.disabled = oui;
-  b.textContent = oui ? 'En cours…' : 'Analyser';
+function busy(b) { const g = $('#go'); g.disabled = b; g.textContent = b ? 'En cours…' : 'Empaqueter'; }
+
+/* L'etat du travail fait foi, pas l'evenement : le journal rejoue a la
+   reconnexion contient les demandes deja satisfaites, et les rejouer
+   ferait reapparaitre un formulaire auquel on vient de repondre. */
+async function attendUneDecision() {
+  try {
+    const t = await (await fetch(API.job(run.id))).json();
+    return t.etat === 'en_attente_de_decision';
+  } catch { return true; }
 }
 
-function echapper(s) {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
+function brancher() {
+  if (run.close) run.close();
+  refs.forEach(r => { r.logOl.textContent = ''; r.log.hidden = true; r.logN.textContent = ''; });
+  let got = false;
+  const es = new EventSource(API.events(run.id));
+  run.close = () => es.close();
+  es.onmessage = async e => {
+    got = true;
+    let d; try { d = JSON.parse(e.data); } catch { return; }
+    if (d.arbitrages && d.arbitrages.length) {
+      if (!await attendUneDecision()) return;
+      es.close();
+      run.waiting = true;
+      renderAsk(d.arbitrages);
+      busy(false); header();
+      return;
+    }
+    if (d.termine && d.succes !== false && d.message) run.chemin = d.message.replace(/^paquet pret\s*:\s*/, '');
+    onEvent(d);
+  };
+  es.onerror = () => {
+    es.close();
+    if (!run || run.result || run.waiting) return;
+    let i = run.state.findIndex(s => s === 'running'); if (i < 0) i = run.state.findIndex(s => s === 'pending');
+    if (i < 0) return;
+    setState(i, 'running');
+    onEvent({etape: STAGES[i][0], termine: true, succes: false, message: got ? 'connexion au serveur interrompue' : 'serveur injoignable'});
+  };
 }
 
-/// Un chemin de champ contient des points : il faut les échapper pour qu'un
-/// sélecteur d'attribut les traite comme du texte et non comme une classe.
-function cssEchappe(s) {
-  return s.replace(/["\\]/g, '\\$&');
+async function start(url) {
+  url = String(url || '').trim();
+  const hint = $('#form-hint');
+  if (!isRepo(url)) { hint.className = 'hint err'; hint.textContent = 'Adresse de dépôt attendue : https://… ou git@…'; $('#url').focus(); return; }
+  hint.className = 'hint'; hint.textContent = '';
+  if (run && run.close) run.close();
+  reset();
+  run = {url, t0: Date.now(), state: STAGES.map(() => 'pending'), result: null};
+  $('#url').value = url;
+  busy(true); header();
+  ticker = setInterval(header, 500);
+
+  let id;
+  try {
+    const r = await fetch(API.jobs, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({url})});
+    if (!r.ok) throw new Error('le serveur a refusé (' + r.status + ')');
+    id = (await r.json()).id;
+  } catch (err) {
+    setState(0, 'running');
+    onEvent({etape: 'analyse', termine: true, succes: false, message: String(err && err.message || err)});
+    return;
+  }
+  run.id = id;
+  brancher();
 }
+$('#form').addEventListener('submit', e => { e.preventDefault(); start($('#url').value); });
+
+/* ——— Liste de souhaits ——— */
+let wish = null, wishLimit = 50;
+function packBtn(repo, analysable) {
+  const u = repo && isRepo(String(repo)) ? String(repo) : null;
+  const ok = u && analysable !== false;
+  return h('button', {class: 'btn sm ghost', type: 'button', disabled: !ok,
+    text: ok ? 'Empaqueter' : u ? 'forge non prise en charge' : 'dépôt inconnu',
+    onclick: () => { show('run', true); window.scrollTo(0, 0); start(u); }});
+}
+function repoLink(repo) {
+  const s = safeUrl(repo);
+  const label = String(repo || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
+  return s ? h('a', {href: s, target: '_blank', rel: 'noopener noreferrer', text: label}) : repo ? h('span', {text: label}) : null;
+}
+function loadWish() {
+  if (wish) return;
+  wish = [];
+  $('#wish-list').replaceChildren(h('li', {class: 'empty', text: 'chargement…'}));
+  fetch(API.wishlist).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+   .then(d => { wish = Array.isArray(d) ? d : []; $('#wish-n').textContent = wish.length; renderWish(); })
+   .catch(() => { wish = null; $('#wish-list').replaceChildren(h('li', {class: 'empty', text: "Liste indisponible : le serveur n'a pas répondu."})); });
+}
+function renderWish() {
+  const q = norm($('#wish-q').value);
+  const f = wish.filter(a => !q || norm((a.name || '') + ' ' + (a.description || '')).includes(q));
+  $('#wish-c').textContent = q ? f.length + ' / ' + wish.length : wish.length + ' applications';
+  const ul = $('#wish-list');
+  ul.replaceChildren(...f.slice(0, wishLimit).map(a => h('li', {class: 'item'},
+    h('div', {}, h('div', {class: 'nm', text: a.name || '—'}), a.description ? h('div', {class: 'ds', text: a.description}) : null,
+      h('div', {class: 'mt'}, repoLink(a.repo) || h('span', {text: 'pas de dépôt renseigné'}),
+        a.en_cours ? h('span', {text: 'paquet déjà en cours ailleurs'}) : null)),
+    packBtn(a.repo, a.analysable))));
+  if (!f.length) ul.append(h('li', {class: 'empty', text: 'Aucune application ne correspond à « ' + $('#wish-q').value + ' ».'}));
+  const more = $('#wish-more'); more.textContent = '';
+  if (f.length > wishLimit) more.append(h('button', {class: 'btn plain sm', type: 'button', text: 'Afficher les ' + Math.min(50, f.length - wishLimit) + ' suivantes', onclick: () => { wishLimit += 50; renderWish(); }}));
+}
+$('#wish-q').addEventListener('input', () => { wishLimit = 50; if (wish) renderWish(); });
+
+/* ——— Alternatives ——— */
+$('#alt-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const q = $('#alt-q').value.trim(); if (!q) return;
+  const ul = $('#alt-list'); ul.hidden = false;
+  ul.replaceChildren(h('li', {class: 'empty', text: 'recherche…'}));
+  fetch(API.alternatives(q)).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d => {
+    const list = Array.isArray(d) ? d : [];
+    if (!list.length) { ul.replaceChildren(h('li', {class: 'empty', text: 'Aucune alternative hors catalogue pour « ' + q + ' ».'})); return; }
+    ul.replaceChildren(...list.map(a => h('li', {class: 'item'},
+      h('div', {}, h('div', {class: 'nm', text: a.name || '—'}), a.description ? h('div', {class: 'ds', text: a.description}) : null,
+        h('div', {class: 'mt'}, a.stars ? h('span', {text: '★ ' + nf.format(a.stars)}) : null,
+          a.license ? h('span', {class: 'lic', text: a.license}) : null, repoLink(a.repo))),
+      packBtn(a.repo, true))));
+  }).catch(() => ul.replaceChildren(h('li', {class: 'empty', text: "Recherche indisponible : le serveur n'a pas répondu."})));
+});
+
+window.addEventListener('hashchange', fromHash);
+fromHash();
+})();
 </script>
 </body>
 </html>

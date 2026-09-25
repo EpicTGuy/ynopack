@@ -92,7 +92,9 @@ async fn main() -> anyhow::Result<()> {
         .route(&format!("{base}/jobs/:id"), get(lire))
         .route(&format!("{base}/jobs/:id/events"), get(evenements))
         .route(&format!("{base}/jobs/:id/reponses"), post(repondre))
-        .route(&format!("{base}/jobs/:id/paquet.tar.gz"), get(paquet));
+        .route(&format!("{base}/jobs/:id/paquet.tar.gz"), get(paquet))
+        .route(&format!("{base}/wishlist"), get(souhaits))
+        .route(&format!("{base}/alternatives"), get(alternatives));
     if !base.is_empty() {
         app = app.route(&base, get(page));
     }
@@ -123,6 +125,71 @@ async fn creer(State(etat): State<Etat>, Json(d): Json<Demande>) -> Json<serde_j
 
 async fn lister(State(etat): State<Etat>) -> Json<serde_json::Value> {
     Json(serde_json::json!(etat.registre.liste()))
+}
+
+/// Ce que la communaute YunoHost attend, moins ce qui existe deja.
+///
+/// L'interet de l'exposer ici est de supprimer une etape : plutot que de
+/// chercher quoi packager puis de recopier une URL, on clique sur une demande.
+async fn souhaits() -> (StatusCode, Json<serde_json::Value>) {
+    match ynp_forge::wishlist::recuperer().await {
+        Ok(liste) => {
+            let items: Vec<_> = liste
+                .iter()
+                .map(|s| {
+                    serde_json::json!({
+                        "name": s.name,
+                        "description": s.description,
+                        "repo": s.upstream,
+                        "analysable": s.analysable(),
+                        "en_cours": s.en_cours(),
+                    })
+                })
+                .collect();
+            (StatusCode::OK, Json(serde_json::json!(items)))
+        }
+        Err(e) => refus(StatusCode::BAD_GATEWAY, &e.to_string()),
+    }
+}
+
+#[derive(Deserialize)]
+struct Recherche {
+    q: String,
+}
+
+/// Les logiciels auto-hebergeables proches d'un autre, encore a packager.
+async fn alternatives(
+    axum::extract::Query(r): axum::extract::Query<Recherche>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let catalogue = match ynp_forge::alternatives::Catalogue::charger().await {
+        Ok(c) => c,
+        Err(e) => return refus(StatusCode::BAD_GATEWAY, &e.to_string()),
+    };
+
+    // Les alternatives d'abord ; a defaut, une recherche par nom, pour que
+    // saisir un terme approximatif rende quelque chose plutot que rien.
+    let proches = catalogue.alternatives(&r.q);
+    let trouves = if proches.is_empty() {
+        catalogue.chercher(&r.q)
+    } else {
+        proches
+    };
+
+    let items: Vec<_> = catalogue
+        .a_packager(&trouves)
+        .iter()
+        .take(50)
+        .map(|l| {
+            serde_json::json!({
+                "name": l.name,
+                "description": l.description,
+                "repo": l.source_code_url,
+                "stars": l.stargazers_count,
+                "license": l.licenses.first(),
+            })
+        })
+        .collect();
+    (StatusCode::OK, Json(serde_json::json!(items)))
 }
 
 /// Applique les reponses de l'utilisateur, puis relance le pipeline.
