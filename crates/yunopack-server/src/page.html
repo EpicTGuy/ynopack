@@ -125,11 +125,29 @@ ol.steps{list-style:none;margin:0;padding:0}
 .lh{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .lh .c{font:13px var(--mono);color:var(--mute);white-space:nowrap}
 ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--line)}
-.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;padding:14px 0;border-bottom:1px solid var(--line);align-items:center}
+.item{display:grid;grid-template-columns:32px minmax(0,1fr) auto auto;gap:4px 14px;padding:14px 0;border-bottom:1px solid var(--line);align-items:center}
+.item .ico{width:32px;height:32px;border-radius:6px;object-fit:cover;background:var(--panel);grid-row:span 1}
+.item .ico[hidden]{display:block!important;visibility:hidden}
 .item .ds{color:var(--mute);font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:1px}
 .item .mt{display:flex;flex-wrap:wrap;gap:4px 12px;font:12px var(--mono);color:var(--mute);margin-top:4px;min-width:0}
 .item .mt a{color:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 .item .mt a:hover{color:var(--fg)}
+/* Badge de faisabilite : le meme verdict que celui du pipeline, pas une
+   estimation faite a part qui pourrait en diverger. */
+.fais{appearance:none;border:1px solid var(--line);border-radius:999px;background:transparent;
+      font:600 12px var(--mono);color:var(--mute);padding:3px 10px;white-space:nowrap;cursor:default;min-width:56px;text-align:center}
+.fais[data-v=feasible]{color:var(--acc);border-color:var(--acc);background:var(--acc-bg)}
+.fais[data-v=work]{color:#8a6d1f;border-color:#c9a227;background:#fbf4e0}
+@media (prefers-color-scheme:dark){.fais[data-v=work]{color:#e3c05c;border-color:#7a6220;background:#2a2313}}
+.fais[data-v=no]{color:var(--err);border-color:var(--err);background:var(--err-bg)}
+.fais[data-v=pending]{font-style:italic;font-weight:400}
+.fais.cliquable{cursor:pointer}
+.fais.cliquable:hover{border-color:var(--fg);color:var(--fg)}
+.pourquoi{grid-column:2/-1;margin:8px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);font-size:13px}
+.pourquoi ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.pourquoi li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:baseline}
+.pourquoi .rm{color:var(--mute);font-size:12px;display:block;margin-top:2px}
+.pourquoi .quand{color:var(--mute);font-size:12px;margin:10px 0 0;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
 .lic{border:1px solid var(--line);border-radius:4px;padding:0 5px}
 .empty{color:var(--mute);padding:18px 0;font-size:14px}
 .more{margin-top:16px}
@@ -563,6 +581,143 @@ async function start(url) {
 }
 $('#form').addEventListener('submit', e => { e.preventDefault(); start($('#url').value); });
 
+/* ——— Faisabilite : cache cote serveur, demande a la demande ———
+   Evaluer un depot coute trois appels a l'API GitHub, qui en accorde soixante
+   par heure sans jeton. On ne demande donc que ce que l'utilisateur regarde
+   vraiment — une ligne visible — et le serveur retient le resultat. */
+const fiches = new Map();          /* depot -> fiche */
+const demandees = new Set();       /* depots deja mis en file */
+let scrutation = null;
+
+function depotDe(url) {
+  try {
+    const u = new URL(String(url));
+    const p = u.pathname.replace(/\.git$/, '').split('/').filter(Boolean);
+    return p.length >= 2 ? (p[0] + '/' + p[1]).toLowerCase() : null;
+  } catch { return null; }
+}
+
+const VERDICTS = {
+  'FAISABLE': ['feasible', s => s + '/100'],
+  'FAISABLE AVEC TRAVAIL': ['work', s => s + '/100'],
+  'NON FAISABLE': ['no', () => 'non']
+};
+
+function badge(repo) {
+  const b = h('button', {class: 'fais', type: 'button', 'data-v': 'pending', text: '…',
+                         title: 'faisabilité pas encore évaluée'});
+  const d = depotDe(repo);
+  if (!d) { b.textContent = '—'; b.title = "dépôt non reconnu"; return b; }
+  b.dataset.depot = d;
+  majBadge(b);
+  return b;
+}
+
+function majBadge(b) {
+  const f = fiches.get(b.dataset.depot);
+  if (!f) return;
+  if (f.etat === 'echouee') {
+    b.dataset.v = 'pending'; b.textContent = '—';
+    b.title = 'non évaluable : ' + f.erreur;
+    return;
+  }
+  const [v, fmt] = VERDICTS[f.verdict] || ['pending', s => String(s)];
+  b.dataset.v = v;
+  b.textContent = fmt(f.score);
+  b.title = f.verdict.toLowerCase() + (f.technologie ? ' · ' + f.technologie : '');
+  b.classList.add('cliquable');
+  b.title += f.bloquants.length || f.reserves.length
+    ? ' — cliquer pour le détail' : ' — cliquer pour la date et réévaluer';
+  b.onclick = () => basculerDetail(b, f);
+}
+
+/* L'age d'une evaluation, parce qu'une evaluation ancienne peut avoir ete
+   depassee par une mise a jour amont. Verifier automatiquement couterait un
+   appel d'API par depot, ce que le quota interdit sur cinq cents lignes : on
+   affiche l'age et on laisse reevaluer d'un clic. */
+function age(secondes) {
+  const j = Math.floor((Date.now() / 1000 - Number(secondes)) / 86400);
+  if (!isFinite(j) || j < 0) return '';
+  if (j === 0) return "aujourd'hui";
+  if (j === 1) return 'hier';
+  if (j < 31) return 'il y a ' + j + ' jours';
+  return 'il y a ' + Math.floor(j / 30) + ' mois';
+}
+
+function basculerDetail(b, f) {
+  const item = b.closest('.item');
+  const deja = item.querySelector('.pourquoi');
+  if (deja) { deja.remove(); return; }
+  const motif = (m, bloquant) => h('li', {},
+    h('code', {class: 'code', text: m.id}),
+    h('span', {}, h('span', {text: m.titre}), m.remede ? h('span', {class: 'rm', text: m.remede}) : null));
+  const refaire = h('button', {class: 'btn sm plain', type: 'button', text: 'Réévaluer',
+    onclick: async () => {
+      refaire.disabled = true; refaire.textContent = 'en file…';
+      fiches.delete(b.dataset.depot); demandees.add(b.dataset.depot);
+      b.dataset.v = 'pending'; b.textContent = '…';
+      item.querySelector('.pourquoi').remove();
+      await fetch(RACINE + 'evaluations', {method: 'POST', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({url: b.dataset.repo, refaire: true})}).catch(() => {});
+      planifier();
+    }});
+  item.append(h('div', {class: 'pourquoi'},
+    h('ul', {}, f.bloquants.map(m => motif(m, true)), f.reserves.map(m => motif(m, false))),
+    h('div', {class: 'quand'},
+      h('span', {text: 'évalué sur ' + (f.reference || 'la source retenue') +
+        (f.evalue_le ? ', ' + age(f.evalue_le) : '')}),
+      refaire)));
+}
+
+/* Ne demande que ce qui entre dans le champ de vision, et s'arrete des que la
+   ligne est connue : la file du serveur est bornee, l'inonder ferait perdre
+   les demandes qui comptent. */
+const vue = new IntersectionObserver(entrees => {
+  for (const e of entrees) {
+    if (!e.isIntersecting) continue;
+    const b = e.target;
+    vue.unobserve(b);
+    const d = b.dataset.depot;
+    if (!d || fiches.has(d) || demandees.has(d)) continue;
+    demandees.add(d);
+    fetch(RACINE + 'evaluations', {method: 'POST', headers: {'content-type': 'application/json'},
+                                   body: JSON.stringify({url: b.dataset.repo})}).catch(() => {});
+    planifier();
+  }
+}, {rootMargin: '200px'});
+
+function observer(b, repo) {
+  if (!b.dataset.depot) return;
+  b.dataset.repo = repo;
+  if (fiches.has(b.dataset.depot)) { majBadge(b); return; }
+  vue.observe(b);
+}
+
+function planifier() {
+  if (scrutation) return;
+  scrutation = setInterval(rafraichir, 4000);
+  rafraichir();
+}
+
+async function rafraichir() {
+  const attendus = [...document.querySelectorAll('.fais[data-depot]')]
+    .filter(b => !fiches.has(b.dataset.depot) && demandees.has(b.dataset.depot));
+  if (!attendus.length) { clearInterval(scrutation); scrutation = null; return; }
+  const urls = attendus.map(b => b.dataset.repo).slice(0, 60).join(',');
+  try {
+    const d = await (await fetch(RACINE + 'evaluations?depots=' + encodeURIComponent(urls))).json();
+    for (const f of d.fiches || []) fiches.set(f.depot, f);
+  } catch { return; }
+  document.querySelectorAll('.fais[data-depot]').forEach(majBadge);
+}
+
+function icone(repo) {
+  const img = h('img', {class: 'ico', alt: '', loading: 'lazy', decoding: 'async',
+                        src: RACINE + 'icone?depot=' + encodeURIComponent(repo)});
+  img.addEventListener('error', () => { img.hidden = true; });
+  return img;
+}
+
 /* ——— Liste de souhaits ——— */
 let wish = null, wishLimit = 50;
 function packBtn(repo, analysable) {
@@ -590,11 +745,18 @@ function renderWish() {
   const f = wish.filter(a => !q || norm((a.name || '') + ' ' + (a.description || '')).includes(q));
   $('#wish-c').textContent = q ? f.length + ' / ' + wish.length : wish.length + ' applications';
   const ul = $('#wish-list');
-  ul.replaceChildren(...f.slice(0, wishLimit).map(a => h('li', {class: 'item'},
-    h('div', {}, h('div', {class: 'nm', text: a.name || '—'}), a.description ? h('div', {class: 'ds', text: a.description}) : null,
-      h('div', {class: 'mt'}, repoLink(a.repo) || h('span', {text: 'pas de dépôt renseigné'}),
-        a.en_cours ? h('span', {text: 'paquet déjà en cours ailleurs'}) : null)),
-    packBtn(a.repo, a.analysable))));
+  ul.replaceChildren(...f.slice(0, wishLimit).map(a => {
+    const b = a.analysable ? badge(a.repo) : null;
+    const li = h('li', {class: 'item'},
+      a.repo ? icone(a.repo) : h('span', {class: 'ico'}),
+      h('div', {}, h('div', {class: 'nm', text: a.name || '—'}), a.description ? h('div', {class: 'ds', text: a.description}) : null,
+        h('div', {class: 'mt'}, repoLink(a.repo) || h('span', {text: 'pas de dépôt renseigné'}),
+          a.en_cours ? h('span', {text: 'paquet déjà en cours ailleurs'}) : null)),
+      b || h('span'),
+      packBtn(a.repo, a.analysable));
+    if (b) observer(b, a.repo);
+    return li;
+  }));
   if (!f.length) ul.append(h('li', {class: 'empty', text: 'Aucune application ne correspond à « ' + $('#wish-q').value + ' ».'}));
   const more = $('#wish-more'); more.textContent = '';
   if (f.length > wishLimit) more.append(h('button', {class: 'btn plain sm', type: 'button', text: 'Afficher les ' + Math.min(50, f.length - wishLimit) + ' suivantes', onclick: () => { wishLimit += 50; renderWish(); }}));
@@ -611,11 +773,17 @@ $('#alt-form').addEventListener('submit', e => {
   .then(d => {
     const list = Array.isArray(d) ? d : [];
     if (!list.length) { ul.replaceChildren(h('li', {class: 'empty', text: 'Aucune alternative hors catalogue pour « ' + q + ' ».'})); return; }
-    ul.replaceChildren(...list.map(a => h('li', {class: 'item'},
-      h('div', {}, h('div', {class: 'nm', text: a.name || '—'}), a.description ? h('div', {class: 'ds', text: a.description}) : null,
-        h('div', {class: 'mt'}, a.stars ? h('span', {text: '★ ' + nf.format(a.stars)}) : null,
-          a.license ? h('span', {class: 'lic', text: a.license}) : null, repoLink(a.repo))),
-      packBtn(a.repo, true))));
+    ul.replaceChildren(...list.map(a => {
+      const b = badge(a.repo);
+      const li = h('li', {class: 'item'},
+        a.repo ? icone(a.repo) : h('span', {class: 'ico'}),
+        h('div', {}, h('div', {class: 'nm', text: a.name || '—'}), a.description ? h('div', {class: 'ds', text: a.description}) : null,
+          h('div', {class: 'mt'}, a.stars ? h('span', {text: '★ ' + nf.format(a.stars)}) : null,
+            a.license ? h('span', {class: 'lic', text: a.license}) : null, repoLink(a.repo))),
+        b, packBtn(a.repo, true));
+      observer(b, a.repo);
+      return li;
+    }));
   }).catch(() => ul.replaceChildren(h('li', {class: 'empty', text: "Recherche indisponible : le serveur n'a pas répondu."})));
 });
 

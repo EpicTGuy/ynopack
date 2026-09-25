@@ -23,6 +23,7 @@ use yunopack_server::travaux::Registre;
 struct Etat {
     registre: Registre,
     racine: PathBuf,
+    evaluateur: yunopack_server::evaluation::Evaluateur,
 }
 
 #[derive(Deserialize)]
@@ -77,9 +78,13 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let options = Options::parse();
+    // Le cache vit a cote des travaux : un seul repertoire a sauvegarder, et
+    // le paquet YunoHost le place deja dans son repertoire de donnees.
+    let cache = yunopack_server::cache::Cache::new(&options.out.join("cache"));
     let etat = Etat {
         registre: Registre::new(),
         racine: options.out.clone(),
+        evaluateur: yunopack_server::evaluation::Evaluateur::new(cache),
     };
 
     // Les chemins sont ecrits en entier plutot que montes avec `nest` : celui-ci
@@ -94,7 +99,12 @@ async fn main() -> anyhow::Result<()> {
         .route(&format!("{base}/jobs/:id/reponses"), post(repondre))
         .route(&format!("{base}/jobs/:id/paquet.tar.gz"), get(paquet))
         .route(&format!("{base}/wishlist"), get(souhaits))
-        .route(&format!("{base}/alternatives"), get(alternatives));
+        .route(&format!("{base}/alternatives"), get(alternatives))
+        .route(
+            &format!("{base}/evaluations"),
+            get(evaluations).post(evaluer),
+        )
+        .route(&format!("{base}/icone"), get(icone));
     if !base.is_empty() {
         app = app.route(&base, get(page));
     }
@@ -190,6 +200,77 @@ async fn alternatives(
         })
         .collect();
     (StatusCode::OK, Json(serde_json::json!(items)))
+}
+
+#[derive(Deserialize)]
+struct Depots {
+    /// Liste d'URL separees par des virgules.
+    depots: String,
+}
+
+/// Ce que le cache sait deja de ces depots. N'evalue rien.
+///
+/// Separer la consultation de la demande est ce qui permet a la liste de
+/// s'afficher instantanement : on montre ce qu'on sait, et on demande le reste
+/// seulement pour les lignes que l'utilisateur regarde.
+async fn evaluations(
+    State(etat): State<Etat>,
+    axum::extract::Query(d): axum::extract::Query<Depots>,
+) -> Json<serde_json::Value> {
+    let depots: Vec<String> = d
+        .depots
+        .split(',')
+        .filter_map(yunopack_server::cache::depot_de)
+        .collect();
+    Json(serde_json::json!({
+        "fiches": etat.evaluateur.cache().lot(&depots),
+        "en_attente": etat.evaluateur.en_attente(),
+    }))
+}
+
+#[derive(Deserialize)]
+struct DemandeEvaluation {
+    url: String,
+    /// Reevaluer meme si le depot est deja en cache.
+    #[serde(default)]
+    refaire: bool,
+}
+
+/// Met un depot en file d'evaluation. Rend la main aussitot.
+async fn evaluer(
+    State(etat): State<Etat>,
+    Json(d): Json<DemandeEvaluation>,
+) -> Json<serde_json::Value> {
+    let etat_demande = etat.evaluateur.demander(&d.url, d.refaire);
+    Json(serde_json::json!({
+        "etat": etat_demande,
+        "en_attente": etat.evaluateur.en_attente(),
+    }))
+}
+
+#[derive(Deserialize)]
+struct DemandeIcone {
+    depot: String,
+}
+
+/// Relaie l'icone d'un projet, en la mettant en cache.
+async fn icone(
+    State(etat): State<Etat>,
+    axum::extract::Query(d): axum::extract::Query<DemandeIcone>,
+) -> Response {
+    match yunopack_server::evaluation::icone(etat.evaluateur.cache(), &d.depot).await {
+        Some(octets) => (
+            [
+                (header::CONTENT_TYPE, "image/png"),
+                // L'avatar d'un compte ne change presque jamais ; le
+                // reconsulter a chaque affichage de la liste serait absurde.
+                (header::CACHE_CONTROL, "public, max-age=86400"),
+            ],
+            octets,
+        )
+            .into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
 }
 
 /// Applique les reponses de l'utilisateur, puis relance le pipeline.
