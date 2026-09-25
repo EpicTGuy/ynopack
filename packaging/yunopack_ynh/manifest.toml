@@ -7,7 +7,7 @@ id = "yunopack"
 name = "Yunopack"
 description.en = "Transforme un depot Git en application YunoHost installable : analyse, faisabilite, generation, verification et installation reelle."
 
-version = "0.3.1~ynh1"
+version = "0.4.0~ynh1"
 
 # Champ obligatoire selon le schema officiel. Une liste vide est honnete tant
 # que personne ne s'est engage a maintenir le paquet.
@@ -46,10 +46,10 @@ ram.runtime = "50M"
     [resources.sources]
 
     [resources.sources.main]
-    arm64.url = "https://github.com/EpicTGuy/yunopack/releases/download/v0.3.1/yunopack-linux-arm64.tar.gz"
-    arm64.sha256 = "158accc2749dbe26ba3f424c20f5d09c3e046538b48aeb31eac4d43c69e62ed2"
-    amd64.url = "https://github.com/EpicTGuy/yunopack/releases/download/v0.3.1/yunopack-linux-amd64.tar.gz"
-    amd64.sha256 = "e74edf6c0e29a99f855e9f880d30f8ffffeaf2a718e56bc4cc7886a39afbea79"
+    arm64.url = "https://github.com/EpicTGuy/yunopack/releases/download/v0.4.0/yunopack-linux-arm64.tar.gz"
+    arm64.sha256 = "59c19c0385affda77548eca80d93f65e5def8ae782b3d95d531306175644dd94"
+    amd64.url = "https://github.com/EpicTGuy/yunopack/releases/download/v0.4.0/yunopack-linux-amd64.tar.gz"
+    amd64.sha256 = "0d371e72cea8fc9b845acf50ea7924ebbe2ae8dc84e20c8172cc4fef9c7efb41"
     in_subdir = false
 
     autoupdate.strategy = "latest_github_release"
