@@ -223,6 +223,7 @@ fn liste(items: &[String]) -> String {
 
 use ynp_core::finding::{Feasibility, Finding, Severity, Verdict};
 use ynp_core::gate::GateReport;
+use ynp_core::spec::Arbitrage;
 
 pub fn feasibility(f: &Feasibility, gates: &GateReport) -> String {
     let mut out = String::new();
@@ -413,18 +414,47 @@ pub fn spec(s: &ynp_core::AppSpec) -> String {
         );
     }
 
-    let manquants = s.unresolved();
-    if manquants.is_empty() {
+    let arbitrages = s.arbitrages();
+    if arbitrages.is_empty() {
         out.push_str("\n  Specification complete : rien a completer.\n");
     } else {
         out.push_str(&format!(
             "\n  ── {} champ(s) a completer ──\n",
-            manquants.len()
+            arbitrages.len()
         ));
-        for (chemin, marqueur) in &manquants {
-            out.push_str(&format!("\n  {chemin}\n"));
-            for l in enrouler(marqueur.trim_start_matches("FIXME(yunopack): "), 72) {
+        out.push_str(&a_completer(&arbitrages));
+    }
+    out
+}
+
+/// Les arbitrages ouverts, avec leurs propositions numerotees.
+///
+/// Le numero n'est pas decoratif : `yunopack repondre <champ>=@2` le reprend,
+/// ce qui evite de recopier une valeur a la main.
+pub fn a_completer(arbitrages: &[Arbitrage]) -> String {
+    let mut out = String::new();
+    for a in arbitrages {
+        out.push_str(&format!("\n  {}\n", a.champ));
+        for l in enrouler(&a.raison, 72) {
+            out.push_str(&format!("      {l}\n"));
+        }
+        if !a.ou_chercher.is_empty() {
+            for l in enrouler(&format!("chercher dans : {}", a.ou_chercher.join(", ")), 72) {
                 out.push_str(&format!("      {l}\n"));
+            }
+        }
+        if !a.choix.is_empty() {
+            out.push_str(&format!(
+                "\n      valeurs acceptees : {}\n",
+                a.choix.join(", ")
+            ));
+        }
+        if !a.candidats.is_empty() {
+            out.push_str("\n      propositions :\n");
+            for (i, c) in a.candidats.iter().enumerate() {
+                let valeur = c.value.replace('\n', " ⏎ ");
+                out.push_str(&format!("      @{:<2} {valeur}\n", i + 1));
+                out.push_str(&format!("          {}\n", c.why));
             }
         }
     }

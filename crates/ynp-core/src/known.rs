@@ -21,6 +21,28 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+/// Une valeur possible pour un champ non resolu, et d'ou elle vient.
+///
+/// Proposer n'est pas deviner : une proposition porte sa provenance, elle
+/// s'affiche a cote de son origine, et rien ne l'applique sans decision. C'est
+/// ce qui la distingue d'un remplissage silencieux.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Candidate {
+    /// La valeur telle qu'elle irait dans le champ.
+    pub value: String,
+    /// Sur quoi elle se fonde : un fichier du depot, une convention repandue.
+    pub why: String,
+}
+
+impl Candidate {
+    pub fn new(value: impl Into<String>, why: impl Into<String>) -> Self {
+        Self {
+            value: value.into(),
+            why: why.into(),
+        }
+    }
+}
+
 /// Pourquoi un champ n'a pas pu etre determine, et ou regarder pour le combler.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Unresolved {
@@ -29,6 +51,10 @@ pub struct Unresolved {
     /// Fichiers ou sections a inspecter pour trancher. Jamais vide en pratique.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub look_in: Vec<String>,
+    /// Valeurs plausibles, de la mieux fondee a la moins. Vide est licite :
+    /// mieux vaut aucune proposition qu'une proposition sans fondement.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub candidates: Vec<Candidate>,
 }
 
 impl Unresolved {
@@ -36,7 +62,13 @@ impl Unresolved {
         Self {
             unknown: reason.into(),
             look_in: look_in.iter().map(|s| s.to_string()).collect(),
+            candidates: Vec::new(),
         }
+    }
+
+    pub fn avec_candidats(mut self, candidats: Vec<Candidate>) -> Self {
+        self.candidates = candidats;
+        self
     }
 }
 
@@ -60,6 +92,23 @@ impl<T> Known<T> {
 
     pub fn unresolved(reason: impl Into<String>, look_in: &[&str]) -> Self {
         Known::Unresolved(Unresolved::new(reason, look_in))
+    }
+
+    /// Non resolu, mais avec des pistes chiffrees a soumettre a la decision.
+    pub fn unresolved_avec(
+        reason: impl Into<String>,
+        look_in: &[&str],
+        candidats: Vec<Candidate>,
+    ) -> Self {
+        Known::Unresolved(Unresolved::new(reason, look_in).avec_candidats(candidats))
+    }
+
+    /// Les valeurs proposees pour ce champ, vides s'il est resolu.
+    pub fn candidates(&self) -> &[Candidate] {
+        match self {
+            Known::Value(_) => &[],
+            Known::Unresolved(u) => &u.candidates,
+        }
     }
 
     pub fn is_resolved(&self) -> bool {
@@ -158,6 +207,34 @@ port = 3000
         let s = toml::to_string(&h).unwrap();
         let back: Holder = toml::from_str(&s).unwrap();
         assert_eq!(h, back);
+    }
+
+    #[test]
+    fn les_candidats_survivent_a_l_aller_retour_toml() {
+        let h = Holder {
+            execstart: Known::unresolved_avec(
+                "pas de CMD",
+                &["Procfile"],
+                vec![Candidate::new("/usr/bin/foo", "seul binaire livre")],
+            ),
+            port: Known::resolved(8080),
+        };
+        let back: Holder = toml::from_str(&toml::to_string(&h).unwrap()).unwrap();
+        assert_eq!(back.execstart.candidates().len(), 1);
+        assert_eq!(back.execstart.candidates()[0].value, "/usr/bin/foo");
+    }
+
+    #[test]
+    fn un_toml_sans_candidats_se_relit_encore() {
+        // Les appspec.toml ecrits avant l'ajout du champ doivent rester lisibles.
+        let h: Holder =
+            toml::from_str("execstart = { unknown = \"pas de CMD\" }\nport = 8080\n").unwrap();
+        assert!(h.execstart.candidates().is_empty());
+    }
+
+    #[test]
+    fn un_champ_resolu_ne_propose_rien() {
+        assert!(Known::resolved(1).candidates().is_empty());
     }
 
     #[test]

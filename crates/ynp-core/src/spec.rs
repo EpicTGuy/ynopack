@@ -10,7 +10,7 @@
 //! explicite plutot qu'une invention.
 
 use crate::facts::{Database, Technology};
-use crate::known::Known;
+use crate::known::{Candidate, Known};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
@@ -133,6 +133,120 @@ impl AppSpec {
     pub fn is_complete(&self) -> bool {
         self.unresolved().is_empty()
     }
+
+    /// Les arbitrages qui restent a rendre, sous une forme posable a un humain.
+    ///
+    /// `unresolved()` rend le marqueur FIXME, fait pour etre depose dans un
+    /// fichier. Ici on rend la matiere d'un formulaire : la raison seule, les
+    /// endroits ou chercher, et les valeurs proposees.
+    pub fn arbitrages(&self) -> Vec<Arbitrage> {
+        self.unresolved()
+            .into_iter()
+            .map(|(chemin, _)| {
+                let (raison, ou_chercher, candidats) = self.detail(&chemin);
+                let choix = if chemin == "runtime.technology" {
+                    Technology::CHOIX
+                        .iter()
+                        .map(|t| t.nom().to_string())
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+                Arbitrage {
+                    champ: chemin,
+                    raison,
+                    ou_chercher,
+                    candidats,
+                    choix,
+                }
+            })
+            .collect()
+    }
+
+    fn detail(&self, chemin: &str) -> (String, Vec<String>, Vec<Candidate>) {
+        macro_rules! decrire {
+            ($champ:expr) => {
+                match $champ.reason() {
+                    Some(u) => (u.unknown.clone(), u.look_in.clone(), u.candidates.clone()),
+                    None => (String::new(), Vec::new(), Vec::new()),
+                }
+            };
+        }
+        match chemin {
+            "app.description_en" => decrire!(self.app.description_en),
+            "app.version" => decrire!(self.app.version),
+            "upstream.license" => decrire!(self.upstream.license),
+            "resources.sources.url" => decrire!(self.resources.sources.url),
+            "resources.sources.sha256" => decrire!(self.resources.sources.sha256),
+            "runtime.technology" => decrire!(self.runtime.technology),
+            "runtime.execstart" => decrire!(self.runtime.execstart),
+            "runtime.port_binding" => decrire!(self.runtime.port_binding),
+            "runtime.database_binding" => decrire!(self.runtime.database_binding),
+            _ => (String::new(), Vec::new(), Vec::new()),
+        }
+    }
+
+    /// Renseigne un champ non resolu, designe par le chemin que rend
+    /// [`AppSpec::unresolved`].
+    ///
+    /// C'est ce qui permet de repondre sans editer le TOML a la main —
+    /// depuis le formulaire web comme depuis la ligne de commande. Un chemin
+    /// inconnu est une erreur : accepter en silence une reponse qui ne sera
+    /// jamais lue serait le pire des comportements.
+    pub fn repondre(&mut self, champ: &str, valeur: &str) -> Result<(), ReponseError> {
+        let v = valeur.trim();
+        if v.is_empty() {
+            return Err(ReponseError::Vide(champ.to_string()));
+        }
+        match champ {
+            "app.description_en" => self.app.description_en = Known::resolved(v.to_string()),
+            "app.version" => self.app.version = Known::resolved(v.to_string()),
+            "upstream.license" => self.upstream.license = Known::resolved(v.to_string()),
+            "resources.sources.url" => self.resources.sources.url = Known::resolved(v.to_string()),
+            "resources.sources.sha256" => {
+                self.resources.sources.sha256 = Known::resolved(v.to_string())
+            }
+            "runtime.technology" => {
+                let t = Technology::from_nom(v)
+                    .ok_or_else(|| ReponseError::ValeurRefusee(champ.to_string(), v.to_string()))?;
+                self.runtime.technology = Known::resolved(t);
+            }
+            "runtime.execstart" => self.runtime.execstart = Known::resolved(v.to_string()),
+            "runtime.port_binding" => self.runtime.port_binding = Known::resolved(v.to_string()),
+            "runtime.database_binding" => {
+                self.runtime.database_binding = Known::resolved(v.to_string())
+            }
+            _ => return Err(ReponseError::ChampInconnu(champ.to_string())),
+        }
+        Ok(())
+    }
+}
+
+/// Un champ a renseigner, sous la forme d'une question posable telle quelle.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Arbitrage {
+    /// Chemin du champ, tel qu'il s'ecrit dans `appspec.toml`.
+    pub champ: String,
+    pub raison: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ou_chercher: Vec<String>,
+    /// Valeurs proposees, avec leur provenance.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub candidats: Vec<Candidate>,
+    /// Liste fermee de valeurs acceptees, quand le champ en a une. Vide sinon :
+    /// la reponse est alors du texte libre.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub choix: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum ReponseError {
+    #[error("« {0} » n'est pas un champ de l'appspec")]
+    ChampInconnu(String),
+    #[error("une reponse vide ne renseigne rien : {0}")]
+    Vide(String),
+    #[error("« {1} » n'est pas une valeur acceptee pour {0}")]
+    ValeurRefusee(String, String),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -608,5 +722,111 @@ mod port_en_ligne_de_commande {
         let s = spec_avec("__INSTALL_DIR__/serveur");
         let manquants: Vec<String> = s.unresolved().into_iter().map(|(c, _)| c).collect();
         assert!(manquants.contains(&"runtime.port_binding".to_string()));
+    }
+}
+
+#[cfg(test)]
+mod reponses {
+    use super::*;
+
+    fn spec() -> AppSpec {
+        let src = include_str!("../../../tests/fixtures/appspec.example.toml");
+        toml::from_str(src).expect("appspec.example.toml doit rester valide")
+    }
+
+    #[test]
+    fn repondre_resout_le_champ_designe() {
+        let mut s = spec();
+        s.runtime.port_binding = Known::unresolved("inconnu", &[]);
+        assert!(!s.is_complete());
+
+        s.repondre("runtime.port_binding", "PORT=__PORT__").unwrap();
+        assert_eq!(
+            s.runtime.port_binding.value().map(String::as_str),
+            Some("PORT=__PORT__")
+        );
+        assert!(s.is_complete());
+    }
+
+    #[test]
+    fn les_espaces_autour_de_la_reponse_sont_retires() {
+        let mut s = spec();
+        s.repondre("runtime.execstart", "  /usr/bin/foo  ").unwrap();
+        assert_eq!(
+            s.runtime.execstart.value().map(String::as_str),
+            Some("/usr/bin/foo")
+        );
+    }
+
+    #[test]
+    fn un_champ_inconnu_est_refuse_plutot_qu_ignore() {
+        // Accepter en silence une reponse qui ne sera jamais lue laisserait
+        // croire que le champ est renseigne.
+        let mut s = spec();
+        assert!(matches!(
+            s.repondre("runtime.inexistant", "x"),
+            Err(ReponseError::ChampInconnu(_))
+        ));
+    }
+
+    #[test]
+    fn une_reponse_vide_est_refusee() {
+        let mut s = spec();
+        assert!(matches!(
+            s.repondre("runtime.execstart", "   "),
+            Err(ReponseError::Vide(_))
+        ));
+    }
+
+    #[test]
+    fn la_technologie_se_repond_sous_ses_appellations_courantes() {
+        let mut s = spec();
+        s.repondre("runtime.technology", "Node.js").unwrap();
+        assert_eq!(s.runtime.technology.value(), Some(&Technology::NodeJs));
+        s.repondre("runtime.technology", "golang").unwrap();
+        assert_eq!(s.runtime.technology.value(), Some(&Technology::Go));
+    }
+
+    #[test]
+    fn une_technologie_inconnue_est_refusee() {
+        let mut s = spec();
+        assert!(matches!(
+            s.repondre("runtime.technology", "cobol"),
+            Err(ReponseError::ValeurRefusee(_, _))
+        ));
+    }
+
+    #[test]
+    fn un_arbitrage_porte_sa_raison_et_ses_propositions() {
+        let mut s = spec();
+        s.runtime.port_binding = Known::unresolved_avec(
+            "nom de variable inconnu",
+            &["README.md"],
+            vec![Candidate::new("PORT=__PORT__", "forme la plus repandue")],
+        );
+
+        let a = s.arbitrages();
+        assert_eq!(a.len(), 1);
+        assert_eq!(a[0].champ, "runtime.port_binding");
+        assert_eq!(a[0].raison, "nom de variable inconnu");
+        assert_eq!(a[0].ou_chercher, vec!["README.md"]);
+        assert_eq!(a[0].candidats[0].value, "PORT=__PORT__");
+        // Champ libre : aucune liste fermee.
+        assert!(a[0].choix.is_empty());
+    }
+
+    #[test]
+    fn la_technologie_propose_une_liste_fermee() {
+        let mut s = spec();
+        s.runtime.technology = Known::unresolved("aucune stack reconnue", &[]);
+        let a = s.arbitrages();
+        let tech = a.iter().find(|a| a.champ == "runtime.technology").unwrap();
+        assert!(tech.choix.contains(&"nodejs".to_string()));
+        assert!(!tech.choix.contains(&"unknown".to_string()));
+    }
+
+    #[test]
+    fn une_specification_complete_ne_pose_aucune_question() {
+        assert!(spec().arbitrages().is_empty());
     }
 }

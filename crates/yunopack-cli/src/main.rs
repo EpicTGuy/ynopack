@@ -58,6 +58,15 @@ enum Command {
         force: bool,
     },
 
+    /// Repond aux champs que `plan` n'a pas pu determiner.
+    ///
+    /// Sans argument, liste les champs ouverts avec leurs propositions.
+    Repondre {
+        /// `champ=valeur`, ou `champ=@n` pour reprendre la proposition n.
+        /// Repetable.
+        reponses: Vec<String>,
+    },
+
     /// Rend le paquet a partir de l'appspec.toml.
     Generate {
         /// Genere malgre des champs non completes, qui apparaitront en FIXME.
@@ -188,6 +197,7 @@ async fn run() -> anyhow::Result<()> {
         Command::Analyze { url } => analyze(url, &cli).await.map(|_| ()),
         Command::Assess { url, seuil } => assess(url.as_deref(), *seuil, &cli).await.map(|_| ()),
         Command::Plan { url, force } => plan(url.as_deref(), *force, &cli).await.map(|_| ()),
+        Command::Repondre { reponses } => repondre(reponses, &cli),
         Command::Generate { force } => generate(*force, &cli),
         Command::Verify { chemin } => verify(chemin.as_deref(), &cli),
         Command::Test {
@@ -326,14 +336,111 @@ async fn plan(url: Option<&str>, force: bool, cli: &Cli) -> anyhow::Result<ynp_c
 
     if !manquants.is_empty() && !force {
         eprintln!(
-            "\n{} champ(s) restent a completer dans {}.\n\
-             Les renseigner, puis relancer `yunopack generate`.",
+            "\n{} champ(s) restent a completer.\n\
+             `yunopack repondre` les liste avec leurs propositions ;\n\
+             editer {} directement reste possible.",
             manquants.len(),
             path.display()
         );
         std::process::exit(20);
     }
     Ok(spec)
+}
+
+/// Repond aux champs ouverts sans passer par l'editeur.
+///
+/// Editer le TOML a la main reste possible et reste la reference ; mais pour
+/// une ou deux lignes, ouvrir un editeur, retrouver le champ et respecter la
+/// syntaxe est une friction sans contrepartie. Ici la reponse tient sur une
+/// ligne, et `@n` reprend une proposition sans la recopier.
+fn repondre(reponses: &[String], cli: &Cli) -> anyhow::Result<()> {
+    let chemin = cli.out.join("appspec.toml");
+    let texte = std::fs::read_to_string(&chemin).map_err(|e| {
+        anyhow::anyhow!(
+            "{} illisible ({e}) — lancer d'abord `yunopack plan <url>`",
+            chemin.display()
+        )
+    })?;
+    let mut spec: ynp_core::AppSpec = toml::from_str(&texte)?;
+
+    if reponses.is_empty() {
+        let arbitrages = spec.arbitrages();
+        if cli.json {
+            println!("{}", serde_json::to_string_pretty(&arbitrages)?);
+            return Ok(());
+        }
+        if arbitrages.is_empty() {
+            println!("\n  Rien a completer : la specification est complete.\n");
+            return Ok(());
+        }
+        println!("\n  ── {} champ(s) a completer ──", arbitrages.len());
+        print!("{}", report::a_completer(&arbitrages));
+        println!(
+            "\n  Repondre avec : yunopack repondre <champ>='<valeur>'\n\
+             \x20 ou, pour reprendre une proposition : yunopack repondre <champ>=@1\n"
+        );
+        return Ok(());
+    }
+
+    let arbitrages = spec.arbitrages();
+    let mut appliquees = Vec::new();
+    for entree in reponses {
+        let (champ, brut) = entree.split_once('=').ok_or_else(|| {
+            anyhow::anyhow!("« {entree} » n'a pas la forme attendue « champ=valeur »")
+        })?;
+        let valeur = resoudre_raccourci(champ, brut, &arbitrages)?;
+        spec.repondre(champ, &valeur)?;
+        appliquees.push((champ.to_string(), valeur));
+    }
+
+    std::fs::write(&chemin, toml::to_string_pretty(&spec)?)?;
+
+    if cli.json {
+        println!("{}", serde_json::to_string_pretty(&spec)?);
+        return Ok(());
+    }
+    for (champ, valeur) in &appliquees {
+        println!("  {champ} = {}", valeur.replace('\n', " ⏎ "));
+    }
+    let restants = spec.arbitrages();
+    if restants.is_empty() {
+        println!("\n  Specification complete — `yunopack generate` peut suivre.\n");
+    } else {
+        println!("\n  {} champ(s) restent a completer :", restants.len());
+        for a in &restants {
+            println!("    {}", a.champ);
+        }
+        println!();
+    }
+    Ok(())
+}
+
+/// Traduit `@n` en la n-ieme proposition du champ. Tout le reste est litteral.
+fn resoudre_raccourci(
+    champ: &str,
+    brut: &str,
+    arbitrages: &[ynp_core::spec::Arbitrage],
+) -> anyhow::Result<String> {
+    let Some(rang) = brut.strip_prefix('@') else {
+        return Ok(brut.to_string());
+    };
+    let n: usize = rang
+        .parse()
+        .map_err(|_| anyhow::anyhow!("« @{rang} » n'est pas un numero de proposition"))?;
+
+    let a = arbitrages
+        .iter()
+        .find(|a| a.champ == champ)
+        .ok_or_else(|| anyhow::anyhow!("{champ} n'est pas un champ ouvert"))?;
+    a.candidats
+        .get(n.wrapping_sub(1))
+        .map(|c| c.value.clone())
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "{champ} n'a que {} proposition(s), @{n} n'existe pas",
+                a.candidats.len()
+            )
+        })
 }
 
 /// Rend le paquet. Aucune decision ici : tout a ete tranche dans l'appspec.
@@ -357,8 +464,9 @@ fn generate(force: bool, cli: &Cli) -> anyhow::Result<()> {
             eprintln!("  {champ}");
         }
         eprintln!(
-            "\nLes completer dans {}, ou passer --force pour generer\n\
-                   un paquet portant des marqueurs FIXME.",
+            "\n`yunopack repondre` les liste avec leurs propositions, ou les\n\
+             completer dans {} ; --force genere malgre tout\n\
+             un paquet portant des marqueurs FIXME.",
             chemin.display()
         );
         std::process::exit(20);

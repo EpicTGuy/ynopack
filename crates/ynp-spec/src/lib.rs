@@ -12,7 +12,7 @@ pub mod apt;
 pub mod execstart;
 
 use ynp_core::facts::{ConfigRole, Database, RepoFacts, Technology};
-use ynp_core::known::Known;
+use ynp_core::known::{Candidate, Known};
 use ynp_core::spec::*;
 
 /// Construit la specification a partir des faits.
@@ -253,15 +253,69 @@ fn liaison_port(facts: &RepoFacts) -> Known<String> {
     }
     match facts.config.get(ConfigRole::Port) {
         Some(v) => Known::resolved(format!("{}=__PORT__", v.name)),
-        None => Known::unresolved(
+        None => Known::unresolved_avec(
             "on ignore sous quel nom l'application attend son port d'ecoute ; la forme varie \
              d'une application a l'autre (PORT=__PORT__, LISTEN_ADDR=127.0.0.1:__PORT__...)",
             &[
                 "documentation de configuration de l'amont",
                 "sortie de --help du binaire",
             ],
+            candidats_port(facts),
         ),
     }
+}
+
+/// Formes plausibles de la liaison du port, la mieux fondee en premier.
+///
+/// Les deux premieres sources sont des faits du depot ; les suivantes sont les
+/// conventions les plus repandues, proposees en dernier et signalees comme
+/// telles. Aucune ne s'applique sans decision.
+fn candidats_port(facts: &RepoFacts) -> Vec<Candidate> {
+    let mut out: Vec<Candidate> = Vec::new();
+    let mut ajouter = |valeur: String, pourquoi: String| {
+        if !out.iter().any(|c: &Candidate| c.value == valeur) {
+            out.push(Candidate::new(valeur, pourquoi));
+        }
+    };
+
+    // Une variable dont le nom evoque le port sans avoir ete classee comme
+    // telle : le depot la nomme, c'est le meilleur indice disponible.
+    for v in &facts.config.variables {
+        let nom = v.name.to_ascii_uppercase();
+        if nom.contains("PORT") || nom.contains("LISTEN") || nom.contains("BIND") {
+            let source = if v.source.is_empty() {
+                "nommee dans la configuration de l'amont".to_string()
+            } else {
+                format!("nommee dans {}", v.source)
+            };
+            ajouter(format!("{}=__PORT__", v.name), source);
+        }
+    }
+
+    // Le Dockerfile publie un EXPOSE : l'application ecoute donc bien sur un
+    // port, meme si son nom reste a trouver.
+    if let Some(expose) = facts.build.as_ref().and_then(|b| b.expose.first()) {
+        ajouter(
+            "PORT=__PORT__".to_string(),
+            format!("EXPOSE {expose} dans le Dockerfile, sans nom de variable"),
+        );
+    }
+
+    for (valeur, pourquoi) in [
+        ("PORT=__PORT__", "forme la plus repandue"),
+        ("HTTP_PORT=__PORT__", "variante courante"),
+        (
+            "LISTEN_ADDR=127.0.0.1:__PORT__",
+            "applications Go qui prennent une adresse complete",
+        ),
+        (
+            "SERVER_PORT=__PORT__",
+            "variante courante des applications Java et Go",
+        ),
+    ] {
+        ajouter(valeur.to_string(), pourquoi.to_string());
+    }
+    out
 }
 
 /// Ligne de configuration transmettant les identifiants de la base.
@@ -303,7 +357,7 @@ fn liaison_base(facts: &RepoFacts) -> Known<String> {
         return Known::resolved(champs.join("\n"));
     }
 
-    Known::unresolved(
+    Known::unresolved_avec(
         format!(
             "une base est provisionnee mais on ignore sous quel nom l'application attend son \
              adresse ; la valeur a transmettre est « {adresse} »"
@@ -312,7 +366,46 @@ fn liaison_base(facts: &RepoFacts) -> Known<String> {
             "documentation de configuration de l'amont",
             "aucun .env.example dans le depot",
         ],
+        candidats_base(facts, adresse),
     )
+}
+
+/// Formes plausibles de la liaison de la base, la mieux fondee en premier.
+fn candidats_base(facts: &RepoFacts, adresse: &str) -> Vec<Candidate> {
+    let mut out: Vec<Candidate> = Vec::new();
+    let mut ajouter = |valeur: String, pourquoi: String| {
+        if !out.iter().any(|c: &Candidate| c.value == valeur) {
+            out.push(Candidate::new(valeur, pourquoi));
+        }
+    };
+
+    for v in &facts.config.variables {
+        let nom = v.name.to_ascii_uppercase();
+        if nom.contains("DATABASE") || nom.contains("_DB") || nom.starts_with("DB") {
+            let source = if v.source.is_empty() {
+                "nommee dans la configuration de l'amont".to_string()
+            } else {
+                format!("nommee dans {}", v.source)
+            };
+            ajouter(format!("{}={adresse}", v.name), source);
+        }
+    }
+
+    for (nom, pourquoi) in [
+        ("DATABASE_URL", "forme la plus repandue"),
+        ("DB_URL", "variante courante"),
+        ("DATABASE_URI", "variante courante"),
+    ] {
+        ajouter(format!("{nom}={adresse}"), pourquoi.to_string());
+    }
+
+    // Certaines applications veulent les champs separement plutot qu'une URL.
+    ajouter(
+        "DB_HOST=127.0.0.1\nDB_NAME=__DB_NAME__\nDB_USER=__DB_USER__\nDB_PASSWORD=__DB_PWD__"
+            .to_string(),
+        "applications qui attendent les champs separement plutot qu'une URL".to_string(),
+    );
+    out
 }
 
 /// Valeur YunoHost correspondant a un role de configuration.

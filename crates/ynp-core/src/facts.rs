@@ -248,6 +248,56 @@ impl Technology {
             _ => None,
         }
     }
+
+    /// Toutes les technologies qu'un humain peut choisir, `Unknown` exclue :
+    /// la repondre ne renseignerait rien.
+    pub const CHOIX: &'static [Technology] = &[
+        Technology::Php,
+        Technology::NodeJs,
+        Technology::Python,
+        Technology::Go,
+        Technology::Ruby,
+        Technology::Rust,
+        Technology::Java,
+        Technology::Static,
+    ];
+
+    /// Le nom canonique, celui qui s'ecrit dans `appspec.toml`.
+    pub fn nom(self) -> &'static str {
+        match self {
+            Technology::Php => "php",
+            Technology::NodeJs => "nodejs",
+            Technology::Python => "python",
+            Technology::Go => "go",
+            Technology::Ruby => "ruby",
+            Technology::Rust => "rust",
+            Technology::Java => "java",
+            Technology::Static => "static",
+            Technology::Unknown => "unknown",
+        }
+    }
+
+    /// L'inverse de [`Technology::nom`], tolerante sur la casse et sur les
+    /// appellations courantes — un humain ecrit « Node.js », pas « nodejs ».
+    pub fn from_nom(s: &str) -> Option<Technology> {
+        let n: String = s
+            .trim()
+            .to_ascii_lowercase()
+            .chars()
+            .filter(|c| c.is_ascii_alphanumeric())
+            .collect();
+        Some(match n.as_str() {
+            "php" => Technology::Php,
+            "nodejs" | "node" | "js" | "javascript" | "typescript" => Technology::NodeJs,
+            "python" | "py" => Technology::Python,
+            "go" | "golang" => Technology::Go,
+            "ruby" | "rb" => Technology::Ruby,
+            "rust" | "rs" => Technology::Rust,
+            "java" | "kotlin" => Technology::Java,
+            "static" | "statique" | "html" => Technology::Static,
+            _ => return None,
+        })
+    }
 }
 
 impl std::fmt::Display for Technology {
