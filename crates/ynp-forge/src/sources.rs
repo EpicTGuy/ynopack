@@ -37,6 +37,20 @@ pub enum SourceKind {
 /// L'ordre de preference suit la qualite du repere offert a l'administrateur
 /// qui verra arriver les mises a jour.
 pub fn choose(source: &SourceRef, releases: &[Release], tags: &[String]) -> SourceChoice {
+    choose_avec(source, releases, tags, crate::github::archive_url)
+}
+
+/// Meme choix, avec la fabrique d'URL d'archive de la forge concernee.
+///
+/// Chaque forge a sa propre forme d'URL d'archive ; la passer en parametre
+/// evite que ce module connaisse les trois, alors que sa seule affaire est
+/// l'ordre de preference entre release, tag et commit.
+pub fn choose_avec(
+    source: &SourceRef,
+    releases: &[Release],
+    tags: &[String],
+    archive_url: impl Fn(&SourceRef, &str) -> String,
+) -> SourceChoice {
     let forge = source.forge.autoupdate_slug();
 
     if let Some(r) = releases
@@ -44,7 +58,7 @@ pub fn choose(source: &SourceRef, releases: &[Release], tags: &[String]) -> Sour
         .find(|r| !r.prerelease && is_version_like(&r.tag))
     {
         return SourceChoice {
-            url: crate::github::archive_url(source, &r.tag),
+            url: archive_url(source, &r.tag),
             version: Some(strip_v(&r.tag)),
             reference: r.tag.clone(),
             strategy: format!("latest_{forge}_release"),
@@ -54,7 +68,7 @@ pub fn choose(source: &SourceRef, releases: &[Release], tags: &[String]) -> Sour
 
     if let Some(tag) = latest_version_tag(tags) {
         return SourceChoice {
-            url: crate::github::archive_url(source, &tag),
+            url: archive_url(source, &tag),
             version: Some(strip_v(&tag)),
             reference: tag,
             strategy: format!("latest_{forge}_tag"),
@@ -67,7 +81,7 @@ pub fn choose(source: &SourceRef, releases: &[Release], tags: &[String]) -> Sour
         .clone()
         .unwrap_or_else(|| "main".into());
     SourceChoice {
-        url: crate::github::archive_url(source, &reference),
+        url: archive_url(source, &reference),
         reference,
         strategy: format!("latest_{forge}_commit"),
         version: None,

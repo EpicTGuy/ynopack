@@ -6,6 +6,8 @@
 
 pub mod alternatives;
 pub mod archive;
+pub mod client;
+pub mod gitea;
 pub mod github;
 pub mod prebuilt;
 pub mod sources;
@@ -47,13 +49,13 @@ pub struct Fetched {
 /// les deux, et donc a publier une somme qui ne correspond a rien.
 pub async fn fetch(repo_url: &str) -> Result<Fetched, FetchError> {
     let mut source = url::parse(repo_url)?;
-    let client = GitHub::new()?;
+    let client = client::Client::pour(&source).await?;
 
     let meta = client.repo(&mut source).await?;
     let releases = client.releases(&source).await?;
     let tags = client.tags(&source).await?;
 
-    let choice = sources::choose(&source, &releases, &tags);
+    let choice = sources::choose_avec(&source, &releases, &tags, |s, r| client.archive_url(s, r));
     let bytes = client.download(&choice.url).await?;
     let sha256 = sources::sha256(&bytes);
     let tree = archive::extract(&bytes).map_err(ForgeError::from)?;

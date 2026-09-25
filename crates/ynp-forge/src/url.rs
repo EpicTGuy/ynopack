@@ -50,13 +50,19 @@ pub fn parse(input: &str) -> Result<SourceRef, UrlError> {
         "github.com" | "www.github.com" => Forge::GitHub,
         "gitlab.com" => Forge::GitLab,
         h if h.contains("codeberg") => Forge::Forgejo,
+        h if h.contains("forgejo") => Forge::Forgejo,
         h if h.contains("gitea") => Forge::Gitea,
-        other => return Err(UrlError::UnsupportedForge(other.to_string())),
+        // Une instance auto-hebergee ne se reconnait pas a son nom de domaine :
+        // `git.exemple.fr` peut heberger n'importe quelle forge. La deviner
+        // serait le contraire de ce que fait cet outil partout ailleurs. C'est
+        // `fetch` qui interroge l'instance pour le savoir.
+        _ => Forge::Inconnue,
     };
 
-    if forge != Forge::GitHub {
-        // Les autres forges partagent l'API de Gitea/Forgejo : le support
-        // viendra, mais annoncer un succes qu'on ne tient pas serait pire.
+    if forge == Forge::GitLab {
+        // GitLab a une API differente de celles de GitHub et de Gitea : le
+        // support viendra, mais annoncer un succes qu'on ne tient pas serait
+        // pire que de refuser.
         return Err(UrlError::UnsupportedForge(host));
     }
 
@@ -99,6 +105,41 @@ mod tests {
             parse("https://gitlab.com/owner/repo"),
             Err(UrlError::UnsupportedForge(_))
         ));
+        // Les hotes inconnus ne sont plus refuses a l'analyse de l'URL : c'est
+        // `fetch` qui tranche apres avoir interroge l'instance.
+        for u in [
+            "https://framagit.org/owner/repo",
+            "https://git.sr.ht/~owner/repo",
+        ] {
+            assert_eq!(parse(u).unwrap().forge, Forge::Inconnue, "{u}");
+        }
+    }
+
+    #[test]
+    fn codeberg_et_les_instances_forgejo_sont_reconnues() {
+        let s = parse("https://codeberg.org/forgejo/forgejo").unwrap();
+        assert_eq!(s.forge, Forge::Forgejo);
+        assert_eq!((s.owner.as_str(), s.repo.as_str()), ("forgejo", "forgejo"));
+        assert_eq!(s.url, "https://codeberg.org/forgejo/forgejo");
+
+        assert_eq!(
+            parse("https://forgejo.ellis.link/a/b").unwrap().forge,
+            Forge::Forgejo
+        );
+        // Une instance auto-hebergee sous `git.` : le pari le plus courant.
+        // Une instance auto-hebergee reste inconnue jusqu'a ce qu'on
+        // l'interroge : son nom de domaine n'apprend rien.
+        assert_eq!(
+            parse("https://git.hom-e.fr/a/b").unwrap().forge,
+            Forge::Inconnue
+        );
+        assert_eq!(parse("https://gitea.com/a/b").unwrap().forge, Forge::Gitea);
+    }
+
+    #[test]
+    fn la_forme_ssh_de_codeberg_est_reconnue_elle_aussi() {
+        let s = parse("git@codeberg.org:forgejo/forgejo.git").unwrap();
+        assert_eq!((s.owner.as_str(), s.repo.as_str()), ("forgejo", "forgejo"));
     }
 
     #[test]

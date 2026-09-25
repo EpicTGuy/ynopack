@@ -44,6 +44,9 @@ impl Souhait {
             ("github.com", "github"),
             ("gitlab.com", "gitlab"),
             ("codeberg.org", "codeberg"),
+            ("framagit.org", "gitlab"),
+            ("salsa.debian.org", "gitlab"),
+            ("0xacab.org", "gitlab"),
             ("git.sr.ht", "sourcehut"),
             ("bitbucket.org", "bitbucket"),
         ] {
@@ -55,8 +58,14 @@ impl Souhait {
     }
 
     /// Vrai si `yunopack` sait analyser cette forge aujourd'hui.
+    ///
+    /// Codeberg fait tourner Forgejo, dont l'API est celle de Gitea : un seul
+    /// client sert les deux. Les instances auto-hebergees ne se reconnaissent
+    /// pas a leur domaine ; c'est `fetch` qui les interroge, et on les tente
+    /// plutot que de les ecarter d'avance.
     pub fn analysable(&self) -> bool {
-        self.forge() == "github"
+        !matches!(self.forge(), "gitlab" | "sourcehut" | "bitbucket")
+            && self.upstream.starts_with("http")
     }
 
     /// Vrai si quelqu'un a deja commence le paquet.

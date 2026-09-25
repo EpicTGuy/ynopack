@@ -81,6 +81,9 @@ pub enum Forge {
     GitLab,
     Gitea,
     Forgejo,
+    /// Hote non identifiable a son nom de domaine. Une instance auto-hebergee
+    /// doit etre interrogee pour qu'on sache quelle forge elle fait tourner.
+    Inconnue,
 }
 
 impl Forge {
@@ -92,6 +95,7 @@ impl Forge {
             Forge::GitLab => "gitlab",
             Forge::Gitea => "gitea",
             Forge::Forgejo => "forgejo",
+            Forge::Inconnue => "inconnue",
         }
     }
 }
