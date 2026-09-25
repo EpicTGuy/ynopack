@@ -56,6 +56,22 @@ impl Forge {
         format!("{}:{}/{depot}.git", self.alias_ssh, self.proprietaire)
     }
 
+    /// URL de push portant le jeton, pour une machine sans cle SSH.
+    ///
+    /// Le service qui heberge l'interface web tourne sous un utilisateur
+    /// systeme sans trousseau : lui en installer un pour publier serait lui
+    /// donner un acces permanent a la forge. Le jeton, lui, se revoque et se
+    /// limite a un depot.
+    pub fn url_push_https(&self, depot: &str) -> Option<String> {
+        let jeton = self.jeton.as_ref()?;
+        let sans_schema = self.url.split_once("://")?.1;
+        let schema = self.url.split_once("://")?.0;
+        Some(format!(
+            "{schema}://{}:{jeton}@{sans_schema}/{}/{depot}.git",
+            self.proprietaire, self.proprietaire
+        ))
+    }
+
     /// Cree le depot s'il n'existe pas deja.
     ///
     /// Rend `false` quand il existait : republier n'est pas une erreur, c'est
@@ -134,7 +150,12 @@ pub fn pousser(
 
     let _ = git(&["remote", "remove", "origin"]);
     git(&["remote", "add", "origin", distant])?;
-    git(&["push", "-q", "--force", "origin", branche])?;
+    let pousse = git(&["push", "-q", "--force", "origin", branche]);
+    // Une URL de push peut porter un jeton ; le laisser dans .git/config le
+    // rendrait lisible a quiconque recupere le paquet. On l'efface, que le
+    // push ait reussi ou non.
+    let _ = git(&["remote", "remove", "origin"]);
+    pousse?;
 
     git(&["rev-parse", "HEAD"])
 }
@@ -142,6 +163,32 @@ pub fn pousser(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn forge_jeton(jeton: Option<&str>) -> Forge {
+        Forge {
+            url: "https://git.exemple.fr".into(),
+            proprietaire: "clem".into(),
+            alias_ssh: "forgejo".into(),
+            jeton: jeton.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn l_url_de_push_https_porte_le_jeton() {
+        assert_eq!(
+            forge_jeton(Some("abc123"))
+                .url_push_https("app_ynh")
+                .as_deref(),
+            Some("https://clem:abc123@git.exemple.fr/clem/app_ynh.git")
+        );
+    }
+
+    #[test]
+    fn sans_jeton_il_n_y_a_pas_d_url_https() {
+        // Pousser sans jeton demanderait un mot de passe interactif : mieux
+        // vaut dire qu'on ne peut pas que bloquer sur une invite invisible.
+        assert!(forge_jeton(None).url_push_https("app_ynh").is_none());
+    }
 
     fn forge() -> Forge {
         Forge {

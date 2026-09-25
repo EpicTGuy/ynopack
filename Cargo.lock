@@ -2594,6 +2594,7 @@ dependencies = [
  "ynp-core",
  "ynp-forge",
  "ynp-gen",
+ "ynp-publish",
  "ynp-rules",
  "ynp-spec",
  "ynp-verify",

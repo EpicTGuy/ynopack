@@ -16,6 +16,7 @@ use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::convert::Infallible;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio_stream::wrappers::BroadcastStream;
 use yunopack_server::travaux::Registre;
 
@@ -24,6 +25,7 @@ struct Etat {
     registre: Registre,
     racine: PathBuf,
     evaluateur: yunopack_server::evaluation::Evaluateur,
+    catalogue: Arc<std::sync::Mutex<Option<Arc<ynp_forge::alternatives::Catalogue>>>>,
 }
 
 #[derive(Deserialize)]
@@ -55,6 +57,13 @@ struct Options {
     /// 404 des que l'application n'est pas installee a la racine du domaine.
     #[arg(long, env = "YNOPACK_BASE", default_value = "/")]
     base: String,
+
+    /// Ne pas evaluer la liste de souhaits en tache de fond.
+    ///
+    /// Le defrichage consomme le quota de la forge ; on veut pouvoir s'en
+    /// passer sur une machine qui n'a que l'API publique et d'autres usages.
+    #[arg(long, env = "YNOPACK_SANS_DEFRICHAGE")]
+    sans_defrichage: bool,
 }
 
 /// Ramene un prefixe a la forme attendue par `Router::nest` : commence par une
@@ -85,6 +94,7 @@ async fn main() -> anyhow::Result<()> {
         registre: Registre::new(),
         racine: options.out.clone(),
         evaluateur: yunopack_server::evaluation::Evaluateur::new(cache),
+        catalogue: Arc::new(std::sync::Mutex::new(None)),
     };
 
     // Les chemins sont ecrits en entier plutot que montes avec `nest` : celui-ci
@@ -98,8 +108,11 @@ async fn main() -> anyhow::Result<()> {
         .route(&format!("{base}/jobs/:id/events"), get(evenements))
         .route(&format!("{base}/jobs/:id/reponses"), post(repondre))
         .route(&format!("{base}/jobs/:id/paquet.tar.gz"), get(paquet))
+        .route(&format!("{base}/jobs/:id/publier"), post(publier))
+        .route(&format!("{base}/forge"), get(forge))
         .route(&format!("{base}/wishlist"), get(souhaits))
         .route(&format!("{base}/alternatives"), get(alternatives))
+        .route(&format!("{base}/suggestions"), get(suggestions))
         .route(
             &format!("{base}/evaluations"),
             get(evaluations).post(evaluer),
@@ -108,7 +121,29 @@ async fn main() -> anyhow::Result<()> {
     if !base.is_empty() {
         app = app.route(&base, get(page));
     }
-    let app = app.with_state(etat);
+    let app = app.with_state(etat.clone());
+
+    // Defricher la liste de souhaits des le demarrage : sans cela, une
+    // installation neuve n'affiche aucun score tant que personne n'a fait
+    // defiler les listes. Le rythme est celui que le quota de la forge
+    // permet, et les demandes directes passent devant.
+    if !options.sans_defrichage {
+        let evaluateur = etat.evaluateur.clone();
+        tokio::spawn(async move {
+            match ynp_forge::wishlist::recuperer().await {
+                Ok(liste) => {
+                    let urls: Vec<String> = liste
+                        .iter()
+                        .filter(|s| s.analysable())
+                        .map(|s| s.upstream.clone())
+                        .collect();
+                    let n = evaluateur.defricher(urls);
+                    tracing::info!("defrichage : {n} depot(s) de la liste de souhaits en attente");
+                }
+                Err(e) => tracing::warn!("liste de souhaits indisponible : {e}"),
+            }
+        });
+    }
 
     let ecoute = tokio::net::TcpListener::bind(&options.addr).await?;
     tracing::info!("yunopack sur http://{}{}/", options.addr, base);
@@ -167,13 +202,41 @@ struct Recherche {
     q: String,
 }
 
-/// Les logiciels auto-hebergeables proches d'un autre, encore a packager.
+/// Le catalogue externe, charge une fois puis reutilise.
+///
+/// Son archive fait plusieurs mega-octets et ne bouge qu'au rythme des
+/// contributions : la retelecharger a chaque recherche ferait attendre
+/// l'utilisateur pour rien.
+async fn catalogue_externe(etat: &Etat) -> Result<Arc<ynp_forge::alternatives::Catalogue>, String> {
+    if let Some(c) = verrou_catalogue(&etat.catalogue).clone() {
+        return Ok(c);
+    }
+    let c = Arc::new(
+        ynp_forge::alternatives::Catalogue::charger()
+            .await
+            .map_err(|e| e.to_string())?,
+    );
+    *verrou_catalogue(&etat.catalogue) = Some(c.clone());
+    Ok(c)
+}
+
+fn verrou_catalogue<T>(m: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, T> {
+    m.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
+}
+
+/// Les logiciels auto-hebergeables proches d'un autre.
+///
+/// Ceux deja au catalogue YunoHost ne sont plus ecartes mais signales : savoir
+/// qu'une alternative existe deja est au moins aussi utile que d'apprendre
+/// qu'il reste a la packager, et c'est ce qui permet de partir d'une
+/// application qu'on utilise pour en decouvrir de proches.
 async fn alternatives(
+    State(etat): State<Etat>,
     axum::extract::Query(r): axum::extract::Query<Recherche>,
 ) -> (StatusCode, Json<serde_json::Value>) {
-    let catalogue = match ynp_forge::alternatives::Catalogue::charger().await {
+    let catalogue = match catalogue_externe(&etat).await {
         Ok(c) => c,
-        Err(e) => return refus(StatusCode::BAD_GATEWAY, &e.to_string()),
+        Err(e) => return refus(StatusCode::BAD_GATEWAY, &e),
     };
 
     // Les alternatives d'abord ; a defaut, une recherche par nom, pour que
@@ -185,21 +248,36 @@ async fn alternatives(
         proches
     };
 
-    let items: Vec<_> = catalogue
-        .a_packager(&trouves)
+    let items: Vec<_> = trouves
         .iter()
-        .take(50)
+        .take(60)
         .map(|l| {
             serde_json::json!({
                 "name": l.name,
                 "description": l.description,
                 "repo": l.source_code_url,
+                "site": l.website_url,
                 "stars": l.stargazers_count,
                 "license": l.licenses.first(),
+                "libre": l.licence_libre(),
+                "analysable": l.analysable(),
+                "deja_package": l.deja_package,
+                "id_yunohost": l.id_yunohost,
+                "abandonne": l.abandonne(),
+                "jours_sans_activite": l.jours_sans_activite(),
+                "derniere_activite": l.updated_at,
             })
         })
         .collect();
     (StatusCode::OK, Json(serde_json::json!(items)))
+}
+
+/// Les noms du catalogue externe, pour l'autocompletion.
+async fn suggestions(State(etat): State<Etat>) -> (StatusCode, Json<serde_json::Value>) {
+    match catalogue_externe(&etat).await {
+        Ok(c) => (StatusCode::OK, Json(serde_json::json!(c.noms()))),
+        Err(e) => refus(StatusCode::BAD_GATEWAY, &e),
+    }
 }
 
 #[derive(Deserialize)]
@@ -225,6 +303,8 @@ async fn evaluations(
     Json(serde_json::json!({
         "fiches": etat.evaluateur.cache().lot(&depots),
         "en_attente": etat.evaluateur.en_attente(),
+        "a_defricher": etat.evaluateur.reste_a_defricher(),
+        "connues": etat.evaluateur.cache().nombre(),
     }))
 }
 
@@ -337,6 +417,90 @@ async fn repondre(
 
 fn refus(code: StatusCode, message: &str) -> (StatusCode, Json<serde_json::Value>) {
     (code, Json(serde_json::json!({ "erreur": message })))
+}
+
+/// Ou l'interface peut publier, si elle le peut.
+///
+/// Le service tourne sous un utilisateur systeme sans trousseau SSH : sans
+/// jeton de forge dans son environnement, il n'a aucun moyen de pousser. Le
+/// dire d'emblee vaut mieux qu'un bouton qui echoue.
+async fn forge() -> Json<serde_json::Value> {
+    match ynp_publish::forge::Forge::depuis_environnement("forgejo") {
+        Some(f) if f.jeton.is_some() => Json(serde_json::json!({
+            "configuree": true,
+            "url": f.url,
+            "proprietaire": f.proprietaire,
+        })),
+        Some(_) => Json(serde_json::json!({
+            "configuree": false,
+            "manque": "FORGEJO_TOKEN",
+        })),
+        None => Json(serde_json::json!({
+            "configuree": false,
+            "manque": "FORGEJO_URL et FORGEJO_OWNER",
+        })),
+    }
+}
+
+/// Pousse le paquet produit sur la forge configuree.
+///
+/// Publier est la seule facon d'atteindre une CI : c'est une machine jetable
+/// qui doit installer un paquet non relu, jamais celle qui heberge
+/// l'interface.
+async fn publier(
+    State(etat): State<Etat>,
+    Path(id): Path<String>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let Some(f) = ynp_publish::forge::Forge::depuis_environnement("forgejo") else {
+        return refus(
+            StatusCode::PRECONDITION_FAILED,
+            "aucune forge configuree — definir FORGEJO_URL, FORGEJO_OWNER et FORGEJO_TOKEN",
+        );
+    };
+    let Some(paquet) = paquet_du_travail(&etat.racine.join(&id)) else {
+        return refus(StatusCode::NOT_FOUND, "aucun paquet pour ce travail");
+    };
+    let nom = paquet
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "paquet_ynh".to_string());
+
+    if let Err(e) = f
+        .creer_depot(&nom, "Paquet YunoHost genere par yunopack")
+        .await
+    {
+        return refus(StatusCode::BAD_GATEWAY, &e.to_string());
+    }
+    let Some(distant) = f.url_push_https(&nom) else {
+        return refus(
+            StatusCode::PRECONDITION_FAILED,
+            "FORGEJO_TOKEN absent : impossible de pousser sans cle SSH ni jeton",
+        );
+    };
+
+    let paquet_clone = paquet.clone();
+    let nom_clone = nom.clone();
+    let pousse = tokio::task::spawn_blocking(move || {
+        ynp_publish::forge::pousser(
+            &paquet_clone,
+            &distant,
+            "main",
+            &format!("{nom_clone} genere par yunopack"),
+        )
+    })
+    .await;
+
+    match pousse {
+        Ok(Ok(_)) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "url": f.url_https(&nom),
+                "depot": nom,
+            })),
+        ),
+        Ok(Err(e)) => refus(StatusCode::BAD_GATEWAY, &e.to_string()),
+        Err(e) => refus(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
 }
 
 /// Le paquet produit, en archive.

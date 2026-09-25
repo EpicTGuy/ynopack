@@ -18,6 +18,7 @@ ynp-rules.workspace = true
 ynp-spec.workspace = true
 ynp-gen.workspace = true
 ynp-verify.workspace = true
+ynp-publish.workspace = true
 axum.workspace = true
 clap.workspace = true
 tokio = { workspace = true, features = ["sync", "time"] }

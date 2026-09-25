@@ -39,12 +39,59 @@ pub struct Logiciel {
     /// Renseigne apres croisement avec le catalogue YunoHost.
     #[serde(default, skip_deserializing)]
     pub deja_package: bool,
+    /// Identifiant de l'application au catalogue YunoHost, quand elle y est.
+    #[serde(default, skip_deserializing)]
+    pub id_yunohost: String,
+}
+
+/// Depuis combien de temps l'amont n'a pas bouge, en jours.
+///
+/// `updated_at` du catalogue externe est une date `AAAA-MM-JJ`. La comparer
+/// exactement demanderait une bibliotheque de dates ; un calcul sur le
+/// calendrier gregorien suffit ici, ou l'ordre de grandeur est ce qui compte.
+fn jours_depuis(date: &str) -> Option<i64> {
+    let mut p = date.trim().trim_matches('\'').splitn(3, '-');
+    let a: i64 = p.next()?.parse().ok()?;
+    let m: i64 = p.next()?.parse().ok()?;
+    let j: i64 = p.next()?.get(..2)?.parse().ok()?;
+
+    let en_jours = |a: i64, m: i64, j: i64| {
+        // Formule de Howard Hinnant : jours depuis l'epoque civile.
+        let a = if m <= 2 { a - 1 } else { a };
+        let ere = if a >= 0 { a } else { a - 399 } / 400;
+        let annee_de_l_ere = a - ere * 400;
+        let jour_de_l_annee = (153 * (if m > 2 { m - 3 } else { m + 9 }) + 2) / 5 + j - 1;
+        let jour_de_l_ere =
+            annee_de_l_ere * 365 + annee_de_l_ere / 4 - annee_de_l_ere / 100 + jour_de_l_annee;
+        ere * 146097 + jour_de_l_ere - 719468
+    };
+
+    let maintenant = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()?
+        .as_secs() as i64
+        / 86400;
+    Some(maintenant - en_jours(a, m, j))
 }
 
 impl Logiciel {
     /// Vrai si `yunopack` sait analyser ce depot aujourd'hui.
     pub fn analysable(&self) -> bool {
         self.source_code_url.contains("github.com")
+    }
+
+    /// Nombre de jours depuis la derniere activite connue en amont.
+    pub fn jours_sans_activite(&self) -> Option<i64> {
+        jours_depuis(&self.updated_at)
+    }
+
+    /// Vrai si le projet semble abandonne.
+    ///
+    /// Deux ans est le seuil que retient la regle MAINT001 : en deca, une
+    /// pause n'a rien d'anormal pour un logiciel mature ; au-dela, personne ne
+    /// corrigera plus les failles.
+    pub fn abandonne(&self) -> bool {
+        self.jours_sans_activite().is_some_and(|j| j > 730)
     }
 
     /// Vrai si la licence figure parmi celles que le catalogue accepte.
@@ -99,8 +146,14 @@ impl Catalogue {
 
         let packagees = deja_packagees(&client).await.unwrap_or_default();
         for l in &mut logiciels {
-            l.deja_package = packagees.contains(&depot_normalise(&l.source_code_url))
-                || packagees.contains(&l.name.to_lowercase());
+            // Le rapprochement se fait sur le depot d'abord, sur le nom
+            // ensuite : les deux catalogues ne nomment pas toujours pareil.
+            let par_depot = packagees.get(&depot_normalise(&l.source_code_url));
+            let par_nom = packagees.get(&l.name.to_lowercase());
+            if let Some(id) = par_depot.or(par_nom) {
+                l.deja_package = true;
+                l.id_yunohost = id.clone();
+            }
         }
 
         // Les plus suivis d'abord : c'est le meilleur indice de ce qui
@@ -169,6 +222,17 @@ impl Catalogue {
             .filter(|l| !l.deja_package && l.analysable())
             .collect()
     }
+
+    /// Les noms connus, pour l'autocompletion de la recherche.
+    ///
+    /// Ceux deja packages y figurent : partir d'une application qu'on a deja
+    /// pour en trouver de proches est un usage a part entiere.
+    pub fn noms(&self) -> Vec<&str> {
+        let mut v: Vec<&str> = self.logiciels.iter().map(|l| l.name.as_str()).collect();
+        v.sort_unstable_by_key(|n| n.to_lowercase());
+        v.dedup();
+        v
+    }
 }
 
 /// Lit les fichiers `software/*.yml` de l'archive.
@@ -198,15 +262,21 @@ fn extraire(gzip: &[u8]) -> Result<Vec<Logiciel>, std::io::Error> {
     Ok(out)
 }
 
-async fn deja_packagees(client: &reqwest::Client) -> Result<BTreeSet<String>, AlternativesError> {
+/// Cle de rapprochement -> identifiant de l'application au catalogue YunoHost.
+///
+/// On retient l'identifiant, pas seulement le fait d'etre package : c'est lui
+/// qui permet de pointer vers la fiche de l'application.
+async fn deja_packagees(
+    client: &reqwest::Client,
+) -> Result<BTreeMap<String, String>, AlternativesError> {
     let brut = client.get(CATALOGUE).send().await?.text().await?;
     let table: BTreeMap<String, toml::Value> = toml::from_str(&brut).unwrap_or_default();
 
-    let mut out = BTreeSet::new();
+    let mut out = BTreeMap::new();
     for (id, entree) in table {
-        out.insert(id.to_lowercase());
+        out.insert(id.to_lowercase(), id.clone());
         if let Some(url) = entree.get("url").and_then(|u| u.as_str()) {
-            out.insert(depot_normalise(url.trim_end_matches("_ynh")));
+            out.insert(depot_normalise(url.trim_end_matches("_ynh")), id.clone());
         }
     }
     Ok(out)
@@ -310,6 +380,69 @@ mod tests {
         assert!(!restants.contains(&"Miniflux"), "deja package");
         assert!(!restants.contains(&"FreshRSS"), "forge non prise en charge");
         assert!(restants.contains(&"Nextcloud"));
+    }
+
+    #[test]
+    fn un_projet_sans_activite_depuis_deux_ans_est_dit_abandonne() {
+        // Packager un logiciel que plus personne ne corrige, c'est heriter de
+        // ses failles : le signaler avant vaut mieux que de le decouvrir apres.
+        let mut l = logiciel("X", &[], 0);
+        l.updated_at = "2019-01-01".into();
+        assert!(l.abandonne());
+        assert!(l.jours_sans_activite().unwrap() > 730);
+    }
+
+    #[test]
+    fn un_projet_recent_ne_l_est_pas() {
+        let mut l = logiciel("X", &[], 0);
+        let dans_un_mois = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64
+            / 86400;
+        // Une date du jour, calculee a rebours par la meme formule.
+        l.updated_at = jour_iso(dans_un_mois);
+        assert!(!l.abandonne(), "{} jours", l.jours_sans_activite().unwrap());
+        assert_eq!(l.jours_sans_activite(), Some(0));
+    }
+
+    #[test]
+    fn une_date_illisible_ne_conclut_rien() {
+        let mut l = logiciel("X", &[], 0);
+        for d in ["", "jamais", "2019", "2019-13"] {
+            l.updated_at = d.into();
+            assert_eq!(l.jours_sans_activite(), None, "{d}");
+            assert!(!l.abandonne(), "{d} : l'ignorance n'est pas un abandon");
+        }
+    }
+
+    /// L'inverse de `jours_depuis`, pour construire une date de test.
+    fn jour_iso(jours_epoque: i64) -> String {
+        let z = jours_epoque + 719468;
+        let ere = if z >= 0 { z } else { z - 146096 } / 146097;
+        let jour_de_l_ere = z - ere * 146097;
+        let annee_de_l_ere = (jour_de_l_ere - jour_de_l_ere / 1460 + jour_de_l_ere / 36524
+            - jour_de_l_ere / 146096)
+            / 365;
+        let a = annee_de_l_ere + ere * 400;
+        let jour_de_l_annee =
+            jour_de_l_ere - (365 * annee_de_l_ere + annee_de_l_ere / 4 - annee_de_l_ere / 100);
+        let mp = (5 * jour_de_l_annee + 2) / 153;
+        let j = jour_de_l_annee - (153 * mp + 2) / 5 + 1;
+        let m = if mp < 10 { mp + 3 } else { mp - 9 };
+        format!("{:04}-{:02}-{:02}", if m <= 2 { a + 1 } else { a }, m, j)
+    }
+
+    #[test]
+    fn les_noms_servent_a_l_autocompletion_et_incluent_les_deja_packages() {
+        let mut c = catalogue();
+        c.logiciels[0].deja_package = true;
+        let noms = c.noms();
+        assert!(
+            noms.contains(&"Miniflux"),
+            "un deja package reste proposable"
+        );
+        assert!(noms.contains(&"Nextcloud"));
     }
 
     #[test]

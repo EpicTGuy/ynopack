@@ -121,6 +121,10 @@ ol.steps{list-style:none;margin:0;padding:0}
 .cmd code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;padding:4px 0}
 .cmd code::before{content:"$ ";color:var(--mute)}
 .acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.apres{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+.apres .note{margin:0;color:var(--mute);font-size:13px;text-wrap:pretty}
+.publie{margin:0 0 12px;font:13px var(--mono);overflow-wrap:anywhere}
+.publie a{overflow-wrap:anywhere}
 .stop{margin-top:24px;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;border-top:1px solid var(--line);padding-top:16px;font:13px var(--mono);color:var(--mute)}
 .lh{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .lh .c{font:13px var(--mono);color:var(--mute);white-space:nowrap}
@@ -149,6 +153,18 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
 .pourquoi .rm{color:var(--mute);font-size:12px;display:block;margin-top:2px}
 .pourquoi .quand{color:var(--mute);font-size:12px;margin:10px 0 0;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
 .lic{border:1px solid var(--line);border-radius:4px;padding:0 5px}
+.etiq{border-radius:4px;padding:0 6px;border:1px solid currentColor;font-size:11px;white-space:nowrap}
+.etiq.pack{color:var(--acc)}
+.etiq.mort{color:var(--err)}
+.etiq.nonlibre{color:#8a6d1f}
+@media (prefers-color-scheme:dark){.etiq.nonlibre{color:#e3c05c}}
+.suggest{position:relative}
+.liste-sug{position:absolute;z-index:20;left:0;right:0;top:calc(100% + 4px);max-height:16rem;overflow-y:auto;
+  background:var(--carte,var(--bg));border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px}
+.liste-sug button{display:block;width:100%;text-align:left;appearance:none;border:0;background:none;color:var(--fg);
+  font:14px var(--sans);padding:6px 10px;border-radius:4px;cursor:pointer}
+.liste-sug button:hover,.liste-sug button[aria-selected=true]{background:var(--acc-bg);color:var(--fg)}
+.secours{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--mute);font-size:13px}
 .empty{color:var(--mute);padding:18px 0;font-size:14px}
 .more{margin-top:16px}
 footer{border-top:1px solid var(--line);font:12px var(--mono);color:var(--mute)}
@@ -210,12 +226,16 @@ footer .wrap{padding-top:16px;padding-bottom:24px;display:flex;flex-wrap:wrap;ga
     <p class="lead">Les logiciels auto-hébergeables qui remplacent un service donné et ne sont pas encore au catalogue YunoHost.</p>
     <form id="alt-form" novalidate>
       <label class="lbl" for="alt-q">logiciel à remplacer</label>
-      <div class="row">
-        <input id="alt-q" type="search" autocomplete="off" spellcheck="false" placeholder="Nextcloud, Miniflux, Grafana…">
+      <div class="row suggest">
+        <input id="alt-q" type="search" autocomplete="off" spellcheck="false" role="combobox"
+               aria-autocomplete="list" aria-expanded="false" aria-controls="alt-sug"
+               placeholder="Nextcloud, Miniflux, Grafana…">
+        <div class="liste-sug" id="alt-sug" role="listbox" hidden></div>
         <button class="btn" type="submit">Chercher</button>
       </div>
     </form>
     <ul class="items" id="alt-list" hidden></ul>
+    <div class="secours" id="alt-secours" hidden></div>
   </section>
 </main>
 
@@ -235,6 +255,8 @@ const API = {
   events: id => `${RACINE}jobs/${id}/events`,
   reponses: id => `${RACINE}jobs/${id}/reponses`,
   paquet: id => `${RACINE}jobs/${id}/paquet.tar.gz`,
+  publier: id => `${RACINE}jobs/${id}/publier`,
+  forge: RACINE + 'forge',
   wishlist: RACINE + 'wishlist',
   alternatives: q => RACINE + 'alternatives?q=' + encodeURIComponent(q)
 };
@@ -509,7 +531,68 @@ function renderSuccess() {
     h('div', {class: 'cmd'}, h('code', {text: cmd}), copyBtn),
     h('div', {class: 'acts'},
       h('a', {class: 'btn', href: API.paquet(run.id), download: name + '.tar.gz', text: 'Télécharger le paquet'}),
-      h('button', {class: 'btn plain', type: 'button', text: 'Autre dépôt', onclick: () => { reset(); run = null; header(); const u = $('#url'); u.value = ''; u.focus(); }}))));
+      publierBtn(run.id, name),
+      h('button', {class: 'btn plain', type: 'button', text: 'Autre dépôt', onclick: () => { reset(); run = null; header(); const u = $('#url'); u.value = ''; u.focus(); }})),
+    h('div', {class: 'apres', id: 'apres'})));
+  suite(name);
+}
+
+/* Publier, puis faire tester ailleurs.
+
+   yunopack ne teste rien sur la machine qui l'héberge : installer un paquet
+   non relu demande les droits root et salirait une instance de production. La
+   voie propre est de publier, puis de laisser une machine jetable l'installer
+   — c'est exactement ce que fait la CI de YunoHost. */
+function publierBtn(id, nom) {
+  const b = h('button', {class: 'btn plain', type: 'button', text: 'Publier sur ma forge', disabled: true,
+                         title: 'vérification de la configuration…'});
+  fetch(API.forge).then(r => r.json()).then(f => {
+    if (!f.configuree) {
+      b.title = 'aucune forge configurée sur ce serveur — il manque ' + (f.manque || 'la configuration');
+      return;
+    }
+    b.disabled = false;
+    b.title = 'pousser vers ' + f.url + '/' + f.proprietaire;
+    b.onclick = async () => {
+      b.disabled = true; b.textContent = 'publication…';
+      let r;
+      try { r = await fetch(API.publier(id), {method: 'POST'}); }
+      catch (e) { b.textContent = 'échec : ' + e; return; }
+      const c = await r.json().catch(() => ({}));
+      if (!r.ok) { b.textContent = 'échec'; b.title = c.erreur || r.status; return; }
+      b.textContent = 'publié';
+      publie(c.url, nom);
+    };
+  }).catch(() => { b.title = 'configuration de la forge inconnue'; });
+  return b;
+}
+
+function suite(nom) {
+  const a = $('#apres');
+  if (!a) return;
+  a.replaceChildren(
+    h('p', {class: 'note', text:
+      "Ce paquet est conforme sur le plan statique — il n'a pas encore été installé. " +
+      "yunopack ne l'installe pas ici : un paquet non relu s'exécute en root, et ce serveur " +
+      "n'est pas jetable. Le faire tester dans un conteneur jetable est l'étape suivante."}),
+    h('div', {class: 'acts'},
+      h('a', {class: 'btn sm plain', target: '_blank', rel: 'noopener noreferrer',
+              href: 'https://doc.yunohost.org/packaging/packaging_apps_testing',
+              text: 'Comment faire tester le paquet'}),
+      h('a', {class: 'btn sm plain', target: '_blank', rel: 'noopener noreferrer',
+              href: 'https://ci-apps-dev.yunohost.org/',
+              text: 'CI publique YunoHost'})));
+}
+
+function publie(url, nom) {
+  const a = $('#apres');
+  if (!a || !url) return;
+  a.prepend(h('div', {class: 'publie'},
+    h('span', {text: 'Publié : '}),
+    h('a', {href: url, target: '_blank', rel: 'noopener noreferrer', text: url}),
+    h('p', {class: 'note', text:
+      "Pour le faire tester : ouvrir une demande d'intégration sur YunoHost/apps et y écrire " +
+      "« !testme » — la CI l'installe alors dans un conteneur jetable et rend le niveau 0 à 8."})));
 }
 
 function busy(b) { const g = $('#go'); g.disabled = b; g.textContent = b ? 'En cours…' : 'Empaqueter'; }
@@ -764,28 +847,113 @@ function renderWish() {
 $('#wish-q').addEventListener('input', () => { wishLimit = 50; if (wish) renderWish(); });
 
 /* ——— Alternatives ——— */
-$('#alt-form').addEventListener('submit', e => {
-  e.preventDefault();
-  const q = $('#alt-q').value.trim(); if (!q) return;
-  const ul = $('#alt-list'); ul.hidden = false;
+
+/* Suggestions : la liste des noms connus, chargée une fois. Sans elle, il faut
+   deviner l'orthographe exacte d'un logiciel pour en trouver les alternatives. */
+let noms = null;
+const sug = $('#alt-sug'), altQ = $('#alt-q');
+let sugChoisie = -1;
+
+function chargerNoms() {
+  if (noms) return;
+  noms = [];
+  fetch(RACINE + 'suggestions').then(r => r.ok ? r.json() : []).then(d => { noms = Array.isArray(d) ? d : []; }).catch(() => {});
+}
+
+function fermerSug() { sug.hidden = true; sug.textContent = ''; sugChoisie = -1; altQ.setAttribute('aria-expanded', 'false'); }
+
+function montrerSug() {
+  const q = norm(altQ.value);
+  if (!q || !noms || !noms.length) return fermerSug();
+  /* Ceux qui commencent par le terme d'abord : taper « nex » cherche
+     Nextcloud, pas un logiciel dont la description le mentionne. */
+  const debut = [], dedans = [];
+  for (const n of noms) {
+    const x = norm(n);
+    if (x.startsWith(q)) debut.push(n);
+    else if (x.includes(q)) dedans.push(n);
+    if (debut.length >= 10) break;
+  }
+  const liste = debut.concat(dedans).slice(0, 10);
+  if (!liste.length || (liste.length === 1 && norm(liste[0]) === q)) return fermerSug();
+  sug.replaceChildren(...liste.map((n, i) => h('button', {type: 'button', role: 'option', text: n,
+    onmousedown: e => { e.preventDefault(); altQ.value = n; fermerSug(); chercherAlt(); }})));
+  sug.hidden = false; sugChoisie = -1; altQ.setAttribute('aria-expanded', 'true');
+}
+
+altQ.addEventListener('input', () => { chargerNoms(); montrerSug(); });
+altQ.addEventListener('focus', chargerNoms);
+altQ.addEventListener('blur', () => setTimeout(fermerSug, 120));
+altQ.addEventListener('keydown', e => {
+  if (sug.hidden) return;
+  const opts = [...sug.children];
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    sugChoisie = (sugChoisie + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length;
+    opts.forEach((o, i) => o.setAttribute('aria-selected', i === sugChoisie));
+    opts[sugChoisie].scrollIntoView({block: 'nearest'});
+  } else if (e.key === 'Enter' && sugChoisie >= 0) {
+    e.preventDefault(); altQ.value = opts[sugChoisie].textContent; fermerSug(); chercherAlt();
+  } else if (e.key === 'Escape') fermerSug();
+});
+
+function etiquettes(a) {
+  const e = [];
+  if (a.deja_package) {
+    const id = a.id_yunohost || '';
+    e.push(id
+      ? h('a', {class: 'etiq pack', href: 'https://apps.yunohost.org/app/' + encodeURIComponent(id),
+                target: '_blank', rel: 'noopener noreferrer', text: 'déjà au catalogue'})
+      : h('span', {class: 'etiq pack', text: 'déjà au catalogue'}));
+  }
+  if (a.abandonne) {
+    const j = a.jours_sans_activite;
+    e.push(h('span', {class: 'etiq mort', text: 'sans activité depuis ' + Math.floor(j / 365) + ' ans',
+                      title: 'dernière activité connue : ' + (a.derniere_activite || 'inconnue')}));
+  }
+  if (a.libre === false) e.push(h('span', {class: 'etiq nonlibre', text: 'licence à vérifier',
+                                           title: 'hors des licences que le catalogue YunoHost accepte'}));
+  return e;
+}
+
+function chercherAlt() {
+  const q = altQ.value.trim(); if (!q) return;
+  fermerSug();
+  const ul = $('#alt-list'), secours = $('#alt-secours');
+  ul.hidden = false; secours.hidden = true;
   ul.replaceChildren(h('li', {class: 'empty', text: 'recherche…'}));
+
+  /* Quand nos résultats ne conviennent pas, autant envoyer chercher ailleurs
+     plutôt que de laisser l'utilisateur sans rien. */
+  secours.replaceChildren(
+    h('span', {text: 'Rien de convaincant ?'}),
+    h('a', {class: 'btn sm plain', target: '_blank', rel: 'noopener noreferrer',
+            href: 'https://alternativeto.net/browse/search/?q=' + encodeURIComponent(q),
+            text: 'Chercher « ' + q + ' » sur AlternativeTo'}));
+
   fetch(API.alternatives(q)).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(d => {
     const list = Array.isArray(d) ? d : [];
-    if (!list.length) { ul.replaceChildren(h('li', {class: 'empty', text: 'Aucune alternative hors catalogue pour « ' + q + ' ».'})); return; }
+    secours.hidden = false;
+    if (!list.length) { ul.replaceChildren(h('li', {class: 'empty', text: 'Aucune alternative connue pour « ' + q + ' ».'})); return; }
     ul.replaceChildren(...list.map(a => {
-      const b = badge(a.repo);
+      const b = a.deja_package ? null : badge(a.repo);
       const li = h('li', {class: 'item'},
         a.repo ? icone(a.repo) : h('span', {class: 'ico'}),
         h('div', {}, h('div', {class: 'nm', text: a.name || '—'}), a.description ? h('div', {class: 'ds', text: a.description}) : null,
           h('div', {class: 'mt'}, a.stars ? h('span', {text: '★ ' + nf.format(a.stars)}) : null,
-            a.license ? h('span', {class: 'lic', text: a.license}) : null, repoLink(a.repo))),
-        b, packBtn(a.repo, true));
-      observer(b, a.repo);
+            a.license ? h('span', {class: 'lic', text: a.license}) : null, ...etiquettes(a), repoLink(a.repo))),
+        b || h('span'),
+        a.deja_package
+          ? h('button', {class: 'btn sm plain', type: 'button', text: 'déjà disponible', disabled: true})
+          : packBtn(a.repo, a.analysable));
+      if (b) observer(b, a.repo);
       return li;
     }));
-  }).catch(() => ul.replaceChildren(h('li', {class: 'empty', text: "Recherche indisponible : le serveur n'a pas répondu."})));
-});
+  }).catch(() => { secours.hidden = false; ul.replaceChildren(h('li', {class: 'empty', text: "Recherche indisponible : le serveur n'a pas répondu."})); });
+}
+
+$('#alt-form').addEventListener('submit', e => { e.preventDefault(); chercherAlt(); });
 
 window.addEventListener('hashchange', fromHash);
 fromHash();

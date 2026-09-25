@@ -23,7 +23,10 @@ const FILE_MAX: usize = 40;
 #[derive(Clone)]
 pub struct Evaluateur {
     cache: Cache,
+    /// Ce que l'utilisateur regarde maintenant. Prioritaire.
     file: Arc<Mutex<VecDeque<String>>>,
+    /// Le defrichage de fond, qui remplit le cache sans que personne attende.
+    fond: Arc<Mutex<VecDeque<String>>>,
     /// Reveille l'executant des qu'une demande arrive, plutot que de le faire
     /// scruter la file.
     signal: Arc<tokio::sync::Notify>,
@@ -38,6 +41,7 @@ impl Evaluateur {
         let e = Self {
             cache,
             file: Arc::new(Mutex::new(VecDeque::new())),
+            fond: Arc::new(Mutex::new(VecDeque::new())),
             signal: Arc::new(tokio::sync::Notify::new()),
         };
         tokio::spawn(e.clone().executer());
@@ -81,17 +85,70 @@ impl Evaluateur {
 
     /// Une evaluation a la fois : c'est le quota de la forge qui commande, pas
     /// la puissance de la machine.
+    ///
+    /// Les demandes de l'utilisateur passent devant le defrichage de fond : il
+    /// attend une reponse, la tache de fond non.
     async fn executer(self) {
         loop {
-            let suivante = verrou(&self.file).pop_front();
+            let suivante = verrou(&self.file)
+                .pop_front()
+                .or_else(|| verrou(&self.fond).pop_front());
             match suivante {
                 None => self.signal.notified().await,
                 Some(url) => {
                     let fiche = evaluer(&url).await;
                     self.cache.ecrire(&fiche);
+                    // Une evaluation qui echoue sur le quota ne doit pas
+                    // enchainer sur la suivante : elle echouerait pareil, et la
+                    // liste entiere se remplirait d'echecs en quelques secondes.
+                    if quota_epuise(&fiche) {
+                        tracing::warn!("quota de la forge epuise — pause de 15 minutes");
+                        tokio::time::sleep(std::time::Duration::from_secs(900)).await;
+                    }
                 }
             }
         }
+    }
+
+    /// Met en file de fond tout ce qui n'est pas encore connu.
+    ///
+    /// Sans cela, une installation neuve n'affiche aucun score tant que
+    /// personne n'a fait defiler les listes. Le defrichage tourne au rythme que
+    /// le quota permet et ne gene pas les demandes directes, qui passent
+    /// devant.
+    pub fn defricher(&self, urls: Vec<String>) -> usize {
+        let mut f = verrou(&self.fond);
+        let mut ajoutees = 0;
+        for url in urls {
+            let Some(depot) = crate::cache::depot_de(&url) else {
+                continue;
+            };
+            if self.cache.lire(&depot).is_some() || f.iter().any(|u| u == &url) {
+                continue;
+            }
+            f.push_back(url);
+            ajoutees += 1;
+        }
+        drop(f);
+        if ajoutees > 0 {
+            self.signal.notify_one();
+        }
+        ajoutees
+    }
+
+    pub fn reste_a_defricher(&self) -> usize {
+        verrou(&self.fond).len()
+    }
+}
+
+/// Vrai si l'echec vient du quota de la forge plutot que du depot.
+fn quota_epuise(fiche: &Fiche) -> bool {
+    match fiche {
+        Fiche::Echouee(e) => {
+            let m = e.erreur.to_lowercase();
+            m.contains("quota") || m.contains("rate limit") || m.contains("403")
+        }
+        Fiche::Evaluee(_) => false,
     }
 }
 
@@ -116,6 +173,8 @@ pub async fn evaluer(url: &str) -> Fiche {
     };
 
     let pushed_at = recupere.forge.meta.pushed_at.clone().unwrap_or_default();
+    let archive = recupere.forge.meta.archived;
+    let etoiles = recupere.forge.meta.stars;
     let reference = recupere.choice.reference.clone();
     let faits = ynp_analyze::analyze(recupere.forge, &recupere.tree);
     let technologie = faits.stack.primary.to_string();
@@ -143,6 +202,9 @@ pub async fn evaluer(url: &str) -> Fiche {
         score: faisabilite.score,
         bloquants: motifs(ynp_core::Severity::Blocker),
         reserves: motifs(ynp_core::Severity::Major),
+        remarques: motifs(ynp_core::Severity::Minor),
+        archive,
+        etoiles,
         technologie,
         reference,
         pushed_at,
@@ -204,6 +266,7 @@ mod tests {
         Evaluateur {
             cache: Cache::new(&racine),
             file: Arc::new(Mutex::new(VecDeque::new())),
+            fond: Arc::new(Mutex::new(VecDeque::new())),
             signal: Arc::new(tokio::sync::Notify::new()),
         }
     }
@@ -249,6 +312,44 @@ mod tests {
         }));
         assert_eq!(e.demander("https://github.com/a/b", true), "en_attente");
         assert_eq!(e.en_attente(), 1);
+    }
+
+    #[test]
+    fn le_defrichage_ignore_ce_qui_est_deja_connu_et_les_doublons() {
+        let e = evaluateur();
+        e.cache.ecrire(&Fiche::Echouee(Echec {
+            depot: "a/connu".into(),
+            url: "https://github.com/a/connu".into(),
+            erreur: "404".into(),
+            evalue_le: maintenant(),
+        }));
+        let n = e.defricher(vec![
+            "https://github.com/a/connu".into(),
+            "https://github.com/a/neuf".into(),
+            "https://github.com/a/neuf".into(),
+            "pas une url".into(),
+        ]);
+        assert_eq!(n, 1);
+        assert_eq!(e.reste_a_defricher(), 1);
+    }
+
+    #[test]
+    fn un_echec_de_quota_se_distingue_d_un_depot_introuvable() {
+        // Enchainer apres un quota epuise remplirait la liste d'echecs faux.
+        let quota = Fiche::Echouee(Echec {
+            depot: "a/b".into(),
+            url: String::new(),
+            erreur: "quota d'API GitHub epuise".into(),
+            evalue_le: String::new(),
+        });
+        let absent = Fiche::Echouee(Echec {
+            depot: "a/b".into(),
+            url: String::new(),
+            erreur: "depot introuvable (404)".into(),
+            evalue_le: String::new(),
+        });
+        assert!(quota_epuise(&quota));
+        assert!(!quota_epuise(&absent));
     }
 
     #[test]

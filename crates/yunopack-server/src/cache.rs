@@ -30,6 +30,15 @@ pub struct Evaluation {
     /// Ce qui ne l'interdit pas mais coutera du travail.
     #[serde(default)]
     pub reserves: Vec<Motif>,
+    /// Ce qui merite d'etre su sans rien coûter : depot sans activite
+    /// recente, absence de SSO. C'est la que se lit l'etat de maintenance.
+    #[serde(default)]
+    pub remarques: Vec<Motif>,
+    /// Depot archive par son auteur : le signal d'abandon le plus sur.
+    #[serde(default)]
+    pub archive: bool,
+    #[serde(default)]
+    pub etoiles: u32,
     /// Technologie et source retenues, utiles a l'affichage.
     #[serde(default)]
     pub technologie: String,
@@ -214,6 +223,9 @@ mod tests {
             score: 100,
             bloquants: Vec::new(),
             reserves: Vec::new(),
+            remarques: Vec::new(),
+            archive: false,
+            etoiles: 0,
             technologie: "Go".into(),
             reference: "v1".into(),
             pushed_at: pushed.into(),
