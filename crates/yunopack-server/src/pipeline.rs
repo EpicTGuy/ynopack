@@ -3,31 +3,51 @@
 //! La logique metier n'est pas dupliquee ici : ce module orchestre les memes
 //! crates que le CLI. Une divergence entre l'interface web et la ligne de
 //! commande serait une source d'incomprehension sans contrepartie.
+//!
+//! Le pipeline est coupe en deux au point ou une decision humaine peut etre
+//! necessaire. La premiere moitie va de l'URL a la specification ; la seconde
+//! rend et verifie le paquet. Entre les deux, le travail attend — et ce qu'il
+//! attend est ecrit dans `appspec.toml`, si bien qu'une reponse donnee par le
+//! formulaire et une reponse donnee par `yunopack repondre` aboutissent
+//! exactement au meme fichier.
 
 use crate::travaux::Registre;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Executee dans une tache de fond ; ne rend rien, tout passe par le registre.
 pub async fn executer(registre: Registre, id: String, url: String, racine: PathBuf) {
     if let Err(e) = tenter(&registre, &id, &url, &racine).await {
-        // La cause profonde porte souvent l'information utile (quota de la
-        // forge, depot prive) : la perdre obligerait a relancer pour rien.
-        let mut message = e.to_string();
-        let mut source = e.source();
-        while let Some(cause) = source {
-            message.push_str(&format!(" — {cause}"));
-            source = cause.source();
-        }
-        registre.conclure(&id, false, &message);
+        registre.conclure(&id, false, &enchainement(e.as_ref()));
     }
 }
 
-async fn tenter(
-    registre: &Registre,
-    id: &str,
-    url: &str,
-    racine: &std::path::Path,
-) -> anyhow::Result<()> {
+/// Reprend un travail suspendu, une fois sa specification completee.
+pub async fn reprendre(registre: Registre, id: String, travail: PathBuf) {
+    if let Err(e) = finir(&registre, &id, &travail) {
+        registre.conclure(&id, false, &enchainement(e.as_ref()));
+    }
+}
+
+/// Le message d'une erreur, suivi de ses causes.
+///
+/// La cause profonde porte souvent l'information utile (quota de la forge,
+/// depot prive) : la perdre obligerait a relancer pour rien.
+fn enchainement(e: &dyn std::error::Error) -> String {
+    let mut message = e.to_string();
+    let mut source = e.source();
+    while let Some(cause) = source {
+        message.push_str(&format!(" — {cause}"));
+        source = cause.source();
+    }
+    message
+}
+
+/// Emplacement de la specification d'un travail. Un seul endroit la nomme.
+pub fn chemin_appspec(travail: &Path) -> PathBuf {
+    travail.join("appspec.toml")
+}
+
+async fn tenter(registre: &Registre, id: &str, url: &str, racine: &Path) -> anyhow::Result<()> {
     let travail = racine.join(id);
     std::fs::create_dir_all(&travail)?;
 
@@ -83,25 +103,32 @@ async fn tenter(
 
     registre.avancer(id, "specification", "arbitrages…");
     let spec = ynp_spec::build(&faits)?;
-    std::fs::write(travail.join("appspec.toml"), toml::to_string_pretty(&spec)?)?;
+    std::fs::write(chemin_appspec(&travail), toml::to_string_pretty(&spec)?)?;
 
-    let manquants = spec.unresolved();
-    if !manquants.is_empty() {
-        let champs: Vec<&str> = manquants.iter().map(|(c, _)| c.as_str()).collect();
-        registre.conclure(
-            id,
-            false,
-            &format!(
-                "{} champ(s) a completer dans appspec.toml : {}",
-                manquants.len(),
-                champs.join(", ")
-            ),
-        );
+    let arbitrages = spec.arbitrages();
+    if !arbitrages.is_empty() {
+        // Ce n'est pas un echec : l'outil a etabli tout ce que le depot permet
+        // d'etablir. Le reste demande une decision, qu'on va chercher.
+        registre.demander(id, arbitrages);
+        return Ok(());
+    }
+
+    finir(registre, id, &travail)
+}
+
+/// De la specification completee au paquet verifie.
+fn finir(registre: &Registre, id: &str, travail: &Path) -> anyhow::Result<()> {
+    let chemin = chemin_appspec(travail);
+    let spec: ynp_core::AppSpec = toml::from_str(&std::fs::read_to_string(&chemin)?)?;
+
+    let restants = spec.arbitrages();
+    if !restants.is_empty() {
+        registre.demander(id, restants);
         return Ok(());
     }
 
     registre.avancer(id, "generation", "rendu du paquet…");
-    let genere = ynp_gen::generate(&spec, &travail)?;
+    let genere = ynp_gen::generate(&spec, travail)?;
     registre.avancer(
         id,
         "generation",
@@ -124,10 +151,14 @@ async fn tenter(
         return Ok(());
     }
 
-    registre.conclure(
+    registre.conclure_avec(
         id,
         true,
         &format!("paquet pret : {}", genere.racine.display()),
+        genere
+            .racine
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned()),
     );
     Ok(())
 }

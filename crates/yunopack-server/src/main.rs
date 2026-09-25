@@ -7,11 +7,13 @@
 use clap::Parser;
 
 use axum::extract::{Path, State};
+use axum::http::{header, StatusCode};
 use axum::response::sse::{Event, Sse};
-use axum::response::Html;
+use axum::response::{Html, IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use serde::Deserialize;
+use std::collections::BTreeMap;
 use std::convert::Infallible;
 use std::path::PathBuf;
 use tokio_stream::wrappers::BroadcastStream;
@@ -88,7 +90,9 @@ async fn main() -> anyhow::Result<()> {
         .route(&format!("{base}/"), get(page))
         .route(&format!("{base}/jobs"), post(creer).get(lister))
         .route(&format!("{base}/jobs/:id"), get(lire))
-        .route(&format!("{base}/jobs/:id/events"), get(evenements));
+        .route(&format!("{base}/jobs/:id/events"), get(evenements))
+        .route(&format!("{base}/jobs/:id/reponses"), post(repondre))
+        .route(&format!("{base}/jobs/:id/paquet.tar.gz"), get(paquet));
     if !base.is_empty() {
         app = app.route(&base, get(page));
     }
@@ -119,6 +123,129 @@ async fn creer(State(etat): State<Etat>, Json(d): Json<Demande>) -> Json<serde_j
 
 async fn lister(State(etat): State<Etat>) -> Json<serde_json::Value> {
     Json(serde_json::json!(etat.registre.liste()))
+}
+
+/// Applique les reponses de l'utilisateur, puis relance le pipeline.
+///
+/// Les reponses sont ecrites dans le meme `appspec.toml` que celui qu'edite
+/// `yunopack repondre` : le formulaire web n'est pas un chemin parallele, c'est
+/// la meme decision prise ailleurs.
+async fn repondre(
+    State(etat): State<Etat>,
+    Path(id): Path<String>,
+    Json(reponses): Json<BTreeMap<String, String>>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    if !etat.registre.attend_une_decision(&id) {
+        return refus(
+            StatusCode::CONFLICT,
+            "ce travail n'attend pas de decision — le relancer depuis son URL",
+        );
+    }
+
+    let travail = etat.racine.join(&id);
+    let chemin = yunopack_server::pipeline::chemin_appspec(&travail);
+    let Ok(texte) = std::fs::read_to_string(&chemin) else {
+        return refus(
+            StatusCode::NOT_FOUND,
+            "specification introuvable — relancer l'analyse",
+        );
+    };
+    let mut spec: ynp_core::AppSpec = match toml::from_str(&texte) {
+        Ok(s) => s,
+        Err(e) => return refus(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    };
+
+    // Tout ou rien : appliquer la moitie des reponses laisserait une
+    // specification a moitie decidee, sans que personne sache laquelle.
+    for (champ, valeur) in &reponses {
+        if let Err(e) = spec.repondre(champ, valeur) {
+            return refus(StatusCode::BAD_REQUEST, &e.to_string());
+        }
+    }
+
+    let rendu = match toml::to_string_pretty(&spec) {
+        Ok(t) => t,
+        Err(e) => return refus(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    };
+    if let Err(e) = std::fs::write(&chemin, rendu) {
+        return refus(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string());
+    }
+
+    etat.registre.avancer(
+        &id,
+        "decision",
+        &format!("{} reponse(s) prises en compte", reponses.len()),
+    );
+    tokio::spawn(yunopack_server::pipeline::reprendre(
+        etat.registre.clone(),
+        id,
+        travail,
+    ));
+    (
+        StatusCode::ACCEPTED,
+        Json(serde_json::json!({ "repris": true })),
+    )
+}
+
+fn refus(code: StatusCode, message: &str) -> (StatusCode, Json<serde_json::Value>) {
+    (code, Json(serde_json::json!({ "erreur": message })))
+}
+
+/// Le paquet produit, en archive.
+///
+/// Sans cela, le seul moyen de recuperer le travail serait d'avoir un acces
+/// shell a la machine qui heberge le serveur — ce qui vide l'interface web de
+/// son interet pour qui ne l'a pas.
+async fn paquet(State(etat): State<Etat>, Path(id): Path<String>) -> Response {
+    let travail = etat.racine.join(&id);
+    let Some(dossier) = paquet_du_travail(&travail) else {
+        return (StatusCode::NOT_FOUND, "aucun paquet pour ce travail").into_response();
+    };
+    let nom = dossier
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "paquet".to_string());
+
+    let archive = match archiver(&dossier, &nom) {
+        Ok(a) => a,
+        Err(e) => {
+            return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response();
+        }
+    };
+
+    (
+        [
+            (header::CONTENT_TYPE, "application/gzip".to_string()),
+            (
+                header::CONTENT_DISPOSITION,
+                format!("attachment; filename=\"{nom}.tar.gz\""),
+            ),
+        ],
+        archive,
+    )
+        .into_response()
+}
+
+/// Le repertoire `<app>_ynh` produit dans le repertoire de travail.
+fn paquet_du_travail(travail: &std::path::Path) -> Option<PathBuf> {
+    std::fs::read_dir(travail)
+        .ok()?
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .find(|p| {
+            p.is_dir()
+                && p.file_name()
+                    .is_some_and(|n| n.to_string_lossy().ends_with("_ynh"))
+        })
+}
+
+fn archiver(dossier: &std::path::Path, nom: &str) -> std::io::Result<Vec<u8>> {
+    let encodeur = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+    let mut tar = tar::Builder::new(encodeur);
+    // Les scripts doivent rester executables a l'arrivee : `append_dir_all`
+    // conserve les permissions, une reconstruction fichier par fichier non.
+    tar.append_dir_all(nom, dossier)?;
+    tar.into_inner()?.finish()
 }
 
 async fn lire(State(etat): State<Etat>, Path(id): Path<String>) -> Json<serde_json::Value> {

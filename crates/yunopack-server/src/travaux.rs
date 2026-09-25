@@ -12,12 +12,16 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast;
+use ynp_core::spec::Arbitrage;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Etat {
     EnAttente,
     EnCours,
+    /// Le pipeline a fait tout ce qu'il pouvait seul : il reste des arbitrages
+    /// que personne d'autre que l'utilisateur ne peut rendre.
+    EnAttenteDeDecision,
     Termine,
     Echoue,
 }
@@ -28,6 +32,27 @@ pub struct Evenement {
     pub message: String,
     pub termine: bool,
     pub succes: bool,
+    /// Les champs a renseigner, quand l'etape est une demande de decision.
+    /// Portes par l'evenement plutot que rappeles a part : le journal rejoue a
+    /// la reconnexion reconstruit ainsi le formulaire tel quel.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub arbitrages: Vec<Arbitrage>,
+    /// Chemin du paquet produit, quand l'etape conclut un succes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub paquet: Option<String>,
+}
+
+impl Evenement {
+    fn etape(etape: &str, message: &str) -> Self {
+        Self {
+            etape: etape.into(),
+            message: message.into(),
+            termine: false,
+            succes: true,
+            arbitrages: Vec::new(),
+            paquet: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -93,33 +118,59 @@ impl Registre {
     }
 
     pub fn avancer(&self, id: &str, etape: &str, message: &str) {
-        self.emettre(
-            id,
-            Evenement {
-                etape: etape.into(),
-                message: message.into(),
-                termine: false,
-                succes: true,
-            },
-        );
+        self.emettre(id, Evenement::etape(etape, message));
         if let Some(t) = verrou(&self.travaux).get_mut(id) {
             t.etat = Etat::EnCours;
         }
     }
 
-    pub fn conclure(&self, id: &str, succes: bool, message: &str) {
+    /// Suspend le travail sur des arbitrages a rendre.
+    ///
+    /// Ce n'est pas un echec : rien n'a echoue, l'outil a simplement atteint la
+    /// limite de ce qu'il peut etablir seul. Le distinguer d'un echec change ce
+    /// que l'interface propose — un formulaire plutot qu'un message d'erreur.
+    pub fn demander(&self, id: &str, arbitrages: Vec<Arbitrage>) {
+        let message = format!(
+            "{} champ(s) que le depot ne permet pas de determiner",
+            arbitrages.len()
+        );
         self.emettre(
             id,
             Evenement {
-                etape: "fin".into(),
-                message: message.into(),
+                arbitrages,
+                ..Evenement::etape("decision", &message)
+            },
+        );
+        if let Some(t) = verrou(&self.travaux).get_mut(id) {
+            t.etat = Etat::EnAttenteDeDecision;
+        }
+    }
+
+    pub fn conclure(&self, id: &str, succes: bool, message: &str) {
+        self.conclure_avec(id, succes, message, None);
+    }
+
+    pub fn conclure_avec(&self, id: &str, succes: bool, message: &str, paquet: Option<String>) {
+        self.emettre(
+            id,
+            Evenement {
                 termine: true,
                 succes,
+                paquet,
+                ..Evenement::etape("fin", message)
             },
         );
         if let Some(t) = verrou(&self.travaux).get_mut(id) {
             t.etat = if succes { Etat::Termine } else { Etat::Echoue };
         }
+    }
+
+    /// Vrai si le travail attend une decision : seul etat ou une reponse a un
+    /// sens. Repondre a un travail termine ou en cours serait une confusion.
+    pub fn attend_une_decision(&self, id: &str) -> bool {
+        verrou(&self.travaux)
+            .get(id)
+            .is_some_and(|t| t.etat == Etat::EnAttenteDeDecision)
     }
 
     fn emettre(&self, id: &str, evenement: Evenement) {

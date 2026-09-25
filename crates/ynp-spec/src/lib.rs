@@ -288,6 +288,18 @@ fn candidats_port(facts: &RepoFacts) -> Vec<Candidate> {
             } else {
                 format!("nommee dans {}", v.source)
             };
+            // La valeur d'exemple dit la forme attendue : une variable qui vaut
+            // `0.0.0.0:8080` veut une adresse, pas un numero. Constate sur
+            // miniflux, dont le LISTEN_ADDR reduit au seul port ne marche pas.
+            if let Some(d) = v.default.as_deref() {
+                if est_une_adresse(d) {
+                    ajouter(
+                        format!("{}=127.0.0.1:__PORT__", v.name),
+                        format!("{source}, avec la valeur « {d} » pour modele"),
+                    );
+                    continue;
+                }
+            }
             ajouter(format!("{}=__PORT__", v.name), source);
         }
     }
@@ -368,6 +380,14 @@ fn liaison_base(facts: &RepoFacts) -> Known<String> {
         ],
         candidats_base(facts, adresse),
     )
+}
+
+/// Vrai pour une valeur de la forme `hote:port`, y compris `:8080`.
+fn est_une_adresse(v: &str) -> bool {
+    match v.rsplit_once(':') {
+        Some((_, port)) => !port.is_empty() && port.chars().all(|c| c.is_ascii_digit()),
+        None => false,
+    }
 }
 
 /// Formes plausibles de la liaison de la base, la mieux fondee en premier.
@@ -510,4 +530,97 @@ fn tronquer(s: &str, max: usize) -> String {
         _ => court.as_str(),
     };
     format!("{}…", coupe.trim_end_matches([',', ';', ':', ' ']))
+}
+
+#[cfg(test)]
+mod propositions {
+    use super::*;
+    use ynp_core::facts::{BuildRecipe, ConfigFacts, ConfigVar};
+
+    fn faits(variables: Vec<ConfigVar>, expose: Vec<u16>) -> RepoFacts {
+        RepoFacts {
+            config: ConfigFacts {
+                example_file: Some(".env.example".into()),
+                variables,
+            },
+            build: Some(BuildRecipe {
+                expose,
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    }
+
+    fn var(nom: &str, defaut: Option<&str>, source: &str) -> ConfigVar {
+        ConfigVar {
+            name: nom.into(),
+            default: defaut.map(str::to_string),
+            role: ConfigRole::Other,
+            secret: false,
+            source: source.into(),
+        }
+    }
+
+    #[test]
+    fn une_variable_du_depot_passe_avant_les_conventions() {
+        let c = candidats_port(&faits(
+            vec![var("APP_LISTEN_PORT", None, "Dockerfile")],
+            vec![],
+        ));
+        assert_eq!(c[0].value, "APP_LISTEN_PORT=__PORT__");
+        assert!(c[0].why.contains("Dockerfile"));
+        // Les conventions restent proposees, mais apres.
+        assert!(c.iter().any(|c| c.value == "PORT=__PORT__"));
+    }
+
+    #[test]
+    fn une_valeur_d_exemple_en_hote_port_fait_proposer_une_adresse() {
+        // miniflux attend `LISTEN_ADDR=127.0.0.1:8080`, pas un numero seul.
+        let c = candidats_port(&faits(
+            vec![var("LISTEN_ADDR", Some("0.0.0.0:8080"), "Dockerfile")],
+            vec![],
+        ));
+        assert_eq!(c[0].value, "LISTEN_ADDR=127.0.0.1:__PORT__");
+        assert!(c[0].why.contains("0.0.0.0:8080"));
+    }
+
+    #[test]
+    fn un_expose_fonde_la_proposition_generique() {
+        let c = candidats_port(&faits(vec![], vec![8080]));
+        assert_eq!(c[0].value, "PORT=__PORT__");
+        assert!(c[0].why.contains("EXPOSE 8080"));
+    }
+
+    #[test]
+    fn aucune_proposition_n_est_repetee() {
+        let c = candidats_port(&faits(vec![var("PORT", None, "x")], vec![3000]));
+        let mut vus: Vec<&str> = c.iter().map(|c| c.value.as_str()).collect();
+        let avant = vus.len();
+        vus.sort_unstable();
+        vus.dedup();
+        assert_eq!(vus.len(), avant);
+    }
+
+    #[test]
+    fn la_base_propose_la_variable_du_depot_avant_les_conventions() {
+        let f = faits(vec![var("APP_DATABASE_DSN", None, "compose.yml")], vec![]);
+        let c = candidats_base(&f, "postgres://x");
+        assert_eq!(c[0].value, "APP_DATABASE_DSN=postgres://x");
+        assert!(c.iter().any(|c| c.value == "DATABASE_URL=postgres://x"));
+    }
+
+    #[test]
+    fn la_base_propose_aussi_la_forme_en_champs_separes() {
+        let c = candidats_base(&faits(vec![], vec![]), "postgres://x");
+        assert!(c.iter().any(|c| c.value.contains("DB_HOST=127.0.0.1")));
+    }
+
+    #[test]
+    fn une_adresse_se_distingue_d_un_simple_numero() {
+        assert!(est_une_adresse("0.0.0.0:8080"));
+        assert!(est_une_adresse(":8080"));
+        assert!(!est_une_adresse("8080"));
+        assert!(!est_une_adresse("localhost"));
+        assert!(!est_une_adresse("host:"));
+    }
 }
