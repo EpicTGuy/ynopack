@@ -8,6 +8,10 @@
 # L'ordre compte : la premiere regle qui correspond gagne. Les roles les plus
 # specifiques doivent donc precer les plus generaux.
 
+# Les suffixes rattrapent les variantes prefixees du nom de l'application, tres
+# repandues : GOTIFY_DATABASE_CONNECTION, NEXTCLOUD_DB_HOST, PAPERLESS_DBUSER.
+# Sans eux, une application qui nomme correctement ses variables etait declaree
+# indeterminable au seul motif qu'elle les prefixe.
 [[rule]]
 role = "database_url"
 exact = [
@@ -15,18 +19,25 @@ exact = [
   "POSTGRES_URL", "POSTGRESQL_URL", "MYSQL_URL", "MONGO_URL", "MONGODB_URI",
   "SQLALCHEMY_DATABASE_URI", "DATABASE_CONNECTION",
 ]
+suffix = [
+  "_DATABASE_URL", "_DATABASE_URI", "_DB_URL", "_DB_URI",
+  "_DATABASE_CONNECTION", "_DATABASE_DSN", "_DB_DSN",
+]
 
 [[rule]]
 role = "database_host"
 exact = ["DB_HOST", "DATABASE_HOST", "POSTGRES_HOST", "MYSQL_HOST", "PGHOST", "DB_SERVER"]
+suffix = ["_DB_HOST", "_DATABASE_HOST", "_DBHOST"]
 
 [[rule]]
 role = "database_name"
 exact = ["DB_NAME", "DATABASE_NAME", "POSTGRES_DB", "MYSQL_DATABASE", "PGDATABASE", "DB_DATABASE"]
+suffix = ["_DB_NAME", "_DATABASE_NAME", "_DBNAME"]
 
 [[rule]]
 role = "database_user"
 exact = ["DB_USER", "DB_USERNAME", "DATABASE_USER", "POSTGRES_USER", "MYSQL_USER", "PGUSER"]
+suffix = ["_DB_USER", "_DATABASE_USER", "_DBUSER", "_DB_USERNAME"]
 
 [[rule]]
 role = "database_password"

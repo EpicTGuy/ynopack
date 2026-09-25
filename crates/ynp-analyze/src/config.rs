@@ -4,12 +4,16 @@
 //! chaque variable par role — port, adresse de base, identifiants — est ce qui
 //! permet de cabler la configuration sur les valeurs YunoHost (`$port`,
 //! `$domain`, `$db_pwd`) sans rien deviner.
+//!
+//! Les sources sont lues de la plus sure a la moins sure, et la premiere qui
+//! nomme une variable l'emporte. Chacune retient d'ou elle vient : une
+//! proposition faite a l'humain vaut surtout par sa provenance.
 
 use crate::knowledge;
-use ynp_core::facts::{ComposeFacts, ConfigFacts, ConfigVar};
+use ynp_core::facts::{BuildRecipe, ComposeFacts, ConfigFacts, ConfigVar};
 use ynp_core::tree::RepoTree;
 
-/// Fichiers d'exemple reconnus, par ordre de preference.
+/// Fichiers d'exemple reconnus par leur chemin exact, par ordre de preference.
 const CANDIDATES: &[&str] = &[
     ".env.example",
     ".env.sample",
@@ -21,27 +25,89 @@ const CANDIDATES: &[&str] = &[
     "config/.env.example",
 ];
 
+/// Terminaisons d'un fichier d'exemple au format `.env`.
+///
+/// Une liste de chemins exacts ne suffit pas : beaucoup de projets prefixent le
+/// fichier du nom de l'application. gotify publie `gotify-server.env.example`,
+/// qui documente son port et sa base — deux champs que l'outil declarait
+/// indeterminables faute de regarder ce fichier.
+const TERMINAISONS: &[&str] = &[
+    ".env.example",
+    ".env.sample",
+    ".env.template",
+    ".env.dist",
+    ".env.defaults",
+    ".env.local.example",
+];
+
 pub fn detect(tree: &RepoTree, compose: Option<&ComposeFacts>) -> ConfigFacts {
+    detect_avec_build(tree, compose, None)
+}
+
+pub fn detect_avec_build(
+    tree: &RepoTree,
+    compose: Option<&ComposeFacts>,
+    build: Option<&BuildRecipe>,
+) -> ConfigFacts {
     let mut facts = ConfigFacts::default();
 
-    if let Some((path, content)) = tree.first_text(CANDIDATES) {
+    if let Some((path, content)) = exemple(tree) {
+        facts.variables = parse_dotenv(content, &path);
         facts.example_file = Some(path);
-        facts.variables = parse_dotenv(content);
     }
 
     // Le compose complete : il porte souvent les variables reellement
     // necessaires au demarrage, la ou le .env.example est incomplet.
     if let Some(c) = compose {
+        let provenance = c.path.clone();
         for svc in c.services.iter().filter(|s| s.is_app) {
             for (name, value) in &svc.environment {
-                if !facts.variables.iter().any(|v| &v.name == name) {
-                    facts.variables.push(make_var(name, non_empty(value)));
-                }
+                ajouter(&mut facts, name, non_empty(value), &provenance);
             }
         }
     }
 
+    // Les `ENV` de l'etape finale du Dockerfile sont ce que l'image fixe
+    // reellement au demarrage. Source moins riche que le compose — pas de
+    // commentaires — mais parfois la seule.
+    if let Some(b) = build {
+        let provenance = b.dockerfile_path.clone();
+        for (name, value) in &b.env {
+            ajouter(&mut facts, name, non_empty(value), &provenance);
+        }
+    }
+
     facts
+}
+
+/// Le fichier d'exemple : chemin connu d'abord, puis terminaison reconnue.
+///
+/// A terminaison egale, le chemin le plus court gagne : `app.env.example` a la
+/// racine est plus representatif que `tests/fixtures/x.env.example`.
+fn exemple(tree: &RepoTree) -> Option<(String, &str)> {
+    if let Some((p, c)) = tree.first_text(CANDIDATES) {
+        return Some((p, c));
+    }
+    let mut trouves: Vec<String> = tree
+        .paths()
+        .into_iter()
+        .filter(|p| {
+            let bas = p.to_lowercase();
+            TERMINAISONS.iter().any(|t| bas.ends_with(t))
+        })
+        .collect();
+    trouves.sort_by_key(|p| (p.matches('/').count(), p.len(), p.clone()));
+    let p = trouves.into_iter().next()?;
+    let c = tree.text(&p)?;
+    Some((p, c))
+}
+
+/// Ajoute une variable si aucune source plus sure ne l'a deja nommee.
+fn ajouter(facts: &mut ConfigFacts, name: &str, valeur: Option<String>, source: &str) {
+    if facts.variables.iter().any(|v| v.name == name) {
+        return;
+    }
+    facts.variables.push(make_var(name, valeur, source));
 }
 
 /// Analyse un fichier au format `.env`.
@@ -49,7 +115,7 @@ pub fn detect(tree: &RepoTree, compose: Option<&ComposeFacts>) -> ConfigFacts {
 /// Les lignes commentees sont lues elles aussi : un `# PORT=3000` documente la
 /// valeur par defaut attendue, information qu'il serait dommage de perdre.
 /// Elles ne sont retenues que si la variable n'est pas deja definie.
-fn parse_dotenv(content: &str) -> Vec<ConfigVar> {
+fn parse_dotenv(content: &str, source: &str) -> Vec<ConfigVar> {
     let mut out: Vec<ConfigVar> = Vec::new();
     let mut commented: Vec<ConfigVar> = Vec::new();
 
@@ -68,7 +134,7 @@ fn parse_dotenv(content: &str) -> Vec<ConfigVar> {
             continue;
         }
 
-        let var = make_var(name, non_empty(value.trim()));
+        let var = make_var(name, non_empty(value.trim()), source);
         if is_comment {
             commented.push(var);
         } else if !out.iter().any(|v| v.name == var.name) {
@@ -84,7 +150,7 @@ fn parse_dotenv(content: &str) -> Vec<ConfigVar> {
     out
 }
 
-fn make_var(name: &str, default: Option<String>) -> ConfigVar {
+fn make_var(name: &str, default: Option<String>, source: &str) -> ConfigVar {
     let k = knowledge::get();
     ConfigVar {
         role: k.role_of(name),
@@ -93,6 +159,7 @@ fn make_var(name: &str, default: Option<String>) -> ConfigVar {
         // d'exemple est publique par construction.
         default: if k.is_secret(name) { None } else { default },
         name: name.to_string(),
+        source: source.to_string(),
     }
 }
 

@@ -123,6 +123,7 @@ fn is_interesting(path: &str) -> bool {
         || lower.starts_with("compose.")
         || lower.starts_with(".env")
         || lower.starts_with("env.")
+        || est_un_fichier_env(&lower)
         // Fichiers de configuration d'exemple, sous leurs formes courantes.
         || (lower.contains("example") || lower.contains("sample") || lower.contains("template"))
             && (lower.ends_with(".yml")
@@ -133,9 +134,32 @@ fn is_interesting(path: &str) -> bool {
                 || lower.ends_with(".conf"))
 }
 
+/// Vrai pour un fichier au format `.env` dont le nom est prefixe.
+///
+/// `starts_with(".env")` ne voit que la forme canonique. Beaucoup de projets
+/// prefixent le fichier du nom de l'application — gotify publie
+/// `gotify-server.env.example`, qui documente son port et sa base. Ne pas le
+/// lire faisait declarer ces deux champs indeterminables.
+fn est_un_fichier_env(nom: &str) -> bool {
+    const SUITES: &[&str] = &["", ".example", ".sample", ".template", ".dist", ".defaults"];
+    SUITES
+        .iter()
+        .any(|suite| nom.ends_with(&format!(".env{suite}")))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn un_fichier_env_prefixe_du_nom_de_l_application_est_lu() {
+        assert!(is_interesting("gotify-server.env.example"));
+        assert!(is_interesting("app.env"));
+        assert!(is_interesting("config/monapp.env.sample"));
+        // Ce qui contient « env » sans etre un fichier .env reste ecarte.
+        assert!(!is_interesting("src/environment.ts"));
+        assert!(!is_interesting("scripts/setup-env.sh"));
+    }
 
     #[test]
     fn les_fichiers_de_projet_sont_retenus_avec_leur_contenu() {

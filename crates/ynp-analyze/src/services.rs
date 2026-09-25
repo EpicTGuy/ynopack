@@ -184,6 +184,7 @@ mod tests {
                 role,
                 default: Some(value.into()),
                 secret: false,
+                source: ".env.example".into(),
             }],
         }
     }

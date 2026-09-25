@@ -76,7 +76,7 @@ pub fn analyze(forge: ForgeData, tree: &RepoTree) -> RepoFacts {
     }
 
     facts.stack = stack::detect(tree, facts.build.as_ref());
-    facts.config = config::detect(tree, facts.compose.as_ref());
+    facts.config = config::detect_avec_build(tree, facts.compose.as_ref(), facts.build.as_ref());
     facts.services = services::detect(
         tree,
         facts.compose.as_ref(),

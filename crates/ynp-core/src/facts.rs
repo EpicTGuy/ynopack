@@ -350,6 +350,10 @@ pub struct ConfigVar {
     pub role: ConfigRole,
     /// Valeur a generer aleatoirement plutot qu'a recopier.
     pub secret: bool,
+    /// Fichier d'ou la variable a ete lue. Une proposition faite a l'humain
+    /// vaut surtout par sa provenance : il peut aller verifier.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub source: String,
 }
 
 /// Role canonique d'une variable de configuration.

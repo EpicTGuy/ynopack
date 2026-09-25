@@ -69,12 +69,14 @@ fn depot_complet() -> RepoFacts {
                 role: ConfigRole::Port,
                 default: Some("8080".into()),
                 secret: false,
+                source: ".env.example".into(),
             },
             ConfigVar {
                 name: "DATABASE_URL".into(),
                 role: ConfigRole::DatabaseUrl,
                 default: None,
                 secret: false,
+                source: ".env.example".into(),
             },
         ],
     };
@@ -170,18 +172,21 @@ fn la_configuration_reconnue_est_cablee_sur_les_valeurs_yunohost() {
                 role: ConfigRole::Port,
                 default: Some("8080".into()),
                 secret: false,
+                source: ".env.example".into(),
             },
             ConfigVar {
                 name: "DATABASE_URL".into(),
                 role: ConfigRole::DatabaseUrl,
                 default: None,
                 secret: false,
+                source: ".env.example".into(),
             },
             ConfigVar {
                 name: "BASE_URL".into(),
                 role: ConfigRole::BaseUrl,
                 default: None,
                 secret: false,
+                source: ".env.example".into(),
             },
         ],
     };
