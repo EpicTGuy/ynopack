@@ -177,6 +177,12 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
 .tech{margin-left:8px;font:11px var(--mono);color:var(--mute);font-weight:400}
 @media (max-width:520px){.note{grid-template-columns:minmax(0,1fr) auto}.note .jauge{grid-column:1/-1}}
 @media (max-width:520px){.gouv li{grid-template-columns:minmax(0,1fr)}}
+.audit{grid-column:2/-1;margin:8px 0 0;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.audit ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:10px}
+.audit li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:baseline;font-size:13px}
+.audit .rm{display:block;color:var(--mute);font-size:12px;margin-top:2px}
+.audit-m{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.audit-ok{margin:0;color:var(--acc);font-size:13px}
 .pourquoi .quand{color:var(--mute);font-size:12px;margin:10px 0 0;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
 .lic{border:1px solid var(--line);border-radius:4px;padding:0 5px}
 .votes{margin-left:8px;font:12px var(--mono);color:var(--acc);font-weight:400}
@@ -186,7 +192,8 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
 .niv[data-e=faible]{color:var(--err)}
 .niv[data-e=inconnu]{color:var(--mute)}
 @media (prefers-color-scheme:dark){.niv[data-e=moyen]{color:#e3c05c}}
-.item .mt .lien{height:26px;padding:0 9px;font-size:12px;font-weight:500}
+.item .mt .lien{height:28px;width:32px;padding:0;justify-content:center}
+.ic{width:16px;height:16px;display:block;flex:none}
 .etiq{border-radius:4px;padding:0 6px;border:1px solid currentColor;font-size:11px;white-space:nowrap}
 .etiq.pack{color:var(--acc)}
 .etiq.mort{color:var(--err)}
@@ -213,35 +220,35 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M5 0H19L24 5V19L19 24H5L0 19V5Z M5.5 8.2L7.5 6.2L13.3 12L7.5 17.8L5.5 15.8L9.3 12Z M14 15.4H19V18.2H14Z"/></svg>
         <b>yunopack</b>
       </a>
-      <span class="tag">dépôt git → paquet YunoHost</span>
+      <span class="tag" data-t="tag"></span>
     </div>
     <nav role="tablist" aria-label="Sections">
-      <button role="tab" data-tab="run" aria-selected="true">Empaqueter</button>
-      <button role="tab" data-tab="wish" aria-selected="false">Liste de souhaits<span class="n" id="wish-n"></span></button>
-      <button role="tab" data-tab="alt" aria-selected="false">Alternatives</button>
+      <button role="tab" data-tab="run" aria-selected="true" data-t="ong_run"></button>
+      <button role="tab" data-tab="wish" aria-selected="false"><span data-t="ong_wish"></span><span class="n" id="wish-n"></span></button>
+      <button role="tab" data-tab="alt" aria-selected="false" data-t="ong_alt"></button>
     </nav>
   </div>
 </header>
 
 <main class="wrap">
   <section id="tab-run" role="tabpanel">
-    <h1>Empaqueter un dépôt</h1>
-    <p class="lead">Lit ce que le projet décrit déjà — Dockerfile, compose, fichiers de projet. Ce qu'il ne peut pas déduire, il le demande.</p>
+    <h1 data-t="run_t"></h1>
+    <p class="lead" data-t="run_lead"></p>
     <form id="form" novalidate>
-      <label class="lbl" for="url">adresse du dépôt, ou nom du logiciel</label>
+      <label class="lbl" for="url" data-t="run_lbl"></label>
       <div class="row suggest">
         <input id="url" name="url" type="text" inputmode="url" autocomplete="off" spellcheck="false"
                role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="url-sug"
-               placeholder="https://github.com/auteur/projet — ou « nextcloud »" required>
+               data-ph="run_ph" required>
         <div class="liste-sug" id="url-sug" role="listbox" hidden></div>
-        <button class="btn go" id="go" type="submit">Empaqueter</button>
+        <button class="btn go" id="go" type="submit" data-t="run_go"></button>
       </div>
       <p class="hint" id="form-hint" aria-live="polite"></p>
     </form>
     <ul class="items" id="trouvailles" hidden></ul>
 
     <div class="pipe" aria-live="polite">
-      <div class="pipe-h" id="pipe-h"><span id="pipe-t"><strong>5 étapes</strong></span><span id="clock"></span></div>
+      <div class="pipe-h" id="pipe-h"><span id="pipe-t"></span><span id="clock"></span></div>
       <div class="rail" id="rail" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
       <ol class="steps" id="steps"></ol>
       <div id="outcome"></div>
@@ -249,26 +256,25 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
   </section>
 
   <section id="tab-wish" role="tabpanel" hidden>
-    <div class="lh"><h1>Liste de souhaits</h1><span class="c" id="wish-c"></span></div>
-    <p class="lead">Ce que la communauté YunoHost attend, du plus demandé au moins.
-      <a href="https://apps.yunohost.org/wishlist" target="_blank" rel="noopener noreferrer">Voter ou proposer une application</a>.</p>
-    <label class="lbl" for="wish-q">filtrer</label>
-    <input id="wish-q" type="search" autocomplete="off" spellcheck="false" placeholder="nom ou description">
+    <div class="lh"><h1 data-t="wish_t"></h1><span class="c" id="wish-c"></span></div>
+    <p class="lead"><span data-t="wish_lead"></span>
+      <a href="https://apps.yunohost.org/wishlist" target="_blank" rel="noopener noreferrer" data-t="wish_voter"></a>.</p>
+    <label class="lbl" for="wish-q" data-t="wish_filtre"></label>
+    <input id="wish-q" type="search" autocomplete="off" spellcheck="false" data-ph="wish_filtre_ph">
     <ul class="items" id="wish-list"></ul>
     <div class="more" id="wish-more"></div>
   </section>
 
   <section id="tab-alt" role="tabpanel" hidden>
-    <h1>Alternatives</h1>
-    <p class="lead">Les logiciels auto-hébergeables proches d'un autre.</p>
+    <h1 data-t="alt_t"></h1>
+    <p class="lead" data-t="alt_lead"></p>
     <form id="alt-form" novalidate>
-      <label class="lbl" for="alt-q">logiciel à remplacer</label>
+      <label class="lbl" for="alt-q" data-t="alt_lbl"></label>
       <div class="row suggest">
         <input id="alt-q" type="search" autocomplete="off" spellcheck="false" role="combobox"
-               aria-autocomplete="list" aria-expanded="false" aria-controls="alt-sug"
-               placeholder="Nextcloud, Miniflux, Grafana…">
+               aria-autocomplete="list" aria-expanded="false" aria-controls="alt-sug" data-ph="alt_ph">
         <div class="liste-sug" id="alt-sug" role="listbox" hidden></div>
-        <button class="btn" type="submit">Chercher</button>
+        <button class="btn" type="submit" data-t="alt_go"></button>
         <a class="btn plain" id="alt-ailleurs" target="_blank" rel="noopener noreferrer"
            href="https://alternativeto.net/" title="chercher le même terme sur AlternativeTo">AlternativeTo</a>
       </div>
@@ -297,18 +303,242 @@ const API = {
   alternatives: q => RACINE + 'alternatives?q=' + encodeURIComponent(q)
 };
 
+/* ——— Langues ———
+   Trois langues, un seul dictionnaire. La langue vient du reglage du serveur ;
+   `auto` suit celle du navigateur. Ce qui n'est pas traduit retombe sur le
+   français plutôt que d'afficher une clé. */
+const LANGUES = {
+  fr: {
+    tag: 'dépôt git → paquet YunoHost',
+    ong_run: 'Empaqueter', ong_wish: 'Liste de souhaits', ong_alt: 'Alternatives',
+    run_t: 'Empaqueter un dépôt',
+    run_lead: "Lit ce que le projet décrit déjà — Dockerfile, compose, fichiers de projet. Ce qu'il ne peut pas déduire, il te le demande.",
+    run_lbl: 'adresse du dépôt, ou nom du logiciel',
+    run_ph: 'https://github.com/auteur/projet — ou « nextcloud »',
+    run_go: 'Empaqueter', run_go_cours: 'En cours…',
+    wish_t: 'Liste de souhaits',
+    wish_lead: 'Ce que la communauté YunoHost attend, du plus demandé au moins.',
+    wish_voter: 'Voter ou proposer une application',
+    wish_filtre: 'filtrer', wish_filtre_ph: 'nom ou description',
+    alt_t: 'Alternatives', alt_lead: "Les logiciels auto-hébergeables proches d'un autre.",
+    alt_lbl: 'logiciel à remplacer', alt_ph: 'Nextcloud, Miniflux, Grafana…',
+    alt_go: 'Chercher',
+    etapes: '5 étapes', etape: 'étape', attente: 'en attente', en_cours: 'en cours',
+    a_toi: 'à toi', fait: 'fait', bloque: 'bloqué', non_faite: 'non faite',
+    connexion: 'connexion…', decision_cours: 'une décision te revient',
+    conforme: 'paquet conforme', arret: 'arrêt',
+    st_analyse: 'Lecture', st_analyse_s: 'ce que contient le projet',
+    st_fais: 'Compatibilité', st_fais_s: 'installable sur YunoHost ?',
+    st_spec: 'Choix', st_spec_s: 'ce qui reste à décider',
+    st_gen: 'Écriture', st_gen_s: 'fabrication du paquet',
+    st_verif: 'Contrôles', st_verif_s: 'le paquet est-il correct ?',
+    journal: 'journal', ligne: 'ligne', lignes: 'lignes',
+    non_faisable: 'Non faisable', echec: 'Échec',
+    champs_1: 'champ à trancher', champs_n: 'champs à trancher',
+    champs_i: 'Non déductibles du dépôt. Propositions classées par solidité ; tu peux aussi écrire la tienne.',
+    continuer: 'Continuer', valeur: 'valeur', valeur_requise: 'une valeur est nécessaire.',
+    chercher_dans: 'chercher dans :',
+    pret: 'Paquet prêt', fichiers: 'fichiers', en_temps: 'en',
+    copier: 'Copier', copie: 'Copié', selectionne: 'Sélectionne',
+    telecharger: 'Télécharger le paquet', autre: 'Autre dépôt',
+    publier: 'Publier sur ma forge', publication: 'publication…', publie: 'publié',
+    publie_le: 'Publié :',
+    apres: "Conforme statiquement, pas encore installé. Un paquet non relu s'exécute en root : à tester dans un conteneur jetable.",
+    apres_pr: "Ouvre une PR sur YunoHost/apps et écris-y « !testme » : la CI l'installe en conteneur jetable et rend le niveau 0 à 8.",
+    doc: 'Documentation', ci: 'CI YunoHost',
+    arrete_a: "Arrêté à l'étape", relancer: 'Relancer',
+    code: 'Code source', site: 'Site web', fiche: 'Fiche YunoHost',
+    deja_cat: 'déjà au catalogue', deja_dispo: 'déjà disponible',
+    empaqueter: 'Empaqueter', forge_non: 'forge non prise en charge', depot_inconnu: 'dépôt inconnu',
+    pas_depot: 'pas de dépôt', en_cours_ailleurs: 'paquet en cours ailleurs',
+    conduite: 'Comment le projet est tenu', revue: 'Revue OpenSSF',
+    archive: 'archivé par son auteur', archive_p: 'plus aucun correctif',
+    fourche: 'fourche de', fourche_p: "le projet d'origine a pu diverger",
+    orga: "dépôt d'organisation", orga_p: 'porté par un collectif',
+    perso: 'dépôt personnel', perso_p: 'tient à une seule personne',
+    chartes_p: 'règles écrites publiées par le projet',
+    sans_charte: 'aucune règle écrite', sans_charte_p: 'ni gouvernance, ni code de conduite',
+    etoiles: 'étoiles', audience: 'audience',
+    tech_on: 'afficher les identifiants techniques', tech_off: 'masquer les identifiants techniques',
+    examine_sur: 'examiné sur', reevaluer: 'Réévaluer', en_file: 'en file…',
+    pas_examine: 'pas encore examiné', non_examine: 'non examiné :',
+    le_projet: 'le projet', projet_tenu: 'comment ce projet est tenu',
+    niveau: 'niveau', non_note: 'non noté', paquet_yh: 'paquet YunoHost :',
+    examiner: 'Examiner le paquet', examen: 'examen…',
+    audit_t: 'Ce qui sépare ce paquet du niveau 8',
+    audit_rien: 'Rien à signaler : ce paquet respecte tout ce que nous savons vérifier.',
+    audit_atteignable: 'niveau atteignable',
+    audit_bloque: 'bloque le niveau', audit_reparable: 'yunopack sait le corriger',
+    demandes: 'demandes', applications: 'applications', resultats: 'dépôtr(s)',
+    aucun_depot: 'Aucun dépôt pour', deux_lettres: 'Une adresse, ou deux lettres au moins.',
+    aucune_alt: 'Aucune alternative connue pour', chargement: 'chargement…',
+    recherche: 'recherche…', indispo: "Le serveur n'a pas répondu.",
+    aucune_corresp: 'Aucune application ne correspond à',
+    afficher_suivantes: 'Afficher les', suivantes: 'suivantes',
+    refuse: 'le serveur a refusé'
+  },
+  en: {
+    tag: 'git repository → YunoHost package',
+    ong_run: 'Package', ong_wish: 'Wishlist', ong_alt: 'Alternatives',
+    run_t: 'Package a repository',
+    run_lead: "Reads what the project already describes — Dockerfile, compose, project files. What it cannot work out, it asks you.",
+    run_lbl: 'repository address, or software name',
+    run_ph: 'https://github.com/author/project — or "nextcloud"',
+    run_go: 'Package', run_go_cours: 'Working…',
+    wish_t: 'Wishlist',
+    wish_lead: 'What the YunoHost community is waiting for, most requested first.',
+    wish_voter: 'Vote or suggest an application',
+    wish_filtre: 'filter', wish_filtre_ph: 'name or description',
+    alt_t: 'Alternatives', alt_lead: 'Self-hostable software close to another.',
+    alt_lbl: 'software to replace', alt_ph: 'Nextcloud, Miniflux, Grafana…',
+    alt_go: 'Search',
+    etapes: '5 steps', etape: 'step', attente: 'waiting', en_cours: 'running',
+    a_toi: 'your call', fait: 'done', bloque: 'blocked', non_faite: 'not run',
+    connexion: 'connecting…', decision_cours: 'a decision is yours',
+    conforme: 'package is sound', arret: 'stopped at',
+    st_analyse: 'Reading', st_analyse_s: 'what the project contains',
+    st_fais: 'Compatibility', st_fais_s: 'installable on YunoHost?',
+    st_spec: 'Choices', st_spec_s: 'what is left to decide',
+    st_gen: 'Writing', st_gen_s: 'building the package',
+    st_verif: 'Checks', st_verif_s: 'is the package correct?',
+    journal: 'log', ligne: 'line', lignes: 'lines',
+    non_faisable: 'Not feasible', echec: 'Failed',
+    champs_1: 'field to settle', champs_n: 'fields to settle',
+    champs_i: 'Not derivable from the repository. Suggestions ranked by how well they are grounded; you can also write your own.',
+    continuer: 'Continue', valeur: 'value', valeur_requise: 'a value is required.',
+    chercher_dans: 'look in:',
+    pret: 'Package ready', fichiers: 'files', en_temps: 'in',
+    copier: 'Copy', copie: 'Copied', selectionne: 'Select it',
+    telecharger: 'Download the package', autre: 'Another repository',
+    publier: 'Publish to my forge', publication: 'publishing…', publie: 'published',
+    publie_le: 'Published:',
+    apres: "Statically sound, not installed yet. An unreviewed package runs as root: test it in a throwaway container.",
+    apres_pr: 'Open a PR on YunoHost/apps and write "!testme": the CI installs it in a throwaway container and returns level 0 to 8.',
+    doc: 'Documentation', ci: 'YunoHost CI',
+    arrete_a: 'Stopped at step', relancer: 'Run again',
+    code: 'Source code', site: 'Website', fiche: 'YunoHost page',
+    deja_cat: 'already in the catalogue', deja_dispo: 'already available',
+    empaqueter: 'Package', forge_non: 'forge not supported', depot_inconnu: 'unknown repository',
+    pas_depot: 'no repository', en_cours_ailleurs: 'package under way elsewhere',
+    conduite: 'How the project is run', revue: 'OpenSSF review',
+    archive: 'archived by its author', archive_p: 'no more fixes',
+    fourche: 'fork of', fourche_p: 'the original project may have diverged',
+    orga: 'organisation repository', orga_p: 'carried by a group',
+    perso: 'personal repository', perso_p: 'rests on one person',
+    chartes_p: 'written rules published by the project',
+    sans_charte: 'no written rules', sans_charte_p: 'no governance, no code of conduct',
+    etoiles: 'stars', audience: 'audience',
+    tech_on: 'show technical identifiers', tech_off: 'hide technical identifiers',
+    examine_sur: 'examined on', reevaluer: 'Re-examine', en_file: 'queued…',
+    pas_examine: 'not examined yet', non_examine: 'not examined:',
+    le_projet: 'the project', projet_tenu: 'how this project is run',
+    niveau: 'level', non_note: 'not rated', paquet_yh: 'YunoHost package:',
+    examiner: 'Examine the package', examen: 'examining…',
+    audit_t: 'What keeps this package from level 8',
+    audit_rien: 'Nothing to report: this package meets everything we can check.',
+    audit_atteignable: 'reachable level',
+    audit_bloque: 'blocks level', audit_reparable: 'yunopack can fix it',
+    demandes: 'requests', applications: 'applications', resultats: 'repositories',
+    aucun_depot: 'No repository for', deux_lettres: 'An address, or at least two letters.',
+    aucune_alt: 'No known alternative for', chargement: 'loading…',
+    recherche: 'searching…', indispo: 'The server did not answer.',
+    aucune_corresp: 'No application matches',
+    afficher_suivantes: 'Show the next', suivantes: '',
+    refuse: 'the server refused'
+  },
+  es: {
+    tag: 'repositorio git → paquete YunoHost',
+    ong_run: 'Empaquetar', ong_wish: 'Lista de deseos', ong_alt: 'Alternativas',
+    run_t: 'Empaquetar un repositorio',
+    run_lead: 'Lee lo que el proyecto ya describe — Dockerfile, compose, archivos del proyecto. Lo que no puede deducir, te lo pregunta.',
+    run_lbl: 'dirección del repositorio, o nombre del programa',
+    run_ph: 'https://github.com/autor/proyecto — o «nextcloud»',
+    run_go: 'Empaquetar', run_go_cours: 'En curso…',
+    wish_t: 'Lista de deseos',
+    wish_lead: 'Lo que espera la comunidad YunoHost, de lo más pedido a lo menos.',
+    wish_voter: 'Votar o proponer una aplicación',
+    wish_filtre: 'filtrar', wish_filtre_ph: 'nombre o descripción',
+    alt_t: 'Alternativas', alt_lead: 'Programas autoalojables parecidos a otro.',
+    alt_lbl: 'programa a sustituir', alt_ph: 'Nextcloud, Miniflux, Grafana…',
+    alt_go: 'Buscar',
+    etapes: '5 etapas', etape: 'etapa', attente: 'en espera', en_cours: 'en curso',
+    a_toi: 'te toca', fait: 'hecho', bloque: 'bloqueado', non_faite: 'sin hacer',
+    connexion: 'conectando…', decision_cours: 'una decisión te corresponde',
+    conforme: 'paquete correcto', arret: 'detenido en',
+    st_analyse: 'Lectura', st_analyse_s: 'qué contiene el proyecto',
+    st_fais: 'Compatibilidad', st_fais_s: '¿instalable en YunoHost?',
+    st_spec: 'Decisiones', st_spec_s: 'lo que queda por decidir',
+    st_gen: 'Escritura', st_gen_s: 'fabricación del paquete',
+    st_verif: 'Controles', st_verif_s: '¿es correcto el paquete?',
+    journal: 'registro', ligne: 'línea', lignes: 'líneas',
+    non_faisable: 'No viable', echec: 'Fallo',
+    champs_1: 'campo por decidir', champs_n: 'campos por decidir',
+    champs_i: 'No deducibles del repositorio. Propuestas ordenadas por solidez; también puedes escribir la tuya.',
+    continuer: 'Continuar', valeur: 'valor', valeur_requise: 'hace falta un valor.',
+    chercher_dans: 'buscar en:',
+    pret: 'Paquete listo', fichiers: 'archivos', en_temps: 'en',
+    copier: 'Copiar', copie: 'Copiado', selectionne: 'Selecciónalo',
+    telecharger: 'Descargar el paquete', autre: 'Otro repositorio',
+    publier: 'Publicar en mi forja', publication: 'publicando…', publie: 'publicado',
+    publie_le: 'Publicado:',
+    apres: 'Correcto sobre el papel, todavía sin instalar. Un paquete no revisado se ejecuta como root: pruébalo en un contenedor desechable.',
+    apres_pr: 'Abre un PR en YunoHost/apps y escribe «!testme»: la CI lo instala en un contenedor desechable y devuelve el nivel 0 a 8.',
+    doc: 'Documentación', ci: 'CI de YunoHost',
+    arrete_a: 'Detenido en la etapa', relancer: 'Reintentar',
+    code: 'Código fuente', site: 'Sitio web', fiche: 'Ficha YunoHost',
+    deja_cat: 'ya en el catálogo', deja_dispo: 'ya disponible',
+    empaqueter: 'Empaquetar', forge_non: 'forja no admitida', depot_inconnu: 'repositorio desconocido',
+    pas_depot: 'sin repositorio', en_cours_ailleurs: 'paquete ya en curso',
+    conduite: 'Cómo se lleva el proyecto', revue: 'Revisión OpenSSF',
+    archive: 'archivado por su autor', archive_p: 'ya no habrá correcciones',
+    fourche: 'bifurcación de', fourche_p: 'el proyecto original pudo divergir',
+    orga: 'repositorio de organización', orga_p: 'llevado por un colectivo',
+    perso: 'repositorio personal', perso_p: 'depende de una sola persona',
+    chartes_p: 'reglas escritas publicadas por el proyecto',
+    sans_charte: 'ninguna regla escrita', sans_charte_p: 'ni gobernanza, ni código de conducta',
+    etoiles: 'estrellas', audience: 'audiencia',
+    tech_on: 'mostrar los identificadores técnicos', tech_off: 'ocultar los identificadores técnicos',
+    examine_sur: 'examinado en', reevaluer: 'Reexaminar', en_file: 'en cola…',
+    pas_examine: 'aún sin examinar', non_examine: 'sin examinar:',
+    le_projet: 'el proyecto', projet_tenu: 'cómo se lleva este proyecto',
+    niveau: 'nivel', non_note: 'sin nota', paquet_yh: 'paquete YunoHost:',
+    examiner: 'Examinar el paquete', examen: 'examinando…',
+    audit_t: 'Lo que separa este paquete del nivel 8',
+    audit_rien: 'Nada que señalar: este paquete cumple todo lo que sabemos comprobar.',
+    audit_atteignable: 'nivel alcanzable',
+    audit_bloque: 'bloquea el nivel', audit_reparable: 'yunopack sabe corregirlo',
+    demandes: 'peticiones', applications: 'aplicaciones', resultats: 'repositorios',
+    aucun_depot: 'Ningún repositorio para', deux_lettres: 'Una dirección, o dos letras como mínimo.',
+    aucune_alt: 'Ninguna alternativa conocida para', chargement: 'cargando…',
+    recherche: 'buscando…', indispo: 'El servidor no respondió.',
+    aucune_corresp: 'Ninguna aplicación corresponde a',
+    afficher_suivantes: 'Mostrar las', suivantes: 'siguientes',
+    refuse: 'el servidor rechazó'
+  }
+};
+
+/* `__LANGUE__` est remplacé par le serveur au moment de servir la page. */
+const REGLAGE = '__LANGUE__';
+const LANGUE = LANGUES[REGLAGE] ? REGLAGE
+  : LANGUES[(navigator.language || 'fr').slice(0, 2)] ? (navigator.language || 'fr').slice(0, 2)
+  : 'fr';
+document.documentElement.lang = LANGUE;
+
+/* Ce qui manque dans une langue retombe sur le français : une clé affichée
+   telle quelle serait pire qu'un mot dans la mauvaise langue. */
+function tr(cle) {
+  return LANGUES[LANGUE][cle] ?? LANGUES.fr[cle] ?? cle;
+}
+
 const STAGES = [
-  ['analyse', 'Lecture', 'ce que contient le projet'],
-  ['faisabilite', 'Compatibilité', 'installable sur YunoHost ?'],
-  ['specification', 'Choix', 'ce qui reste à décider'],
-  ['generation', 'Écriture', 'fabrication du paquet'],
-  ['verification', 'Contrôles', 'le paquet est-il correct ?']
+  ['analyse', 'st_analyse'], ['faisabilite', 'st_fais'], ['specification', 'st_spec'],
+  ['generation', 'st_gen'], ['verification', 'st_verif']
 ];
 
 /* Ce que fait chaque étape, en clair. Un outil qui produit un paquet à
    installer sur sa propre machine doit pouvoir dire ce qu'il a fait ; sans
    cela il faut le croire sur parole. */
-const EXPLICATIONS = {
+const EXPLICATIONS_FR = {
   analyse: [
     "Le contenu du projet est téléchargé, puis lu. Rien n'est exécuté : aucun script du projet ne tourne sur ce serveur.",
     "yunopack cherche ce que le projet dit déjà de lui-même — son Dockerfile, son docker-compose.yml, ses fichiers de langage, son exemple de configuration.",
@@ -334,6 +564,60 @@ const EXPLICATIONS = {
   ]
 };
 
+const EXPLICATIONS_EN = {
+  analyse: [
+    "The project's content is downloaded, then read. Nothing is executed: no script of the project runs on this server.",
+    "yunopack looks for what the project already says about itself — its Dockerfile, its docker-compose.yml, its language files, its configuration example.",
+    "From that it works out the language used, the version to package, the system dependencies, the listening port and the start command."
+  ],
+  faisabilite: [
+    "A dozen rules are applied to what was gathered.",
+    "Some stop everything: a licence the catalogue does not accept, software that only runs in a Docker container, a database YunoHost cannot provide.",
+    "Others flag extra work without forbidding it: an abandoned project, a language whose version does not match Debian's."
+  ],
+  specification: [
+    "Every packaging decision is gathered in a single file, readable and editable.",
+    "What the project says nowhere is not guessed. yunopack asks, offering the most plausible values and saying what each one rests on.",
+    "Nothing is applied without your agreement, and you can always write your own value."
+  ],
+  generation: [
+    "The package is written from those decisions: the manifest, the web server configuration, the system service, and the install, upgrade, backup and removal scripts.",
+    "This step decides nothing: it lays out what was settled just before."
+  ],
+  verification: [
+    "The package is read back: conformity to YunoHost's official format, script syntax, no value left hanging.",
+    "A package that passes these checks is sound on paper. It has not been installed yet — that is the next step, and it happens on a throwaway machine, never here."
+  ]
+};
+
+const EXPLICATIONS_ES = {
+  analyse: [
+    'Se descarga el contenido del proyecto y luego se lee. No se ejecuta nada: ningún script del proyecto corre en este servidor.',
+    'yunopack busca lo que el proyecto ya dice de sí mismo — su Dockerfile, su docker-compose.yml, sus archivos de lenguaje, su ejemplo de configuración.',
+    'De ahí deduce el lenguaje empleado, la versión a empaquetar, las dependencias del sistema, el puerto de escucha y el comando de arranque.'
+  ],
+  faisabilite: [
+    'Se aplica una docena de reglas a lo recogido.',
+    'Algunas lo detienen todo: una licencia que el catálogo no acepta, un programa que solo funciona en contenedor Docker, una base de datos que YunoHost no sabe proporcionar.',
+    'Otras señalan trabajo adicional sin prohibirlo: un proyecto abandonado, un lenguaje cuya versión no coincide con la de Debian.'
+  ],
+  specification: [
+    'Todas las decisiones de empaquetado se reúnen en un solo archivo, legible y modificable.',
+    'Lo que el proyecto no dice en ninguna parte no se adivina. yunopack lo pregunta, proponiendo los valores más plausibles y diciendo en qué se basa cada uno.',
+    'Nada se aplica sin tu acuerdo, y siempre puedes escribir tu propio valor.'
+  ],
+  generation: [
+    'El paquete se escribe a partir de esas decisiones: el manifiesto, la configuración del servidor web, el servicio del sistema, y los scripts de instalación, actualización, copia de seguridad y eliminación.',
+    'Esta etapa no decide nada: da forma a lo que se acaba de zanjar.'
+  ],
+  verification: [
+    'Se relee el paquete producido: conformidad con el formato oficial de YunoHost, sintaxis de los scripts, ningún valor pendiente.',
+    'Un paquete que supera estos controles es correcto sobre el papel. Todavía no se ha instalado — esa es la etapa siguiente, y se hace en una máquina desechable, nunca aquí.'
+  ]
+};
+
+const EXPLICATIONS = {fr: EXPLICATIONS_FR, en: EXPLICATIONS_EN, es: EXPLICATIONS_ES}[LANGUE] || EXPLICATIONS_FR;
+
 /* Les chemins de champs et les codes de règle sont précis et utiles à qui va
    éditer le fichier ; ils n'apprennent rien aux autres. Un seul interrupteur
    les fait apparaître, plutôt que deux versions de chaque texte — deux
@@ -343,19 +627,48 @@ try { technique = localStorage.getItem('yunopack:technique') === 'oui'; } catch 
 
 /* Ce que chaque champ demande, dit en clair. Le chemin reste affiché en mode
    technique : c'est lui qu'on cherche dans appspec.toml. */
-const CHAMPS = {
-  'runtime.port_binding': ['Comment lui indiquer son port',
-    "L'application doit savoir sur quel port écouter. Chacune attend cette information sous un nom différent."],
-  'runtime.database_binding': ['Comment lui indiquer sa base de données',
-    "YunoHost crée la base ; reste à dire à l'application comment la joindre."],
-  'runtime.execstart': ['La commande qui démarre l\u2019application', ''],
-  'runtime.technology': ['Le langage de l\u2019application', ''],
-  'app.description_en': ['La description affichée dans le catalogue', ''],
-  'app.version': ['Le numéro de version', ''],
-  'upstream.license': ['La licence du logiciel', ''],
-  'resources.sources.url': ['L\u2019adresse du fichier à télécharger', ''],
-  'resources.sources.sha256': ['L\u2019empreinte du fichier téléchargé', '']
+const CHAMPS_PAR_LANGUE = {
+  fr: {
+    'runtime.port_binding': ['Comment lui indiquer son port',
+      "L'application doit savoir sur quel port écouter. Chacune attend cette information sous un nom différent."],
+    'runtime.database_binding': ['Comment lui indiquer sa base de données',
+      "YunoHost crée la base ; reste à dire à l'application comment la joindre."],
+    'runtime.execstart': ["La commande qui démarre l'application", ''],
+    'runtime.technology': ["Le langage de l'application", ''],
+    'app.description_en': ['La description affichée dans le catalogue', ''],
+    'app.version': ['Le numéro de version', ''],
+    'upstream.license': ['La licence du logiciel', ''],
+    'resources.sources.url': ["L'adresse du fichier à télécharger", ''],
+    'resources.sources.sha256': ["L'empreinte du fichier téléchargé", '']
+  },
+  en: {
+    'runtime.port_binding': ['How to tell it which port to use',
+      'The application needs to know which port to listen on. Each one expects that under a different name.'],
+    'runtime.database_binding': ['How to tell it about its database',
+      'YunoHost creates the database; what remains is telling the application how to reach it.'],
+    'runtime.execstart': ['The command that starts the application', ''],
+    'runtime.technology': ['The language of the application', ''],
+    'app.description_en': ['The description shown in the catalogue', ''],
+    'app.version': ['The version number', ''],
+    'upstream.license': ['The licence of the software', ''],
+    'resources.sources.url': ['The address of the file to download', ''],
+    'resources.sources.sha256': ['The checksum of the downloaded file', '']
+  },
+  es: {
+    'runtime.port_binding': ['Cómo indicarle su puerto',
+      'La aplicación debe saber en qué puerto escuchar. Cada una espera ese dato bajo un nombre distinto.'],
+    'runtime.database_binding': ['Cómo indicarle su base de datos',
+      'YunoHost crea la base; queda decirle a la aplicación cómo alcanzarla.'],
+    'runtime.execstart': ['El comando que arranca la aplicación', ''],
+    'runtime.technology': ['El lenguaje de la aplicación', ''],
+    'app.description_en': ['La descripción mostrada en el catálogo', ''],
+    'app.version': ['El número de versión', ''],
+    'upstream.license': ['La licencia del programa', ''],
+    'resources.sources.url': ['La dirección del archivo a descargar', ''],
+    'resources.sources.sha256': ['La huella del archivo descargado', '']
+  }
 };
+const CHAMPS = CHAMPS_PAR_LANGUE[LANGUE] || CHAMPS_PAR_LANGUE.fr;
 
 function libelleChamp(chemin) {
   const c = CHAMPS[chemin];
@@ -368,7 +681,7 @@ function aideChamp(chemin) {
 /* Une demande de decision se rattache a la specification : c'est la qu'un
    arbitrage se rend, et c'est la que le pipeline s'est arrete. */
 const RATTACHE = {decision: 'specification', fin: null};
-const LABEL = {pending: 'en attente', running: 'en cours', waiting: 'à vous', ok: 'fait', fail: 'bloqué', skipped: 'non faite'};
+const LABEL = {pending: 'attente', running: 'en_cours', waiting: 'a_toi', ok: 'fait', fail: 'bloque', skipped: 'non_faite'};
 
 /* Rien de ce qui vient du serveur ne passe par innerHTML : tout est insere en textContent. */
 const $ = s => document.querySelector(s);
@@ -390,6 +703,8 @@ function safeUrl(u) {
 }
 const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 const stageIndex = s => STAGES.findIndex(([k]) => k === norm(s));
+const stageNom = i => tr(STAGES[i][1]);
+const stageSous = i => tr(STAGES[i][1] + '_s');
 const fmtT = ms => { const s = Math.max(0, Math.round(ms / 1000)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
 const fmtRel = ms => '+' + (ms / 1000).toFixed(1) + 's';
 const nf = new Intl.NumberFormat('fr-FR', {notation: 'compact', maximumFractionDigits: 1});
@@ -410,19 +725,19 @@ const fromHash = () => show(Object.keys(HASH).find(k => HASH[k] && '#' + HASH[k]
 
 /* ——— Pipeline ——— */
 const stepsEl = $('#steps'), railEls = [...$('#rail').children];
-const refs = STAGES.map(([k, name, sub], i) => {
+const refs = STAGES.map(([k], i) => {
   const mk = h('span', {class: 'mk', text: i + 1});
-  const st = h('span', {class: 'st', text: LABEL.pending});
+  const st = h('span', {class: 'st', text: tr(LABEL.pending)});
   const sum = h('div', {class: 'sum'});
   const logN = h('span');
   const logOl = h('ol');
-  const log = h('details', {class: 'log', hidden: true}, h('summary', {}, 'journal', logN), logOl);
+  const log = h('details', {class: 'log', hidden: true}, h('summary', {}, tr('journal'), logN), logOl);
   const why = h('div');
   const explication = h('div', {class: 'expl', hidden: true},
     h('ul', {}, (EXPLICATIONS[k] || []).map(t => h('li', {text: t}))));
   const hd = h('div', {class: 'hd', role: 'button', tabindex: '0',
-                       title: 'ce que fait cette étape'},
-    h('span', {class: 'nm', text: name}), h('span', {class: 'sub', text: sub}), st);
+                       title: tr('st_' + (['analyse','fais','spec','gen','verif'][i]) + '_s')},
+    h('span', {class: 'nm', text: stageNom(i)}), h('span', {class: 'sub', text: stageSous(i)}), st);
   const ouvrir = () => { explication.hidden = !explication.hidden; };
   hd.addEventListener('click', ouvrir);
   hd.addEventListener('keydown', e => {
@@ -447,20 +762,20 @@ function reset() {
 function setState(i, s) {
   const r = refs[i];
   r.li.dataset.s = s; railEls[i].dataset.s = s;
-  r.st.textContent = LABEL[s];
+  r.st.textContent = tr(LABEL[s]);
   r.mk.textContent = s === 'ok' ? '✓' : s === 'fail' ? '✕' : s === 'skipped' ? '–' : s === 'waiting' ? '?' : i + 1;
   if (run) run.state[i] = s;
 }
 function header() {
   const hd = $('#pipe-h'); hd.className = 'pipe-h';
   const t = $('#pipe-t'); t.textContent = '';
-  if (!run) { t.append(h('strong', {text: '5 étapes'})); $('#clock').textContent = ''; return; }
+  if (!run) { t.append(h('strong', {text: tr('etapes')})); $('#clock').textContent = ''; return; }
   const cur = run.state.findIndex(s => s === 'running' || s === 'fail' || s === 'waiting');
-  if (run.result === 'ok') { hd.classList.add('ok'); t.append(h('strong', {text: '5/5'}), ' · paquet conforme'); }
-  else if (run.result === 'fail') { hd.classList.add('fail'); t.append(h('strong', {text: 'arrêt ' + (run.failAt + 1) + '/5'}), ' · ' + STAGES[run.failAt][1].toLowerCase()); }
-  else if (run.waiting) t.append(h('strong', {text: 'en attente'}), ' · une décision vous revient');
-  else if (cur >= 0) t.append(h('strong', {text: 'étape ' + (cur + 1) + '/5'}), ' · ' + STAGES[cur][1].toLowerCase());
-  else t.append(h('strong', {text: 'connexion…'}));
+  if (run.result === 'ok') { hd.classList.add('ok'); t.append(h('strong', {text: '5/5'}), ' · ' + tr('conforme')); }
+  else if (run.result === 'fail') { hd.classList.add('fail'); t.append(h('strong', {text: tr('arret') + ' ' + (run.failAt + 1) + '/5'}), ' · ' + stageNom(run.failAt).toLowerCase()); }
+  else if (run.waiting) t.append(h('strong', {text: tr('attente')}), ' · ' + tr('decision_cours'));
+  else if (cur >= 0) t.append(h('strong', {text: tr('etape') + ' ' + (cur + 1) + '/5'}), ' · ' + stageNom(cur).toLowerCase());
+  else t.append(h('strong', {text: tr('connexion')}));
   $('#clock').textContent = fmtT((run.end || Date.now()) - run.t0);
 }
 
@@ -477,7 +792,7 @@ function renderFailure(i, msg) {
   const r = refs[i];
   r.sum.textContent = '';
   r.why.append(h('div', {class: 'why', role: 'alert'},
-    h('p', {class: 'why-t', text: nonFaisable ? 'Non faisable' : 'Échec'}),
+    h('p', {class: 'why-t', text: nonFaisable ? tr('non_faisable') : tr('echec')}),
     h('ul', {}, items.map(it => h('li', {},
       technique && it.code ? h('code', {class: 'code', text: it.code}) : h('span', {class: 'puce', text: '·'}),
       h('span', {text: it.text}))))));
@@ -492,13 +807,13 @@ function renderAsk(arbitrages) {
   r.why.textContent = '';
 
   const form = h('form', {class: 'ask'},
-    h('p', {class: 'ask-t', text: arbitrages.length + (arbitrages.length > 1 ? ' champs à trancher' : ' champ à trancher')}),
-    h('p', {class: 'ask-i', text: "Non déductibles du dépôt. Propositions classées par solidité ; saisie libre possible."}));
+    h('p', {class: 'ask-t', text: arbitrages.length + ' ' + tr(arbitrages.length > 1 ? 'champs_n' : 'champs_1')}),
+    h('p', {class: 'ask-i', text: tr('champs_i')}));
 
   const saisies = {};
   for (const a of arbitrages) form.append(champ(a, saisies));
 
-  const envoyer = h('button', {class: 'btn sm', type: 'submit', text: 'Continuer'});
+  const envoyer = h('button', {class: 'btn sm', type: 'submit', text: tr('continuer')});
   const erreur = h('p', {class: 'hint err', hidden: true, role: 'alert'});
   form.append(h('div', {class: 'acts'}, envoyer, lienTechnique()), erreur);
 
@@ -508,7 +823,7 @@ function renderAsk(arbitrages) {
     const reponses = {};
     for (const a of arbitrages) {
       const v = saisies[a.champ].value.trim();
-      if (!v) { erreur.textContent = a.champ + ' : une valeur est nécessaire.'; erreur.hidden = false; envoyer.disabled = false; return; }
+      if (!v) { erreur.textContent = libelleChamp(a.champ) + ' : ' + tr('valeur_requise'); erreur.hidden = false; envoyer.disabled = false; return; }
       reponses[a.champ] = v;
     }
     let res;
@@ -519,7 +834,7 @@ function renderAsk(arbitrages) {
     }
     if (!res.ok) {
       const c = await res.json().catch(() => ({}));
-      erreur.textContent = c.erreur || 'le serveur a refusé (' + res.status + ')';
+      erreur.textContent = c.erreur || tr('refuse') + ' (' + res.status + ')';
       erreur.hidden = false; envoyer.disabled = false; return;
     }
     run.waiting = false;
@@ -544,7 +859,7 @@ function champ(a, saisies) {
   if (aide) d.append(h('p', {class: 'why-not', text: aide}));
   if (technique && a.raison) d.append(h('p', {class: 'why-not', text: a.raison}));
   if (technique && a.ou_chercher && a.ou_chercher.length) {
-    d.append(h('p', {class: 'look', text: 'chercher dans : ' + a.ou_chercher.join(', ')}));
+    d.append(h('p', {class: 'look', text: tr('chercher_dans') + ' ' + a.ou_chercher.join(', ')}));
   }
 
   if (a.choix && a.choix.length) {
@@ -554,7 +869,7 @@ function champ(a, saisies) {
     return d;
   }
 
-  const libre = h('input', {class: 'free', type: 'text', autocomplete: 'off', spellcheck: 'false', placeholder: 'valeur'});
+  const libre = h('input', {class: 'free', type: 'text', autocomplete: 'off', spellcheck: 'false', placeholder: tr('valeur')});
   saisies[a.champ] = libre;
 
   if (a.candidats && a.candidats.length) {
@@ -585,7 +900,7 @@ function onEvent(ev) {
     if (msg) {
       r.logOl.append(h('li', {}, h('time', {text: fmtRel(Date.now() - run.t0)}), h('span', {text: msg})));
       const n = r.logOl.children.length;
-      r.logN.textContent = ' · ' + n + (n > 1 ? ' lignes' : ' ligne');
+      r.logN.textContent = ' · ' + n + ' ' + (n > 1 ? tr('lignes') : tr('ligne'));
       r.log.hidden = n < 2;
       r.sum.textContent = msg;
       r.sum.className = 'sum' + (ev.termine ? ' final' : '');
@@ -617,8 +932,8 @@ function finish(result, at) {
     for (let j = at + 1; j < STAGES.length; j++) setState(j, 'skipped');
     const url = run.url;
     $('#outcome').append(h('div', {class: 'stop'},
-      h('span', {text: "Arrêté à l'étape " + (at + 1) + '/5.'}),
-      h('button', {class: 'btn sm plain', type: 'button', text: 'Relancer', onclick: () => start(url)})));
+      h('span', {text: tr('arrete_a') + ' ' + (at + 1) + '/5.'}),
+      h('button', {class: 'btn sm plain', type: 'button', text: tr('relancer'), onclick: () => start(url)})));
   } else renderSuccess();
   header(); busy(false);
 }
@@ -634,21 +949,21 @@ function renderSuccess() {
      chemin pour qui fait tourner yunopack sur son propre YunoHost. */
   const chemin = (run.chemin || './' + name);
   const cmd = 'sudo yunohost app install ' + chemin;
-  const copyBtn = h('button', {class: 'btn sm ghost', type: 'button', text: 'Copier'});
+  const copyBtn = h('button', {class: 'btn sm ghost', type: 'button', text: tr('copier')});
   copyBtn.addEventListener('click', () => {
     (navigator.clipboard ? navigator.clipboard.writeText(cmd) : Promise.reject()).then(
-      () => { copyBtn.textContent = 'Copié'; setTimeout(() => copyBtn.textContent = 'Copier', 1600); },
-      () => { copyBtn.textContent = 'Sélectionnez'; });
+      () => { copyBtn.textContent = tr('copie'); setTimeout(() => copyBtn.textContent = tr('copier'), 1600); },
+      () => { copyBtn.textContent = tr('selectionne'); });
   });
-  const meta = [run.files ? run.files + ' fichiers' : null, 'conforme', 'en ' + fmtT(run.end - run.t0)].filter(Boolean).join(' · ');
+  const meta = [run.files ? run.files + ' ' + tr('fichiers') : null, tr('conforme'), tr('en_temps') + ' ' + fmtT(run.end - run.t0)].filter(Boolean).join(' · ');
   $('#outcome').append(h('div', {class: 'out'},
-    h('h2', {}, 'Paquet prêt', h('code', {text: name})),
+    h('h2', {}, tr('pret'), h('code', {text: name})),
     h('div', {class: 'meta', text: meta}),
     h('div', {class: 'cmd'}, h('code', {text: cmd}), copyBtn),
     h('div', {class: 'acts'},
-      h('a', {class: 'btn', href: API.paquet(run.id), download: name + '.tar.gz', text: 'Télécharger le paquet'}),
+      h('a', {class: 'btn', href: API.paquet(run.id), download: name + '.tar.gz', text: tr('telecharger')}),
       publierBtn(run.id, name),
-      h('button', {class: 'btn plain', type: 'button', text: 'Autre dépôt', onclick: () => { reset(); run = null; header(); const u = $('#url'); u.value = ''; u.focus(); }})),
+      h('button', {class: 'btn plain', type: 'button', text: tr('autre'), onclick: () => { reset(); run = null; header(); const u = $('#url'); u.value = ''; u.focus(); }})),
     h('div', {class: 'apres', id: 'apres'})));
   suite(name);
 }
@@ -660,7 +975,7 @@ function renderSuccess() {
    voie propre est de publier, puis de laisser une machine jetable l'installer
    — c'est exactement ce que fait la CI de YunoHost. */
 function publierBtn(id, nom) {
-  const b = h('button', {class: 'btn plain', type: 'button', text: 'Publier sur ma forge', disabled: true,
+  const b = h('button', {class: 'btn plain', type: 'button', text: tr('publier'), disabled: true,
                          title: 'vérification de la configuration…'});
   fetch(API.forge).then(r => r.json()).then(f => {
     if (!f.configuree) {
@@ -670,13 +985,13 @@ function publierBtn(id, nom) {
     b.disabled = false;
     b.title = 'pousser vers ' + f.url + '/' + f.proprietaire;
     b.onclick = async () => {
-      b.disabled = true; b.textContent = 'publication…';
+      b.disabled = true; b.textContent = tr('publication');
       let r;
       try { r = await fetch(API.publier(id), {method: 'POST'}); }
       catch (e) { b.textContent = 'échec : ' + e; return; }
       const c = await r.json().catch(() => ({}));
       if (!r.ok) { b.textContent = 'échec'; b.title = c.erreur || r.status; return; }
-      b.textContent = 'publié';
+      b.textContent = tr('publie');
       publie(c.url, nom);
     };
   }).catch(() => { b.title = 'configuration de la forge inconnue'; });
@@ -692,23 +1007,23 @@ function suite(nom) {
     h('div', {class: 'acts'},
       h('a', {class: 'btn sm plain', target: '_blank', rel: 'noopener noreferrer',
               href: 'https://doc.yunohost.org/packaging/packaging_apps_testing',
-              text: 'Documentation'}),
+              text: tr('doc')}),
       h('a', {class: 'btn sm plain', target: '_blank', rel: 'noopener noreferrer',
               href: 'https://ci-apps-dev.yunohost.org/',
-              text: 'CI YunoHost'})));
+              text: tr('ci')})));
 }
 
 function publie(url, nom) {
   const a = $('#apres');
   if (!a || !url) return;
   a.prepend(h('div', {class: 'publie'},
-    h('span', {text: 'Publié : '}),
+    h('span', {text: tr('publie_le') + ' '}),
     h('a', {href: url, target: '_blank', rel: 'noopener noreferrer', text: url}),
     h('p', {class: 'note', text:
       "Ouvrir une PR sur YunoHost/apps et y écrire « !testme » : la CI l'installe en conteneur jetable et rend le niveau 0 à 8."})));
 }
 
-function busy(b) { const g = $('#go'); g.disabled = b; g.textContent = b ? 'En cours…' : 'Empaqueter'; }
+function busy(b) { const g = $('#go'); g.disabled = b; g.textContent = tr(b ? 'run_go_cours' : 'run_go'); }
 
 /* L'etat du travail fait foi, pas l'evenement : le journal rejoue a la
    reconnexion contient les demandes deja satisfaites, et les rejouer
@@ -790,12 +1105,12 @@ async function chercherDepot(terme) {
   const hint = $('#form-hint'), ul = $('#trouvailles');
   if (terme.length < 2) {
     hint.className = 'hint err';
-    hint.textContent = 'Une adresse, ou deux lettres au moins.';
+    hint.textContent = tr('deux_lettres');
     return;
   }
-  hint.className = 'hint'; hint.textContent = 'recherche de « ' + terme + ' »…';
+  hint.className = 'hint'; hint.textContent = tr('recherche');
   ul.hidden = false;
-  ul.replaceChildren(h('li', {class: 'empty', text: 'recherche…'}));
+  ul.replaceChildren(h('li', {class: 'empty', text: tr('recherche')}));
 
   let d;
   try { d = await (await fetch(RACINE + 'recherche?q=' + encodeURIComponent(terme))).json(); }
@@ -804,11 +1119,11 @@ async function chercherDepot(terme) {
   const list = Array.isArray(d) ? d : [];
   if (!list.length) {
     hint.className = 'hint err';
-    hint.textContent = 'Aucun dépôt pour « ' + terme + ' ».';
+    hint.textContent = tr('aucun_depot') + ' « ' + terme + ' ».';
     ul.hidden = true;
     return;
   }
-  hint.textContent = list.length + ' dépôt(s).';
+  hint.textContent = list.length + ' dépôtr(s).';
   ul.replaceChildren(...list.map(t => {
     const b = badge(t.depot);
     const choisir = h('button', {class: 'btn sm ghost', type: 'button', text: 'Empaqueter',
@@ -821,7 +1136,7 @@ async function chercherDepot(terme) {
         h('div', {class: 'mt'},
           t.etoiles ? h('span', {text: '★ ' + nf.format(t.etoiles)}) : null,
           h('span', {class: 'lic', text: t.origine}),
-          t.deja_package ? h('span', {class: 'etiq pack', text: 'déjà au catalogue'}) : null),
+          t.deja_package ? h('span', {class: 'etiq pack', text: tr('deja_cat')}) : null),
         h('div', {class: 'mt'}, ...liens(t))),
       b || h('span'),
       choisir);
@@ -855,7 +1170,7 @@ const VERDICTS = {
 
 function badge(repo, packagee) {
   const b = h('button', {class: 'fais', type: 'button', 'data-v': 'pending', text: '…',
-                         title: 'pas encore examiné'});
+                         title: tr('pas_examine')});
   const d = depotDe(repo);
   if (!d) { b.textContent = '—'; b.title = 'dépôt non reconnu'; return b; }
   b.dataset.depot = d;
@@ -872,13 +1187,13 @@ function majBadge(b) {
   if (!f) return;
   if (f.etat === 'echouee') {
     b.dataset.v = 'pending'; b.textContent = '—';
-    b.title = 'non examiné : ' + f.erreur;
+    b.title = tr('non_examine') + ' ' + f.erreur;
     return;
   }
   if (b.dataset.pack) {
     b.dataset.v = 'feasible';
-    b.textContent = 'le projet';
-    b.title = 'comment ce projet est tenu';
+    b.textContent = tr('le_projet');
+    b.title = tr('projet_tenu');
   } else {
     const [v, fmt] = VERDICTS[f.verdict] || ['pending', s => String(s)];
     b.dataset.v = v;
@@ -897,16 +1212,16 @@ function majBadge(b) {
 function gouvernance(f) {
   const g = f.gouvernance || {};
   const traits = [];
-  if (f.archive) traits.push(['archivé par son auteur', 'plus aucun correctif']);
-  if (g.fourche_de) traits.push(['fourche de ' + g.fourche_de, 'le projet d\u2019origine a pu diverger']);
-  if (g.proprietaire_collectif === true) traits.push(['dépôt d\u2019organisation', 'porté par un collectif']);
-  if (g.proprietaire_collectif === false) traits.push(['dépôt personnel', 'tient à une seule personne']);
-  if (g.chartes && g.chartes.length) traits.push([g.chartes.join(', '), 'règles écrites publiées par le projet']);
-  else traits.push(['aucune règle écrite', 'ni gouvernance, ni code de conduite']);
-  if (f.etoiles) traits.push([nf.format(f.etoiles) + ' étoiles', 'audience']);
+  if (f.archive) traits.push([tr('archive'), tr('archive_p')]);
+  if (g.fourche_de) traits.push([tr('fourche') + ' ' + g.fourche_de, tr('fourche_p')]);
+  if (g.proprietaire_collectif === true) traits.push([tr('orga'), tr('orga_p')]);
+  if (g.proprietaire_collectif === false) traits.push([tr('perso'), tr('perso_p')]);
+  if (g.chartes && g.chartes.length) traits.push([g.chartes.join(', '), tr('chartes_p')]);
+  else traits.push([tr('sans_charte'), tr('sans_charte_p')]);
+  if (f.etoiles) traits.push([nf.format(f.etoiles) + ' ' + tr('etoiles'), tr('audience')]);
 
   const bloc = h('div', {class: 'gouv'},
-    h('div', {class: 'gouv-t', text: 'Comment le projet est tenu'}),
+    h('div', {class: 'gouv-t', text: tr('conduite')}),
     h('ul', {}, traits.map(([quoi, pourquoi]) =>
       h('li', {}, h('span', {class: 'q', text: quoi}), h('span', {class: 'p', text: pourquoi})))));
 
@@ -916,7 +1231,7 @@ function gouvernance(f) {
   if (sc && sc.criteres && sc.criteres.length) {
     bloc.append(
       h('div', {class: 'gouv-t', style: 'margin-top:10px'},
-        'Revue OpenSSF — ', h('b', {text: (sc.dixiemes / 10).toFixed(1) + '/10'}),
+        tr('revue') + ' — ', h('b', {text: (sc.dixiemes / 10).toFixed(1) + '/10'}),
         sc.date ? ' · ' + sc.date : ''),
       h('div', {class: 'notes'}, sc.criteres.map(c =>
         h('div', {class: 'note'},
@@ -948,9 +1263,9 @@ function basculerDetail(b, f) {
   const motif = (m) => h('li', {},
     technique ? h('code', {class: 'code', text: m.id}) : h('span', {class: 'puce', text: '·'}),
     h('span', {}, h('span', {text: m.titre}), m.remede ? h('span', {class: 'rm', text: m.remede}) : null));
-  const refaire = h('button', {class: 'btn sm plain', type: 'button', text: 'Réévaluer',
+  const refaire = h('button', {class: 'btn sm plain', type: 'button', text: tr('reevaluer'),
     onclick: async () => {
-      refaire.disabled = true; refaire.textContent = 'en file…';
+      refaire.disabled = true; refaire.textContent = tr('en_file');
       fiches.delete(b.dataset.depot); demandees.add(b.dataset.depot);
       b.dataset.v = 'pending'; b.textContent = '…';
       item.querySelector('.pourquoi').remove();
@@ -962,7 +1277,7 @@ function basculerDetail(b, f) {
     h('ul', {}, f.bloquants.map(motif), f.reserves.map(motif), (f.remarques || []).map(motif)),
     gouvernance(f),
     h('div', {class: 'quand'},
-      h('span', {}, 'examiné sur ' + (f.reference || 'la source retenue') +
+      h('span', {}, tr('examine_sur') + ' ' + (f.reference || '?') +
         (f.evalue_le ? ', ' + age(f.evalue_le) : ''), ' · ', lienTechnique()),
       refaire));
   item.append(panneau);
@@ -1037,24 +1352,55 @@ function packBtn(repo, analysable) {
   const u = repo && isRepo(String(repo)) ? String(repo) : null;
   const ok = u && analysable !== false;
   return h('button', {class: 'btn sm ghost', type: 'button', disabled: !ok,
-    text: ok ? 'Empaqueter' : u ? 'forge non prise en charge' : 'dépôt inconnu',
+    text: ok ? tr('empaqueter') : u ? tr('forge_non') : tr('depot_inconnu'),
     onclick: () => { show('run', true); window.scrollTo(0, 0); start(u); }});
 }
-/* Un lien devient un bouton : plus facile à viser, et le nom dit où il mène
-   mieux qu'une adresse tronquée. */
-function lienBouton(url, texte, titre) {
+/* Icônes dessinées pour le projet : quelques traits sur une grille de 24, au
+   même trait que le reste. Aucune police ni bibliothèque externe — rien à
+   charger, rien à concéder à personne, aucune licence tierce à porter. */
+const TRAITS = {
+  /* chevrons < > : du code */
+  code: 'M8 6 3 12l5 6M16 6l5 6-5 6',
+  /* un globe */
+  site: 'M12 3a9 9 0 100 18 9 9 0 000-18zM3.6 9h16.8M3.6 15h16.8M12 3a14 14 0 000 18a14 14 0 000-18',
+  /* une boîte : le paquet */
+  paquet: 'M12 3l8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9',
+  /* une loupe */
+  loupe: 'M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-4-4'
+};
+
+function icone_(nom) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('class', 'ic');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', TRAITS[nom]);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', 'currentColor');
+  path.setAttribute('stroke-width', '1.8');
+  path.setAttribute('stroke-linecap', 'round');
+  path.setAttribute('stroke-linejoin', 'round');
+  svg.append(path);
+  return svg;
+}
+
+/* Un lien devient un bouton à icône : plus facile à viser qu'une adresse
+   tronquée, et le nom reste lisible par un lecteur d'écran. */
+function lienBouton(url, icone, libelle) {
   const u = safeUrl(url);
   if (!u) return null;
   return h('a', {class: 'btn sm plain lien', href: u, target: '_blank',
-                 rel: 'noopener noreferrer', title: titre || u, text: texte});
+                 rel: 'noopener noreferrer', title: libelle, 'aria-label': libelle},
+    icone_(icone));
 }
 
 function liens(o) {
   return [
-    lienBouton(o.repo || o.depot, 'Code source'),
-    lienBouton(o.site, 'Site web'),
+    lienBouton(o.repo || o.depot, 'code', tr('code')),
+    lienBouton(o.site, 'site', tr('site')),
     o.qualite && o.qualite.id
-      ? lienBouton('https://apps.yunohost.org/app/' + encodeURIComponent(o.qualite.id), 'Fiche YunoHost')
+      ? lienBouton('https://apps.yunohost.org/app/' + encodeURIComponent(o.qualite.id), 'paquet', tr('fiche'))
       : null
   ].filter(Boolean);
 }
@@ -1063,21 +1409,61 @@ function liens(o) {
    s'installe pas, à 8, qui s'installe, se met à jour et se sauvegarde sans
    reproche. Savoir qu'une application existe ne dit pas si elle est bien
    empaquetée. */
+/* Un paquet deja au catalogue qui n'atteint pas le niveau maximal peut
+   souvent y arriver : sept cents applications sont deja la, et les refaire de
+   zero serait du gachis. Ce bouton dit ce qui leur manque. */
+function boutonExamen(q) {
+  if (!q || !q.id) return null;
+  const b = h('button', {class: 'btn sm plain', type: 'button', text: tr('examiner')});
+  b.onclick = async () => {
+    const item = b.closest('.item');
+    const deja = item.querySelector('.audit');
+    if (deja) { deja.remove(); return; }
+    b.disabled = true; b.textContent = tr('examen');
+    let d;
+    try { d = await (await fetch(RACINE + 'audit?q=' + encodeURIComponent(q.id))).json(); }
+    catch (e) { d = {erreur: String(e)}; }
+    b.disabled = false; b.textContent = tr('examiner');
+    item.append(bilanAudit(d));
+  };
+  return b;
+}
+
+function bilanAudit(d) {
+  if (d.erreur) return h('div', {class: 'audit'}, h('p', {class: 'hint err', text: d.erreur}));
+  if (!d.constats || !d.constats.length) {
+    return h('div', {class: 'audit'}, h('p', {class: 'audit-ok', text: tr('audit_rien')}));
+  }
+  return h('div', {class: 'audit'},
+    h('div', {class: 'gouv-t'}, tr('audit_t'),
+      ' — ', tr('audit_atteignable'), ' ', h('b', {text: d.niveau_atteignable + '/8'})),
+    h('ul', {}, d.constats.map(c => h('li', {},
+      technique ? h('code', {class: 'code', text: c.id}) : h('span', {class: 'puce', text: '·'}),
+      h('span', {},
+        h('span', {text: c.quoi}),
+        h('span', {class: 'rm', text: c.remede}),
+        h('span', {class: 'audit-m'},
+          c.bloque_le_niveau ? h('span', {class: 'etiq mort',
+            text: tr('audit_bloque') + ' ' + c.bloque_le_niveau}) : null,
+          c.reparable ? h('span', {class: 'etiq pack', text: tr('audit_reparable')}) : null))))),
+    h('div', {class: 'quand'}, lienTechnique()));
+}
+
 function niveauPaquet(q) {
   if (!q) return null;
   const n = q.niveau;
   const etat = n == null ? 'inconnu' : q.solide ? 'bon' : n >= 2 ? 'moyen' : 'faible';
   return h('span', {class: 'niv', 'data-e': etat,
-                    title: 'paquet YunoHost : ' + q.ce_que_dit_le_niveau},
-    n == null ? 'non noté' : 'niveau ' + n + '/8');
+                    title: tr('paquet_yh') + ' ' + q.ce_que_dit_le_niveau},
+    n == null ? tr('non_note') : tr('niveau') + ' ' + n + '/8');
 }
 function loadWish() {
   if (wish) return;
   wish = [];
-  $('#wish-list').replaceChildren(h('li', {class: 'empty', text: 'chargement…'}));
+  $('#wish-list').replaceChildren(h('li', {class: 'empty', text: tr('chargement')}));
   fetch(API.wishlist).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
    .then(d => { wish = Array.isArray(d) ? d : []; $('#wish-n').textContent = wish.length; renderWish(); })
-   .catch(() => { wish = null; $('#wish-list').replaceChildren(h('li', {class: 'empty', text: "Liste indisponible : le serveur n'a pas répondu."})); });
+   .catch(() => { wish = null; $('#wish-list').replaceChildren(h('li', {class: 'empty', text: tr('indispo')})); });
 }
 function renderWish() {
   const q = norm($('#wish-q').value);
@@ -1087,7 +1473,7 @@ function renderWish() {
   const perimes = wish.filter(a => a.deja_package).length;
   $('#wish-c').textContent = q
     ? f.length + ' / ' + wish.length
-    : wish.length + ' demandes' + (perimes ? ' · ' + perimes + ' déjà au catalogue' : '');
+    : wish.length + ' ' + tr('demandes') + (perimes ? ' · ' + perimes + ' déjà au catalogue' : '');
   const ul = $('#wish-list');
   ul.replaceChildren(...f.slice(0, wishLimit).map(a => {
     const b = a.analysable ? badge(a.repo, a.deja_package) : null;
@@ -1096,25 +1482,26 @@ function renderWish() {
       h('div', {},
         h('div', {class: 'nm'}, a.name || '—',
           a.votes ? h('span', {class: 'votes', text: '♥ ' + a.votes}) : null,
-          a.deja_package ? h('span', {class: 'etiq pack', text: 'déjà au catalogue',
+          a.deja_package ? h('span', {class: 'etiq pack', text: tr('deja_cat'),
                                       title: 'la demande peut être retirée de la liste'}) : null,
           niveauPaquet(a.qualite)),
         a.description ? h('div', {class: 'ds', text: a.description}) : null,
         h('div', {class: 'mt'},
           ...liens(a),
-          a.repo ? null : h('span', {text: 'pas de dépôt'}),
-          a.en_cours ? h('span', {text: 'paquet en cours ailleurs'}) : null)),
+          a.repo ? null : h('span', {text: tr('pas_depot')}),
+          a.en_cours ? h('span', {text: tr('en_cours_ailleurs')}) : null)),
       b || h('span'),
       a.deja_package
-        ? h('button', {class: 'btn sm plain', type: 'button', text: 'déjà disponible', disabled: true})
+        ? (boutonExamen(a.qualite) || h('button', {class: 'btn sm plain', type: 'button',
+            text: tr('deja_dispo'), disabled: true}))
         : packBtn(a.repo, a.analysable));
     if (b) observer(b, a.repo);
     return li;
   }));
   remplirDepuisLeCache(f.slice(0, wishLimit).map(a => a.repo));
-  if (!f.length) ul.append(h('li', {class: 'empty', text: 'Aucune application ne correspond à « ' + $('#wish-q').value + ' ».'}));
+  if (!f.length) ul.append(h('li', {class: 'empty', text: tr('aucune_corresp') + ' « ' + $('#wish-q').value + ' ».'}));
   const more = $('#wish-more'); more.textContent = '';
-  if (f.length > wishLimit) more.append(h('button', {class: 'btn plain sm', type: 'button', text: 'Afficher les ' + Math.min(50, f.length - wishLimit) + ' suivantes', onclick: () => { wishLimit += 50; renderWish(); }}));
+  if (f.length > wishLimit) more.append(h('button', {class: 'btn plain sm', type: 'button', text: tr('afficher_suivantes') + ' ' + Math.min(50, f.length - wishLimit) + ' ' + tr('suivantes'), onclick: () => { wishLimit += 50; renderWish(); }}));
 }
 $('#wish-q').addEventListener('input', () => { wishLimit = 50; if (wish) renderWish(); });
 
@@ -1187,7 +1574,7 @@ brancherSuggestions($('#url'), $('#url-sug'), () => $('#form').requestSubmit());
 
 function etiquettes(a) {
   const e = [];
-  if (a.deja_package) e.push(h('span', {class: 'etiq pack', text: 'déjà au catalogue'}));
+  if (a.deja_package) e.push(h('span', {class: 'etiq pack', text: tr('deja_cat')}));
   if (a.abandonne) {
     const j = a.jours_sans_activite;
     e.push(h('span', {class: 'etiq mort', text: 'sans activité depuis ' + Math.floor(j / 365) + ' ans',
@@ -1213,12 +1600,12 @@ function chercherAlt() {
   fermerSug(); majAilleurs();
   const ul = $('#alt-list');
   ul.hidden = false;
-  ul.replaceChildren(h('li', {class: 'empty', text: 'recherche…'}));
+  ul.replaceChildren(h('li', {class: 'empty', text: tr('recherche')}));
 
   fetch(API.alternatives(q)).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(d => {
     const list = Array.isArray(d) ? d : [];
-    if (!list.length) { ul.replaceChildren(h('li', {class: 'empty', text: 'Aucune alternative connue pour « ' + q + ' ».'})); return; }
+    if (!list.length) { ul.replaceChildren(h('li', {class: 'empty', text: tr('aucune_alt') + ' « ' + q + ' ».'})); return; }
     ul.replaceChildren(...list.map(a => {
       const b = badge(a.repo, a.deja_package);
       const li = h('li', {class: 'item'},
@@ -1231,13 +1618,14 @@ function chercherAlt() {
           h('div', {class: 'mt'}, ...liens(a))),
         b || h('span'),
         a.deja_package
-          ? h('button', {class: 'btn sm plain', type: 'button', text: 'déjà disponible', disabled: true})
+          ? (boutonExamen(a.qualite) || h('button', {class: 'btn sm plain', type: 'button',
+              text: tr('deja_dispo'), disabled: true}))
           : packBtn(a.repo, a.analysable));
       observer(b, a.repo);
       return li;
     }));
     remplirDepuisLeCache(list.map(a => a.repo));
-  }).catch(() => ul.replaceChildren(h('li', {class: 'empty', text: "Recherche indisponible : le serveur n'a pas répondu."})));
+  }).catch(() => ul.replaceChildren(h('li', {class: 'empty', text: tr('indispo')})));
 }
 
 $('#alt-form').addEventListener('submit', e => { e.preventDefault(); chercherAlt(); });
@@ -1248,7 +1636,7 @@ $('#alt-form').addEventListener('submit', e => { e.preventDefault(); chercherAlt
    et mémorisé : un seul texte à maintenir, pas deux versions qui divergent. */
 function lienTechnique() {
   const a = h('button', {class: 'bascule', type: 'button',
-    text: technique ? 'masquer les identifiants techniques' : 'afficher les identifiants techniques'});
+    text: tr(technique ? 'tech_off' : 'tech_on')});
   a.onclick = () => {
     technique = !technique;
     try { localStorage.setItem('yunopack:technique', technique ? 'oui' : 'non'); } catch (e) {}
@@ -1267,6 +1655,11 @@ function redessiner() {
   const ask = document.querySelector('form.ask');
   if (ask && run && run.arbitrages) { ask.remove(); renderAsk(run.arbitrages); }
 }
+
+/* Le HTML porte des points d'ancrage plutôt que du texte : une seule source
+   pour les trois langues, et rien à tenir en double dans le balisage. */
+document.querySelectorAll('[data-t]').forEach(e => { e.textContent = tr(e.dataset.t); });
+document.querySelectorAll('[data-ph]').forEach(e => { e.placeholder = tr(e.dataset.ph); });
 
 window.addEventListener('hashchange', fromHash);
 fromHash();

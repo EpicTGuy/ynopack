@@ -11,6 +11,7 @@
 //! Le quatrieme point vient d'une installation qui a echoue : un jeton sans
 //! reglage arrete l'installation, et rien dans le paquet ne le laissait voir.
 
+pub mod audit;
 pub mod placeholders;
 pub mod scripts;
 

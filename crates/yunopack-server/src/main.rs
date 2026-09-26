@@ -29,6 +29,18 @@ struct Etat {
     /// Le catalogue officiel de YunoHost : ce qui est disponible, et a quel
     /// niveau de qualite. Charge une fois.
     officiel: Arc<std::sync::Mutex<Option<Arc<ynp_forge::catalogue::Catalogue>>>>,
+    langue: String,
+}
+
+/// Ramene un reglage de langue a une valeur que la page connait.
+///
+/// Une langue inconnue vaut `auto` : la page suit alors le navigateur, ce qui
+/// vaut mieux que d'imposer une langue que personne n'a demandee.
+fn langue_valide(brut: &str) -> String {
+    match brut.trim().to_lowercase().as_str() {
+        "fr" | "en" | "es" => brut.trim().to_lowercase(),
+        _ => "auto".to_string(),
+    }
 }
 
 #[derive(Deserialize)]
@@ -73,6 +85,11 @@ struct Options {
     )]
     cache_partage: String,
 
+    /// Langue de l'interface : `fr`, `en`, `es`, ou `auto` pour suivre le
+    /// navigateur de chaque visiteur.
+    #[arg(long, env = "YUNOPACK_LANGUE", default_value = "auto")]
+    langue: String,
+
     /// Ne pas evaluer la liste de souhaits en tache de fond.
     ///
     /// Le defrichage consomme le quota de la forge ; on veut pouvoir s'en
@@ -111,6 +128,7 @@ async fn main() -> anyhow::Result<()> {
         evaluateur: yunopack_server::evaluation::Evaluateur::new(cache),
         catalogue: Arc::new(std::sync::Mutex::new(None)),
         officiel: Arc::new(std::sync::Mutex::new(None)),
+        langue: langue_valide(&options.langue),
     };
 
     // Les chemins sont ecrits en entier plutot que montes avec `nest` : celui-ci
@@ -130,6 +148,7 @@ async fn main() -> anyhow::Result<()> {
         .route(&format!("{base}/alternatives"), get(alternatives))
         .route(&format!("{base}/suggestions"), get(suggestions))
         .route(&format!("{base}/recherche"), get(recherche))
+        .route(&format!("{base}/audit"), get(audit))
         .route(
             &format!("{base}/evaluations"),
             get(evaluations).post(evaluer),
@@ -182,8 +201,12 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn page() -> Html<&'static str> {
-    Html(include_str!("page.html"))
+/// La page, avec la langue du serveur substituee.
+///
+/// Une seule substitution plutot qu'un moteur de gabarit : la page est un
+/// fichier unique, et la langue est la seule chose qui varie.
+async fn page(State(etat): State<Etat>) -> Html<String> {
+    Html(include_str!("page.html").replace("__LANGUE__", &etat.langue))
 }
 
 async fn creer(State(etat): State<Etat>, Json(d): Json<Demande>) -> Json<serde_json::Value> {
@@ -409,6 +432,76 @@ async fn recherche(
     }
 
     Json(serde_json::json!(out))
+}
+
+/// Examine un paquet deja au catalogue et dit ce qui le separe du niveau 8.
+///
+/// Sept cents applications sont deja la, et une bonne part n'atteint pas le
+/// niveau maximal. Repartir de zero serait du gachis : elles marchent,
+/// quelqu'un s'en occupe. Ce qui manque, c'est de savoir ce qui leur manque.
+async fn audit(
+    State(etat): State<Etat>,
+    axum::extract::Query(r): axum::extract::Query<Recherche>,
+) -> (StatusCode, Json<serde_json::Value>) {
+    let Some(officiel) = catalogue_officiel(&etat).await else {
+        return refus(StatusCode::BAD_GATEWAY, "catalogue officiel indisponible");
+    };
+    let Some(paquet) = officiel.trouver(r.q.trim()) else {
+        return refus(
+            StatusCode::NOT_FOUND,
+            "cette application n'est pas au catalogue",
+        );
+    };
+    if paquet.depot_paquet.is_empty() {
+        return refus(StatusCode::NOT_FOUND, "le catalogue ne donne pas de depot");
+    }
+
+    // Le depot examine est celui du *paquet*, pas celui du logiciel.
+    let recupere = match ynp_forge::fetch(&paquet.depot_paquet).await {
+        Ok(r) => r,
+        Err(e) => return refus(StatusCode::BAD_GATEWAY, &e.to_string()),
+    };
+
+    // L'examen travaille sur des fichiers ; l'arbre est ecrit dans un
+    // repertoire temporaire, efface ensuite.
+    let dossier = etat.racine.join("audits").join(&paquet.id);
+    let _ = std::fs::remove_dir_all(&dossier);
+    if let Err(e) = ecrire_arbre(&recupere.tree, &dossier) {
+        return refus(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string());
+    }
+
+    let a = ynp_verify::audit::examiner(&dossier, paquet.niveau);
+    let _ = std::fs::remove_dir_all(&dossier);
+
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "app": paquet.id,
+            "depot_paquet": paquet.depot_paquet,
+            "niveau_actuel": paquet.niveau,
+            "niveau_atteignable": a.niveau_atteignable(),
+            "reparables": a.reparables().len(),
+            "format": a.format,
+            "constats": a.constats,
+        })),
+    )
+}
+
+/// Ecrit l'arborescence lue dans un repertoire, pour l'examiner sur disque.
+fn ecrire_arbre(arbre: &ynp_core::tree::RepoTree, racine: &std::path::Path) -> std::io::Result<()> {
+    for chemin in arbre.paths() {
+        // Un chemin vient d'une archive distante : il ne doit designer que
+        // l'interieur du repertoire de travail.
+        if chemin.contains("..") || chemin.starts_with('/') {
+            continue;
+        }
+        let cible = racine.join(&chemin);
+        if let Some(d) = cible.parent() {
+            std::fs::create_dir_all(d)?;
+        }
+        std::fs::write(cible, arbre.text(&chemin).unwrap_or_default())?;
+    }
+    Ok(())
 }
 
 /// Les noms du catalogue externe, pour l'autocompletion.
@@ -751,7 +844,26 @@ async fn evenements(
 
 #[cfg(test)]
 mod tests {
-    use super::prefixe;
+    use super::{langue_valide, prefixe};
+
+    #[test]
+    fn une_langue_connue_est_retenue_telle_quelle() {
+        for l in ["fr", "en", "es", "FR", " es "] {
+            assert!(
+                matches!(langue_valide(l).as_str(), "fr" | "en" | "es"),
+                "{l}"
+            );
+        }
+    }
+
+    #[test]
+    fn une_langue_inconnue_laisse_le_navigateur_choisir() {
+        // Imposer une langue que personne n'a demandee serait pire que de
+        // suivre celle du visiteur.
+        for l in ["", "auto", "de", "n'importe quoi"] {
+            assert_eq!(langue_valide(l), "auto", "{l}");
+        }
+    }
 
     #[test]
     fn la_racine_ne_donne_aucun_prefixe() {

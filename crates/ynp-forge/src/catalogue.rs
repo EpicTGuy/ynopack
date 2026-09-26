@@ -34,6 +34,11 @@ pub struct Paquet {
     /// Retire du catalogue a cette date.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub retire_le: Option<i64>,
+    /// Services que cette application remplace, tels que le catalogue les
+    /// declare. C'est la seule source qui dise « ceci remplace cela » du point
+    /// de vue de YunoHost lui-meme.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub remplace: Vec<String>,
 }
 
 impl Paquet {
@@ -125,6 +130,15 @@ impl Catalogue {
                         .unwrap_or_default()
                         .to_string(),
                     retire_le: entree.get("deprecated_date").and_then(|d| d.as_integer()),
+                    remplace: entree
+                        .get("potential_alternative_to")
+                        .and_then(|a| a.as_array())
+                        .map(|a| {
+                            a.iter()
+                                .filter_map(|v| v.as_str().map(str::to_string))
+                                .collect()
+                        })
+                        .unwrap_or_default(),
                     depot_paquet,
                     id,
                 },
@@ -143,6 +157,39 @@ impl Catalogue {
 
     pub fn nombre(&self) -> usize {
         self.paquets.len()
+    }
+
+    /// Les applications du catalogue qui declarent remplacer ce service.
+    ///
+    /// Le catalogue porte ces correspondances lui-meme, du point de vue de
+    /// YunoHost : « AppFlowy remplace Notion ». Les ignorer revenait a ne
+    /// proposer que des alternatives qu'il reste a packager, alors que
+    /// certaines sont deja disponibles.
+    pub fn remplacants_de(&self, service: &str) -> Vec<&Paquet> {
+        let t = service.trim().to_lowercase();
+        if t.is_empty() {
+            return Vec::new();
+        }
+        let mut out: Vec<&Paquet> = self
+            .paquets
+            .values()
+            .filter(|p| p.remplace.iter().any(|r| r.to_lowercase() == t))
+            .collect();
+        out.sort_by_key(|p| std::cmp::Reverse(p.niveau.unwrap_or(0)));
+        out
+    }
+
+    /// Tous les services que le catalogue declare remplacer, pour completer
+    /// les suggestions de recherche.
+    pub fn services_remplaces(&self) -> Vec<&str> {
+        let mut v: Vec<&str> = self
+            .paquets
+            .values()
+            .flat_map(|p| p.remplace.iter().map(String::as_str))
+            .collect();
+        v.sort_unstable_by_key(|s| s.to_lowercase());
+        v.dedup();
+        v
     }
 }
 
@@ -172,6 +219,7 @@ mod tests {
 branch = "master"
 category = "reading"
 level = 8
+potential_alternative_to = [ "12ft" ]
 state = "working"
 url = "https://github.com/YunoHost-Apps/13ft_ynh"
 
@@ -242,6 +290,24 @@ url = "https://github.com/YunoHost-Apps/vieux-truc_ynh"
             };
             assert!(!p.ce_que_dit_le_niveau().is_empty(), "niveau {n}");
         }
+    }
+
+    #[test]
+    fn le_catalogue_dit_lui_meme_ce_qu_une_application_remplace() {
+        // C'est la seule source qui donne le point de vue de YunoHost :
+        // « telle application remplace tel service ».
+        let c = Catalogue::lire(TOML);
+        let r = c.remplacants_de("12ft");
+        assert_eq!(r.len(), 1);
+        assert_eq!(r[0].id, "13ft");
+        assert_eq!(c.remplacants_de("12FT").len(), 1, "la casse ne compte pas");
+        assert!(c.remplacants_de("inconnu").is_empty());
+        assert!(c.remplacants_de("").is_empty());
+    }
+
+    #[test]
+    fn les_services_remplaces_alimentent_les_suggestions() {
+        assert_eq!(Catalogue::lire(TOML).services_remplaces(), vec!["12ft"]);
     }
 
     #[test]

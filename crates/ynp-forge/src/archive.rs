@@ -118,6 +118,7 @@ fn is_interesting(path: &str) -> bool {
     ];
 
     EXACT.contains(&lower.as_str())
+        || est_un_fichier_de_paquet(&path.to_lowercase())
         || lower.starts_with("dockerfile")
         || lower.starts_with("docker-compose.")
         || lower.starts_with("compose.")
@@ -132,6 +133,34 @@ fn is_interesting(path: &str) -> bool {
                 || lower.ends_with(".toml")
                 || lower.ends_with(".ini")
                 || lower.ends_with(".conf"))
+}
+
+/// Vrai pour un fichier appartenant a un paquet YunoHost.
+///
+/// Examiner un paquet deja publie demande d'en lire le manifeste et les
+/// scripts. Sans cette regle, ils etaient retenus par leur chemin mais vides
+/// de contenu, et l'examen concluait a un format inconnu et a des scripts
+/// absents — sur un paquet parfaitement correct.
+fn est_un_fichier_de_paquet(chemin: &str) -> bool {
+    const RACINE: &[&str] = &[
+        "manifest.toml",
+        "manifest.json",
+        "tests.toml",
+        "config_panel.toml",
+    ];
+    const SCRIPTS: &[&str] = &[
+        "install",
+        "remove",
+        "upgrade",
+        "backup",
+        "restore",
+        "change_url",
+        "_common.sh",
+    ];
+    RACINE.contains(&chemin)
+        || chemin
+            .strip_prefix("scripts/")
+            .is_some_and(|n| SCRIPTS.contains(&n))
 }
 
 /// Vrai pour un fichier au format `.env` dont le nom est prefixe.
@@ -150,6 +179,25 @@ fn est_un_fichier_env(nom: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn les_fichiers_d_un_paquet_yunohost_sont_lus() {
+        // Sans eux, examiner un paquet publie conclut a un format inconnu et
+        // a des scripts absents, sur un paquet parfaitement correct.
+        for f in [
+            "manifest.toml",
+            "tests.toml",
+            "config_panel.toml",
+            "scripts/install",
+            "scripts/backup",
+            "scripts/_common.sh",
+        ] {
+            assert!(is_interesting(f), "{f} devrait etre lu");
+        }
+        // Ce qui n'est pas un fichier de paquet le reste.
+        assert!(!is_interesting("scripts/build.sh"));
+        assert!(!is_interesting("autre/install"));
+    }
 
     #[test]
     fn un_fichier_env_prefixe_du_nom_de_l_application_est_lu() {

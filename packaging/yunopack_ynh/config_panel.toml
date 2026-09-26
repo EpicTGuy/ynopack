@@ -25,6 +25,19 @@ name.en = "Forge access"
     optional = true
     bind = "GITLAB_TOKEN:/etc/yunopack/env"
 
+[main.affichage]
+name.fr = "Affichage"
+name.en = "Display"
+
+    [main.affichage.langue]
+    ask.fr = "Langue de l'interface"
+    ask.en = "Interface language"
+    help.fr = "« Auto » suit la langue du navigateur de chaque visiteur."
+    type = "select"
+    choices = ["auto", "fr", "en", "es"]
+    default = "auto"
+    bind = "YUNOPACK_LANGUE:/etc/yunopack/env"
+
 [main.partage]
 name.fr = "Evaluations partagees"
 

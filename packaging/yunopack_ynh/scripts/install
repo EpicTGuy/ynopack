@@ -43,6 +43,7 @@ GITHUB_TOKEN=
 GITLAB_TOKEN=
 YUNOPACK_CACHE_PARTAGE=https://raw.githubusercontent.com/EpicTGuy/yunopack/main/assets/evaluations.json
 YUNOPACK_HOTE_TEST=
+YUNOPACK_LANGUE=auto
 REGLAGES
 fi
 # Les jetons y figurent : lisible par le service, par personne d'autre.
