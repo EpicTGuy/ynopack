@@ -84,11 +84,11 @@ arbre de fichiers, testable seule.
 ## L5 — Validation dynamique · **livré**
 
 - [x] **L5-1** · `ynp-runner` : exécution SSH/rsync via `tokio::process`, `ControlMaster`, journaux
-- [x] **L5-2** · Cycle G3 sur `dell` : install, `curl` sur l'endpoint, backup/restore, remove → EXG-F-33
+- [x] **L5-2** · Cycle G3 sur une machine de test : install, `curl` sur l'endpoint, backup/restore, remove → EXG-F-33
 - [x] **L5-3** · Contrôle des résidus après remove : utilisateur système, `$install_dir`, conf
       nginx, base → EXG-F-34
 - [x] **L5-4** · `yunopack test --host=<alias>`, gate G3
-- [x] **L5-5** *(optionnel)* · `scripts/provision-runner.sh` : VM Debian + Incus sur `hom-e`.
+- [x] **L5-5** *(optionnel)* · `scripts/provision-runner.sh` : VM Debian + Incus sur une machine hote.
       **Écrit mais jamais exécuté** — à relire avant de s'y fier.
 - [ ] **L5-6** *(optionnel)* · Pilotage de `package_check`, analyse du niveau 0-8, gate G4 → EXG-F-35
 

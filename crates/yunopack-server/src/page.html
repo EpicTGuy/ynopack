@@ -22,7 +22,8 @@ header{border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none}
 .brand svg{width:24px;height:24px;color:var(--acc);display:block;flex:none}
 .brand b{font:600 17px/1 var(--mono);letter-spacing:-.01em}
-.tag{margin-left:auto;color:var(--mute);font:13px var(--mono)}
+.bascule{margin-left:auto;display:flex;align-items:center;gap:6px;color:var(--mute);font:13px var(--sans);cursor:pointer;white-space:nowrap}
+.bascule input{width:auto;height:auto;min-width:0;padding:0;margin:0;flex:none}
 nav{display:flex;gap:24px;overflow-x:auto;scrollbar-width:none}
 nav button{appearance:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 0 10px;font:14px var(--sans);color:var(--mute);cursor:pointer;white-space:nowrap}
 nav button:hover{color:var(--fg)}
@@ -157,6 +158,17 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
 .gouv li{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);gap:10px;align-items:baseline;font-size:13px}
 .gouv .q{font-weight:600;overflow-wrap:anywhere}
 .gouv .p{color:var(--mute);font-size:12px}
+.notes{display:grid;gap:5px;margin-top:6px}
+.note{display:grid;grid-template-columns:minmax(0,10rem) 1fr auto;gap:10px;align-items:center;font-size:13px}
+.note .n{overflow-wrap:anywhere}
+.note .v{font:12px var(--mono);color:var(--mute)}
+.jauge{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.jauge i{display:block;height:100%;background:var(--acc)}
+.jauge[data-n=moyen] i{background:#c9a227}
+.jauge[data-n=faible] i{background:var(--err)}
+.puce{color:var(--mute)}
+.tech{margin-left:8px;font:11px var(--mono);color:var(--mute);font-weight:400}
+@media (max-width:520px){.note{grid-template-columns:minmax(0,1fr) auto}.note .jauge{grid-column:1/-1}}
 @media (max-width:520px){.gouv li{grid-template-columns:minmax(0,1fr)}}
 .pourquoi .quand{color:var(--mute);font-size:12px;margin:10px 0 0;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
 .lic{border:1px solid var(--line);border-radius:4px;padding:0 5px}
@@ -175,7 +187,7 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
 .secours{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--mute);font-size:13px}
 .empty{color:var(--mute);padding:18px 0;font-size:14px}
 .more{margin-top:16px}
-@media (max-width:520px){.wrap{padding:0 16px}.tag,.sub{display:none}.item{grid-template-columns:minmax(0,1fr)}.item .btn{justify-self:start;margin-top:6px}.btn.go{padding:0 14px}}
+@media (max-width:520px){.wrap{padding:0 16px}.bascule{font-size:0;gap:0}.sub{display:none}.item{grid-template-columns:minmax(0,1fr)}.item .btn{justify-self:start;margin-top:6px}.btn.go{padding:0 14px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
@@ -187,7 +199,9 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M5 0H19L24 5V19L19 24H5L0 19V5Z M5.5 8.2L7.5 6.2L13.3 12L7.5 17.8L5.5 15.8L9.3 12Z M14 15.4H19V18.2H14Z"/></svg>
         <b>yunopack</b>
       </a>
-      <span class="tag">dépôt git → paquet YunoHost</span>
+      <label class="bascule" title="affiche les noms de champs et les codes de règle">
+        <input type="checkbox" id="tech"> détails techniques
+      </label>
     </div>
     <nav role="tablist" aria-label="Sections">
       <button role="tab" data-tab="run" aria-selected="true">Empaqueter</button>
@@ -203,8 +217,11 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
     <p class="lead">Lit ce que le projet décrit déjà — Dockerfile, compose, fichiers de projet. Ce qu'il ne peut pas déduire, il le demande.</p>
     <form id="form" novalidate>
       <label class="lbl" for="url">adresse du dépôt, ou nom du logiciel</label>
-      <div class="row">
-        <input id="url" name="url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://github.com/auteur/projet — ou « nextcloud »" required>
+      <div class="row suggest">
+        <input id="url" name="url" type="text" inputmode="url" autocomplete="off" spellcheck="false"
+               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="url-sug"
+               placeholder="https://github.com/auteur/projet — ou « nextcloud »" required>
+        <div class="liste-sug" id="url-sug" role="listbox" hidden></div>
         <button class="btn go" id="go" type="submit">Empaqueter</button>
       </div>
       <p class="hint" id="form-hint" aria-live="polite"></p>
@@ -221,7 +238,8 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
 
   <section id="tab-wish" role="tabpanel" hidden>
     <div class="lh"><h1>Liste de souhaits</h1><span class="c" id="wish-c"></span></div>
-    <p class="lead">Ce que la communauté YunoHost attend, du plus demandé au moins.</p>
+    <p class="lead">Ce que la communauté YunoHost attend, du plus demandé au moins.
+      <a href="https://apps.yunohost.org/wishlist" target="_blank" rel="noopener noreferrer">Voter ou proposer une application</a>.</p>
     <label class="lbl" for="wish-q">filtrer</label>
     <input id="wish-q" type="search" autocomplete="off" spellcheck="false" placeholder="nom ou description">
     <ul class="items" id="wish-list"></ul>
@@ -267,16 +285,48 @@ const API = {
 };
 
 const STAGES = [
-  ['analyse', 'Analyse', 'lecture du dépôt'],
-  ['faisabilite', 'Faisabilité', 'verdict et score'],
-  ['specification', 'Spécification', 'arbitrages de packaging'],
-  ['generation', 'Génération', 'écriture du paquet'],
-  ['verification', 'Vérification', 'conformité']
+  ['analyse', 'Lecture', 'ce que contient le projet'],
+  ['faisabilite', 'Compatibilité', 'installable sur YunoHost ?'],
+  ['specification', 'Choix', 'ce qui reste à décider'],
+  ['generation', 'Écriture', 'fabrication du paquet'],
+  ['verification', 'Contrôles', 'le paquet est-il correct ?']
 ];
+
+/* Les chemins de champs et les codes de règle sont précis et utiles à qui va
+   éditer le fichier ; ils n'apprennent rien aux autres. Un seul interrupteur
+   les fait apparaître, plutôt que deux versions de chaque texte — deux
+   versions finissent toujours par diverger. */
+let technique = false;
+try { technique = localStorage.getItem('yunopack:technique') === 'oui'; } catch (e) {}
+
+/* Ce que chaque champ demande, dit en clair. Le chemin reste affiché en mode
+   technique : c'est lui qu'on cherche dans appspec.toml. */
+const CHAMPS = {
+  'runtime.port_binding': ['Comment lui indiquer son port',
+    "L'application doit savoir sur quel port écouter. Chacune attend cette information sous un nom différent."],
+  'runtime.database_binding': ['Comment lui indiquer sa base de données',
+    "YunoHost crée la base ; reste à dire à l'application comment la joindre."],
+  'runtime.execstart': ['La commande qui démarre l\u2019application', ''],
+  'runtime.technology': ['Le langage de l\u2019application', ''],
+  'app.description_en': ['La description affichée dans le catalogue', ''],
+  'app.version': ['Le numéro de version', ''],
+  'upstream.license': ['La licence du logiciel', ''],
+  'resources.sources.url': ['L\u2019adresse du fichier à télécharger', ''],
+  'resources.sources.sha256': ['L\u2019empreinte du fichier téléchargé', '']
+};
+
+function libelleChamp(chemin) {
+  const c = CHAMPS[chemin];
+  return c ? c[0] : chemin;
+}
+function aideChamp(chemin) {
+  const c = CHAMPS[chemin];
+  return c && c[1] ? c[1] : '';
+}
 /* Une demande de decision se rattache a la specification : c'est la qu'un
    arbitrage se rend, et c'est la que le pipeline s'est arrete. */
 const RATTACHE = {decision: 'specification', fin: null};
-const LABEL = {pending: 'en attente', running: 'en cours', waiting: 'à vous', ok: 'terminé', fail: 'échec', skipped: 'non lancée'};
+const LABEL = {pending: 'en attente', running: 'en cours', waiting: 'à vous', ok: 'fait', fail: 'bloqué', skipped: 'non faite'};
 
 /* Rien de ce qui vient du serveur ne passe par innerHTML : tout est insere en textContent. */
 const $ = s => document.querySelector(s);
@@ -376,7 +426,9 @@ function renderFailure(i, msg) {
   r.sum.textContent = '';
   r.why.append(h('div', {class: 'why', role: 'alert'},
     h('p', {class: 'why-t', text: nonFaisable ? 'Non faisable' : 'Échec'}),
-    h('ul', {}, items.map(it => h('li', {}, it.code ? h('code', {class: 'code', text: it.code}) : h('span'), h('span', {text: it.text}))))));
+    h('ul', {}, items.map(it => h('li', {},
+      technique && it.code ? h('code', {class: 'code', text: it.code}) : h('span', {class: 'puce', text: '·'}),
+      h('span', {text: it.text}))))));
 }
 
 /* ——— Arbitrages ——— */
@@ -432,9 +484,15 @@ function renderAsk(arbitrages) {
    ne couvre tous les cas, et celui qui connait son application ne doit pas
    etre contraint de choisir dans la notre. */
 function champ(a, saisies) {
-  const d = h('div', {class: 'fld'}, h('span', {class: 'k', text: a.champ}));
-  if (a.raison) d.append(h('p', {class: 'why-not', text: a.raison}));
-  if (a.ou_chercher && a.ou_chercher.length) d.append(h('p', {class: 'look', text: 'chercher dans : ' + a.ou_chercher.join(', ')}));
+  const d = h('div', {class: 'fld'},
+    h('span', {class: 'k'}, libelleChamp(a.champ),
+      technique ? h('span', {class: 'tech', text: a.champ}) : null));
+  const aide = aideChamp(a.champ);
+  if (aide) d.append(h('p', {class: 'why-not', text: aide}));
+  if (technique && a.raison) d.append(h('p', {class: 'why-not', text: a.raison}));
+  if (technique && a.ou_chercher && a.ou_chercher.length) {
+    d.append(h('p', {class: 'look', text: 'chercher dans : ' + a.ou_chercher.join(', ')}));
+  }
 
   if (a.choix && a.choix.length) {
     const menu = h('select', {class: 'free'}, a.choix.map(c => h('option', {value: c, text: c})));
@@ -741,12 +799,16 @@ const VERDICTS = {
   'NON FAISABLE': ['no', () => 'non']
 };
 
-function badge(repo) {
+function badge(repo, packagee) {
   const b = h('button', {class: 'fais', type: 'button', 'data-v': 'pending', text: '…',
-                         title: 'faisabilité pas encore évaluée'});
+                         title: 'pas encore examiné'});
   const d = depotDe(repo);
-  if (!d) { b.textContent = '—'; b.title = "dépôt non reconnu"; return b; }
+  if (!d) { b.textContent = '—'; b.title = 'dépôt non reconnu'; return b; }
   b.dataset.depot = d;
+  /* Pour une application déjà au catalogue, la compatibilité n'a plus d'objet.
+     La manière dont son projet est tenu, si : c'est ce qui aide à choisir
+     entre deux outils qui font la même chose. */
+  if (packagee) b.dataset.pack = 'oui';
   majBadge(b);
   return b;
 }
@@ -756,16 +818,20 @@ function majBadge(b) {
   if (!f) return;
   if (f.etat === 'echouee') {
     b.dataset.v = 'pending'; b.textContent = '—';
-    b.title = 'non évaluable : ' + f.erreur;
+    b.title = 'non examiné : ' + f.erreur;
     return;
   }
-  const [v, fmt] = VERDICTS[f.verdict] || ['pending', s => String(s)];
-  b.dataset.v = v;
-  b.textContent = fmt(f.score);
-  b.title = f.verdict.toLowerCase() + (f.technologie ? ' · ' + f.technologie : '');
+  if (b.dataset.pack) {
+    b.dataset.v = 'feasible';
+    b.textContent = 'le projet';
+    b.title = 'comment ce projet est tenu';
+  } else {
+    const [v, fmt] = VERDICTS[f.verdict] || ['pending', s => String(s)];
+    b.dataset.v = v;
+    b.textContent = fmt(f.score);
+    b.title = f.verdict.toLowerCase() + (f.technologie ? ' · ' + f.technologie : '');
+  }
   b.classList.add('cliquable');
-  b.title += f.bloquants.length || f.reserves.length
-    ? ' — cliquer pour le détail' : ' — cliquer pour la date et réévaluer';
   b.onclick = () => basculerDetail(b, f);
 }
 
@@ -785,10 +851,27 @@ function gouvernance(f) {
   else traits.push(['aucune règle écrite', 'ni gouvernance, ni code de conduite']);
   if (f.etoiles) traits.push([nf.format(f.etoiles) + ' étoiles', 'audience']);
 
-  return h('div', {class: 'gouv'},
-    h('div', {class: 'gouv-t', text: 'Conduite du projet'}),
+  const bloc = h('div', {class: 'gouv'},
+    h('div', {class: 'gouv-t', text: 'Comment le projet est tenu'}),
     h('ul', {}, traits.map(([quoi, pourquoi]) =>
       h('li', {}, h('span', {class: 'q', text: quoi}), h('span', {class: 'p', text: pourquoi})))));
+
+  /* Notes publiées par la fondation OpenSSF. Elle ne passe en revue qu'une
+     partie des dépôts GitHub : l'absence de note ne dit rien du projet. */
+  const sc = g.scorecard;
+  if (sc && sc.criteres && sc.criteres.length) {
+    bloc.append(
+      h('div', {class: 'gouv-t', style: 'margin-top:10px'},
+        'Revue OpenSSF — ', h('b', {text: (sc.dixiemes / 10).toFixed(1) + '/10'}),
+        sc.date ? ' · ' + sc.date : ''),
+      h('div', {class: 'notes'}, sc.criteres.map(c =>
+        h('div', {class: 'note'},
+          h('span', {class: 'n', text: c.nom}),
+          h('span', {class: 'jauge', 'data-n': c.note >= 7 ? 'bon' : c.note >= 4 ? 'moyen' : 'faible'},
+            h('i', {style: 'width:' + (c.note * 10) + '%'})),
+          h('span', {class: 'v', text: c.note + '/10'})))));
+  }
+  return bloc;
 }
 
 /* L'age d'une evaluation, parce qu'une evaluation ancienne peut avoir ete
@@ -808,8 +891,8 @@ function basculerDetail(b, f) {
   const item = b.closest('.item');
   const deja = item.querySelector('.pourquoi');
   if (deja) { deja.remove(); return; }
-  const motif = (m, bloquant) => h('li', {},
-    h('code', {class: 'code', text: m.id}),
+  const motif = (m) => h('li', {},
+    technique ? h('code', {class: 'code', text: m.id}) : h('span', {class: 'puce', text: '·'}),
     h('span', {}, h('span', {text: m.titre}), m.remede ? h('span', {class: 'rm', text: m.remede}) : null));
   const refaire = h('button', {class: 'btn sm plain', type: 'button', text: 'Réévaluer',
     onclick: async () => {
@@ -822,8 +905,7 @@ function basculerDetail(b, f) {
       planifier();
     }});
   item.append(h('div', {class: 'pourquoi'},
-    h('ul', {}, f.bloquants.map(m => motif(m, true)), f.reserves.map(m => motif(m, false)),
-                (f.remarques || []).map(m => motif(m, false))),
+    h('ul', {}, f.bloquants.map(motif), f.reserves.map(motif), (f.remarques || []).map(motif)),
     gouvernance(f),
     h('div', {class: 'quand'},
       h('span', {text: 'évalué sur ' + (f.reference || 'la source retenue') +
@@ -913,7 +995,7 @@ function renderWish() {
     : wish.length + ' demandes' + (perimes ? ' · ' + perimes + ' déjà au catalogue' : '');
   const ul = $('#wish-list');
   ul.replaceChildren(...f.slice(0, wishLimit).map(a => {
-    const b = a.analysable && !a.deja_package ? badge(a.repo) : null;
+    const b = a.analysable ? badge(a.repo, a.deja_package) : null;
     const li = h('li', {class: 'item'},
       a.repo ? icone(a.repo) : h('span', {class: 'ico'}),
       h('div', {},
@@ -943,11 +1025,10 @@ $('#wish-q').addEventListener('input', () => { wishLimit = 50; if (wish) renderW
 
 /* ——— Alternatives ——— */
 
-/* Suggestions : la liste des noms connus, chargée une fois. Sans elle, il faut
-   deviner l'orthographe exacte d'un logiciel pour en trouver les alternatives. */
+/* Suggestions : la liste des noms connus, chargée une fois et partagée par les
+   deux champs de recherche. Sans elle, il faut deviner l'orthographe exacte
+   d'un logiciel pour le trouver. */
 let noms = null;
-const sug = $('#alt-sug'), altQ = $('#alt-q');
-let sugChoisie = -1;
 
 function chargerNoms() {
   if (noms) return;
@@ -955,42 +1036,59 @@ function chargerNoms() {
   fetch(RACINE + 'suggestions').then(r => r.ok ? r.json() : []).then(d => { noms = Array.isArray(d) ? d : []; }).catch(() => {});
 }
 
-function fermerSug() { sug.hidden = true; sug.textContent = ''; sugChoisie = -1; altQ.setAttribute('aria-expanded', 'false'); }
+/* Branche un champ de saisie sur la liste des noms.
+   `valider` est appelé quand l'utilisateur en choisit un. */
+function brancherSuggestions(champ, liste, valider) {
+  let choisie = -1;
 
-function montrerSug() {
-  const q = norm(altQ.value);
-  if (!q || !noms || !noms.length) return fermerSug();
-  /* Ceux qui commencent par le terme d'abord : taper « nex » cherche
-     Nextcloud, pas un logiciel dont la description le mentionne. */
-  const debut = [], dedans = [];
-  for (const n of noms) {
-    const x = norm(n);
-    if (x.startsWith(q)) debut.push(n);
-    else if (x.includes(q)) dedans.push(n);
-    if (debut.length >= 10) break;
-  }
-  const liste = debut.concat(dedans).slice(0, 10);
-  if (!liste.length || (liste.length === 1 && norm(liste[0]) === q)) return fermerSug();
-  sug.replaceChildren(...liste.map((n, i) => h('button', {type: 'button', role: 'option', text: n,
-    onmousedown: e => { e.preventDefault(); altQ.value = n; fermerSug(); chercherAlt(); }})));
-  sug.hidden = false; sugChoisie = -1; altQ.setAttribute('aria-expanded', 'true');
+  const fermer = () => {
+    liste.hidden = true; liste.textContent = ''; choisie = -1;
+    champ.setAttribute('aria-expanded', 'false');
+  };
+
+  const montrer = () => {
+    const q = norm(champ.value);
+    /* Une adresse n'a pas besoin d'être devinée. */
+    if (!q || isRepo(champ.value) || !noms || !noms.length) return fermer();
+    /* Ceux qui commencent par le terme d'abord : taper « nex » cherche
+       Nextcloud, pas un logiciel dont la description le mentionne. */
+    const debut = [], dedans = [];
+    for (const n of noms) {
+      const x = norm(n);
+      if (x.startsWith(q)) debut.push(n);
+      else if (x.includes(q)) dedans.push(n);
+      if (debut.length >= 10) break;
+    }
+    const trouves = debut.concat(dedans).slice(0, 10);
+    if (!trouves.length || (trouves.length === 1 && norm(trouves[0]) === q)) return fermer();
+    liste.replaceChildren(...trouves.map(n => h('button', {type: 'button', role: 'option', text: n,
+      onmousedown: e => { e.preventDefault(); champ.value = n; fermer(); valider(); }})));
+    liste.hidden = false; choisie = -1;
+    champ.setAttribute('aria-expanded', 'true');
+  };
+
+  champ.addEventListener('input', () => { chargerNoms(); montrer(); });
+  champ.addEventListener('focus', chargerNoms);
+  champ.addEventListener('blur', () => setTimeout(fermer, 120));
+  champ.addEventListener('keydown', e => {
+    if (liste.hidden) return;
+    const opts = [...liste.children];
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      choisie = (choisie + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length;
+      opts.forEach((o, i) => o.setAttribute('aria-selected', i === choisie));
+      opts[choisie].scrollIntoView({block: 'nearest'});
+    } else if (e.key === 'Enter' && choisie >= 0) {
+      e.preventDefault(); champ.value = opts[choisie].textContent; fermer(); valider();
+    } else if (e.key === 'Escape') fermer();
+  });
+
+  return fermer;
 }
 
-altQ.addEventListener('input', () => { chargerNoms(); montrerSug(); });
-altQ.addEventListener('focus', chargerNoms);
-altQ.addEventListener('blur', () => setTimeout(fermerSug, 120));
-altQ.addEventListener('keydown', e => {
-  if (sug.hidden) return;
-  const opts = [...sug.children];
-  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-    e.preventDefault();
-    sugChoisie = (sugChoisie + (e.key === 'ArrowDown' ? 1 : -1) + opts.length) % opts.length;
-    opts.forEach((o, i) => o.setAttribute('aria-selected', i === sugChoisie));
-    opts[sugChoisie].scrollIntoView({block: 'nearest'});
-  } else if (e.key === 'Enter' && sugChoisie >= 0) {
-    e.preventDefault(); altQ.value = opts[sugChoisie].textContent; fermerSug(); chercherAlt();
-  } else if (e.key === 'Escape') fermerSug();
-});
+const altQ = $('#alt-q');
+const fermerSug = brancherSuggestions(altQ, $('#alt-sug'), () => chercherAlt());
+brancherSuggestions($('#url'), $('#url-sug'), () => $('#form').requestSubmit());
 
 function etiquettes(a) {
   const e = [];
@@ -1032,7 +1130,7 @@ function chercherAlt() {
     secours.hidden = false;
     if (!list.length) { ul.replaceChildren(h('li', {class: 'empty', text: 'Aucune alternative connue pour « ' + q + ' ».'})); return; }
     ul.replaceChildren(...list.map(a => {
-      const b = a.deja_package ? null : badge(a.repo);
+      const b = badge(a.repo, a.deja_package);
       const li = h('li', {class: 'item'},
         a.repo ? icone(a.repo) : h('span', {class: 'ico'}),
         h('div', {}, h('div', {class: 'nm', text: a.name || '—'}), a.description ? h('div', {class: 'ds', text: a.description}) : null,
@@ -1042,13 +1140,29 @@ function chercherAlt() {
         a.deja_package
           ? h('button', {class: 'btn sm plain', type: 'button', text: 'déjà disponible', disabled: true})
           : packBtn(a.repo, a.analysable));
-      if (b) observer(b, a.repo);
+      observer(b, a.repo);
       return li;
     }));
   }).catch(() => { secours.hidden = false; ul.replaceChildren(h('li', {class: 'empty', text: "Recherche indisponible : le serveur n'a pas répondu."})); });
 }
 
 $('#alt-form').addEventListener('submit', e => { e.preventDefault(); chercherAlt(); });
+
+/* L'interrupteur des détails techniques. Un seul état, mémorisé, plutôt que
+   deux versions de chaque texte : deux versions finissent par diverger. */
+const bascule = $('#tech');
+bascule.checked = technique;
+bascule.addEventListener('change', () => {
+  technique = bascule.checked;
+  try { localStorage.setItem('yunopack:technique', technique ? 'oui' : 'non'); } catch (e) {}
+  /* Les détails déjà dépliés se redessinent ; le reste se fera au prochain
+     affichage. Rien n'est rechargé depuis le serveur. */
+  document.querySelectorAll('.pourquoi').forEach(d => {
+    const b = d.closest('.item').querySelector('.fais[data-depot]');
+    d.remove();
+    if (b) { const f = fiches.get(b.dataset.depot); if (f) basculerDetail(b, f); }
+  });
+});
 
 window.addEventListener('hashchange', fromHash);
 fromHash();

@@ -1,0 +1,48 @@
+#:schema https://raw.githubusercontent.com/YunoHost/apps/main/schemas/config_panel.v1.schema.json
+
+version = "1.0"
+
+[main]
+name.fr = "Reglages"
+name.en = "Settings"
+
+[main.forges]
+name.fr = "Acces aux forges"
+name.en = "Forge access"
+
+    [main.forges.github_token]
+    ask.fr = "Jeton GitHub"
+    ask.en = "GitHub token"
+    help.fr = "Sans jeton, GitHub n'accorde que soixante requetes par heure, ce qui limite fortement le nombre d'evaluations. Un jeton en lecture seule suffit."
+    type = "password"
+    optional = true
+    bind = ":/etc/yunopack/env"
+
+    [main.forges.gitlab_token]
+    ask.fr = "Jeton GitLab"
+    help.fr = "Facultatif. Utile seulement pour les depots prives."
+    type = "password"
+    optional = true
+    bind = ":/etc/yunopack/env"
+
+[main.partage]
+name.fr = "Evaluations partagees"
+
+    [main.partage.cache_partage]
+    ask.fr = "Adresse du lot d'evaluations"
+    help.fr = "Les evaluations deja faites ailleurs sont reprises au demarrage, ce qui evite de refaire le meme calcul. Laisser vide pour n'utiliser que les siennes."
+    type = "url"
+    optional = true
+    default = "https://raw.githubusercontent.com/EpicTGuy/yunopack/main/assets/evaluations.json"
+    bind = ":/etc/yunopack/env"
+
+[main.test]
+name.fr = "Machine de test"
+help.fr = "Installer un paquet non relu execute ses scripts en root. Cette machine doit etre une instance YunoHost dediee aux tests, jamais celle-ci, et jamais une machine de production."
+
+    [main.test.hote_test]
+    ask.fr = "Alias SSH de la machine de test"
+    help.fr = "Tel que declare dans le ~/.ssh/config de l'utilisateur systeme. Laisser vide desactive les tests reels."
+    type = "string"
+    optional = true
+    bind = ":/etc/yunopack/env"

@@ -163,7 +163,12 @@ mod tests {
 
     #[test]
     fn un_depot_hors_github_n_entre_pas_au_catalogue_officiel() {
-        let e = preparer(&spec(), "https://git.hom-e.fr/epicuser/demo_ynh", Some(8)).unwrap_err();
+        let e = preparer(
+            &spec(),
+            "https://git.exemple.fr/utilisateur/demo_ynh",
+            Some(8),
+        )
+        .unwrap_err();
         assert!(matches!(e, OfficielError::HorsGitHub { .. }));
     }
 

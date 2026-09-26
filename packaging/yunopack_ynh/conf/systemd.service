@@ -7,6 +7,9 @@ Type=simple
 User=__APP__
 Group=__APP__
 WorkingDirectory=__INSTALL_DIR__/
+# Les reglages vivent hors de l'unite : le panneau de configuration les
+# reecrit sans avoir a regenerer celle-ci. Le `-` tolere son absence.
+EnvironmentFile=-/etc/yunopack/env
 ExecStart=__INSTALL_DIR__/yunopack-server --addr 127.0.0.1:__PORT__ --out __DATA_DIR__/travaux --base __PATH__
 Restart=always
 RestartSec=5

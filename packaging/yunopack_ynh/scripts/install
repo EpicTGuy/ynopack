@@ -29,6 +29,17 @@ ynh_config_add_logrotate
 yunohost service add "$app" --description="Yunopack" --log="/var/log/$app/$app.log"
 
 #=================================================
+# FICHIER DE REGLAGES
+#=================================================
+
+# Le panneau de configuration ecrit ici ; le service le lit au demarrage.
+# Les jetons y figurent, d'ou les droits restreints au compte du service.
+mkdir -p /etc/yunopack
+touch /etc/yunopack/env
+chown root:"$app" /etc/yunopack/env
+chmod 640 /etc/yunopack/env
+
+#=================================================
 # LOGO DU PORTAIL
 #=================================================
 

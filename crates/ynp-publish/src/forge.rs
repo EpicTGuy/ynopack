@@ -20,7 +20,7 @@ pub enum ForgeError {
 /// Ou publier.
 #[derive(Debug, Clone)]
 pub struct Forge {
-    /// Racine HTTP de l'instance, ex. `https://git.hom-e.fr`.
+    /// Racine HTTP de l'instance, ex. `https://git.exemple.fr`.
     pub url: String,
     pub proprietaire: String,
     /// Alias SSH servant au push, declare dans `~/.ssh/config`.
@@ -167,7 +167,7 @@ mod tests {
     fn forge_jeton(jeton: Option<&str>) -> Forge {
         Forge {
             url: "https://git.exemple.fr".into(),
-            proprietaire: "clem".into(),
+            proprietaire: "utilisateur".into(),
             alias_ssh: "forgejo".into(),
             jeton: jeton.map(str::to_string),
         }
@@ -179,7 +179,7 @@ mod tests {
             forge_jeton(Some("abc123"))
                 .url_push_https("app_ynh")
                 .as_deref(),
-            Some("https://clem:abc123@git.exemple.fr/clem/app_ynh.git")
+            Some("https://utilisateur:abc123@git.exemple.fr/utilisateur/app_ynh.git")
         );
     }
 
@@ -192,8 +192,8 @@ mod tests {
 
     fn forge() -> Forge {
         Forge {
-            url: "https://git.hom-e.fr".into(),
-            proprietaire: "epicuser".into(),
+            url: "https://git.exemple.fr".into(),
+            proprietaire: "utilisateur".into(),
             alias_ssh: "forgejo".into(),
             jeton: None,
         }
@@ -204,17 +204,17 @@ mod tests {
         let f = forge();
         assert_eq!(
             f.url_https("demo_ynh"),
-            "https://git.hom-e.fr/epicuser/demo_ynh"
+            "https://git.exemple.fr/utilisateur/demo_ynh"
         );
-        assert_eq!(f.url_ssh("demo_ynh"), "forgejo:epicuser/demo_ynh.git");
+        assert_eq!(f.url_ssh("demo_ynh"), "forgejo:utilisateur/demo_ynh.git");
     }
 
     #[test]
     fn une_barre_finale_dans_l_url_ne_se_duplique_pas() {
-        std::env::set_var("FORGEJO_URL", "https://git.hom-e.fr/");
-        std::env::set_var("FORGEJO_OWNER", "epicuser");
+        std::env::set_var("FORGEJO_URL", "https://git.exemple.fr/");
+        std::env::set_var("FORGEJO_OWNER", "utilisateur");
         let f = Forge::depuis_environnement("forgejo").unwrap();
-        assert_eq!(f.url_https("x"), "https://git.hom-e.fr/epicuser/x");
+        assert_eq!(f.url_https("x"), "https://git.exemple.fr/utilisateur/x");
         std::env::remove_var("FORGEJO_URL");
         std::env::remove_var("FORGEJO_OWNER");
     }

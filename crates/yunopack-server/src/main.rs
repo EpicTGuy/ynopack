@@ -58,6 +58,18 @@ struct Options {
     #[arg(long, env = "YNOPACK_BASE", default_value = "/")]
     base: String,
 
+    /// Lot d'evaluations deja faites ailleurs, telecharge au demarrage.
+    ///
+    /// Le meme depot donne le meme resultat, quelle que soit la machine :
+    /// refaire partout le meme calcul depense du quota et du courant pour
+    /// rien. Une chaine vide desactive le partage.
+    #[arg(
+        long,
+        env = "YUNOPACK_CACHE_PARTAGE",
+        default_value = "https://raw.githubusercontent.com/EpicTGuy/yunopack/main/assets/evaluations.json"
+    )]
+    cache_partage: String,
+
     /// Ne pas evaluer la liste de souhaits en tache de fond.
     ///
     /// Le defrichage consomme le quota de la forge ; on veut pouvoir s'en
@@ -118,11 +130,25 @@ async fn main() -> anyhow::Result<()> {
             &format!("{base}/evaluations"),
             get(evaluations).post(evaluer),
         )
+        .route(&format!("{base}/evaluations/export"), get(exporter))
         .route(&format!("{base}/icone"), get(icone));
     if !base.is_empty() {
         app = app.route(&base, get(page));
     }
     let app = app.with_state(etat.clone());
+
+    // Le cache partage avant tout le reste : ce qu'il apporte n'aura pas a
+    // etre recalcule, et le defrichage n'en tiendra pas compte autrement.
+    if !options.cache_partage.trim().is_empty() {
+        let evaluateur = etat.evaluateur.clone();
+        let url = options.cache_partage.clone();
+        tokio::spawn(async move {
+            match yunopack_server::evaluation::verser_le_partage(evaluateur.cache(), &url).await {
+                Ok(n) => tracing::info!("cache partage : {n} evaluation(s) reprises"),
+                Err(e) => tracing::warn!("cache partage indisponible : {e}"),
+            }
+        });
+    }
 
     // Defricher la liste de souhaits des le demarrage : sans cela, une
     // installation neuve n'affiche aucun score tant que personne n'a fait
@@ -360,6 +386,15 @@ async fn evaluations(
         "a_defricher": etat.evaluateur.reste_a_defricher(),
         "connues": etat.evaluateur.cache().nombre(),
     }))
+}
+
+/// Tout ce que cette instance a evalue, pour le partager.
+///
+/// Le meme depot donne le meme resultat, quelle que soit la machine. Publier
+/// ce lot evite a d'autres de refaire le calcul ; il est verifiable, donc le
+/// reprendre ne demande pas de faire confiance a qui l'a produit.
+async fn exporter(State(etat): State<Etat>) -> Json<serde_json::Value> {
+    Json(serde_json::json!(etat.evaluateur.cache().toutes()))
 }
 
 #[derive(Deserialize)]

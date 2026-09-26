@@ -18,7 +18,7 @@ Les jobs durent de deux à trente minutes. Le multiplexage `ControlMaster` d'Ope
 de session, la reconnexion et les délais d'attente mieux que ce que nous écririons — et c'est du
 code éprouvé depuis vingt ans.
 
-Les hôtes sont déjà déclarés dans `~/.ssh/config`. L'outil prend un alias (`--host=dell`), jamais
+Les hôtes sont déjà déclarés dans `~/.ssh/config`. L'outil prend un alias (`--host=<machine-de-test>`), jamais
 des identifiants : aucun secret ne transite par la configuration de l'application, et l'utilisateur
 garde la maîtrise de ses clés.
 

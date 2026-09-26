@@ -92,6 +92,4 @@ Déclarées dans `~/.ssh/config`, jamais d'identifiants en dur dans le code.
 
 | Alias | Rôle | À savoir |
 |---|---|---|
-| `dell` | Instance YunoHost de test — cible des gates G3 | 2 c / 3,7 Go. **Ne pas y installer Incus** : cela casserait le dnsmasq de YunoHost |
-| `hom-e` | Forgejo + hôte de la VM de test G4 | 16 c / 31 Go. Machine de production : rien d'installé sur l'hôte lui-même |
 | `forgejo` | Accès SSH à la forge pour les push | Clé déjà autorisée |

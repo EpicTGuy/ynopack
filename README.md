@@ -7,7 +7,7 @@ explicites quand il refuse —, génère le paquet, le valide jusqu'à l'install
 serveur, puis le publie.
 
 ```console
-$ yunopack run https://github.com/foo/bar --host=dell
+$ yunopack run https://github.com/foo/bar --host=ma-machine-de-test
 
 G0 Legal & policy .................. ok   AGPL-3.0, dépôt actif
 G1 Faisabilité ..................... ok   score 85/100 — 1 majeur, 2 infos
@@ -51,7 +51,7 @@ jamais un paquet qui a l'air fini alors qu'il ne l'est pas.
 | `yunopack plan` | `appspec.toml` | **Le seul point de décision** — le document qu'on relit |
 | `yunopack generate` | `<app>_ynh/` | Rendu de templates, aucune décision |
 | `yunopack verify` | `lint.json` | Schéma officiel, règles du linter, `bash -n`, jetons de configuration |
-| `yunopack test --host=dell` | `test.json` | Install réelle, service, endpoint, backup/restore, remove sans résidu |
+| `yunopack test --host=<alias ssh>` | `test.json` | Install réelle, service, endpoint, backup/restore, remove sans résidu |
 | `yunopack publish` | URL du dépôt | Forgejo + entrée de catalogue |
 | `yunopack run <url>` | tout | Enchaîne les étapes, s'arrête à la première gate en échec |
 | `yunopack eval` | matrice | Compare les paquets produits à ceux du catalogue officiel |

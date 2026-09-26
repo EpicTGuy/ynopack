@@ -67,6 +67,9 @@ pub struct Gouvernance {
     /// Le projet s'est donne des regles ecrites, et lesquelles.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub chartes: Vec<String>,
+    /// Notes OpenSSF, quand le depot y figure. Son absence ne dit rien.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scorecard: Option<ynp_forge::scorecard::Scorecard>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -157,6 +160,35 @@ impl Cache {
     /// Toutes les fiches connues, pour un lot de depots.
     pub fn lot(&self, depots: &[String]) -> Vec<Fiche> {
         depots.iter().filter_map(|d| self.lire(d)).collect()
+    }
+
+    /// Verse un lot de fiches venues d'ailleurs, sans ecraser ce qu'on sait.
+    ///
+    /// Une evaluation locale a ete faite sur cette machine, a une date connue ;
+    /// une evaluation partagee vient d'ailleurs. En cas de doublon, la locale
+    /// gagne — non parce qu'elle vaut mieux, mais parce qu'on sait d'ou elle
+    /// vient. Rend le nombre de fiches reellement ajoutees.
+    pub fn verser(&self, fiches: Vec<Fiche>) -> usize {
+        let mut ajoutees = 0;
+        for f in fiches {
+            if self.lire(f.depot()).is_none() {
+                self.ecrire(&f);
+                ajoutees += 1;
+            }
+        }
+        ajoutees
+    }
+
+    /// Toutes les fiches du cache, pour republier ce qu'on a appris.
+    pub fn toutes(&self) -> Vec<Fiche> {
+        let Ok(entrees) = std::fs::read_dir(&self.evaluations) else {
+            return Vec::new();
+        };
+        entrees
+            .filter_map(Result::ok)
+            .filter_map(|e| std::fs::read_to_string(e.path()).ok())
+            .filter_map(|t| serde_json::from_str(&t).ok())
+            .collect()
     }
 
     pub fn nombre(&self) -> usize {
@@ -342,6 +374,42 @@ mod tests {
         let f = c.lot(&["a/b".into(), "c/d".into()]);
         assert_eq!(f.len(), 1);
         assert_eq!(f[0].depot(), "a/b");
+    }
+
+    #[test]
+    fn verser_ajoute_l_inconnu_sans_ecraser_le_connu() {
+        // Une evaluation locale a ete faite ici, a une date connue ; une
+        // partagee vient d'ailleurs. En cas de doublon, la locale gagne.
+        let (c, _g) = cache();
+        c.ecrire(&evaluation("a/local", "date-locale"));
+
+        let n = c.verser(vec![
+            evaluation("a/local", "date-etrangere"),
+            evaluation("b/neuf", "x"),
+        ]);
+        assert_eq!(n, 1, "seule la fiche inconnue est versee");
+        match c.lire("a/local") {
+            Some(Fiche::Evaluee(e)) => assert_eq!(e.pushed_at, "date-locale"),
+            autre => panic!("{autre:?}"),
+        }
+        assert!(c.lire("b/neuf").is_some());
+    }
+
+    #[test]
+    fn toutes_rend_ce_qui_a_ete_ecrit() {
+        let (c, _g) = cache();
+        c.ecrire(&evaluation("a/b", "x"));
+        c.ecrire(&evaluation("c/d", "y"));
+        let mut depots: Vec<String> = c.toutes().iter().map(|f| f.depot().to_string()).collect();
+        depots.sort();
+        assert_eq!(depots, vec!["a/b", "c/d"]);
+    }
+
+    #[test]
+    fn un_cache_vide_ne_rend_rien_plutot_que_de_paniquer() {
+        let (c, _g) = cache();
+        assert!(c.toutes().is_empty());
+        assert_eq!(c.verser(Vec::new()), 0);
     }
 
     #[test]

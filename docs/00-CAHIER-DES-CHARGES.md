@@ -18,7 +18,7 @@ Un outil autonome qui, à partir d'une seule URL de dépôt, décide si l'applic
 produit le paquet, le valide jusqu'à l'installation réelle, et le publie installable.
 
 ```
-yunopack run https://github.com/foo/bar --host=dell
+yunopack run https://github.com/foo/bar --host=<machine-de-test>
 ```
 
 ## 3. Périmètre
@@ -80,7 +80,7 @@ yunopack run https://github.com/foo/bar --host=dell
 | EXG-F-30 | Valider le `manifest.toml` contre le schéma JSON officiel | Un manifest volontairement invalide est rejeté avec le chemin fautif |
 | EXG-F-31 | Reproduire les contrôles critiques de `package_linter` | Aucun désaccord avec le linter officiel sur le corpus |
 | EXG-F-32 | Refuser tout paquet contenant un `FIXME(yunopack)` résiduel | La gate G2 échoue et nomme chaque champ manquant |
-| EXG-F-33 | Installer réellement le paquet sur un hôte YunoHost distant, vérifier l'endpoint HTTP, la sauvegarde/restauration, puis la désinstallation sans résidu | Le cycle complet passe sur `dell` pour l'app canari |
+| EXG-F-33 | Installer réellement le paquet sur un hôte YunoHost distant, vérifier l'endpoint HTTP, la sauvegarde/restauration, puis la désinstallation sans résidu | Le cycle complet passe sur `<machine-de-test>` pour l'app canari |
 | EXG-F-34 | Contrôler l'absence de résidus après désinstallation : utilisateur système, `$install_dir`, conf nginx, base de données | Un paquet qui laisse une trace fait échouer la gate G3 |
 | EXG-F-35 | Piloter `package_check` en VM isolée et remonter le niveau 0-8 *(optionnel)* | Le niveau remonté correspond à celui du journal de `package_check` |
 
@@ -131,7 +131,7 @@ Relevées dans la documentation officielle versionnée sous `docs/yunohost/`. No
 
 Le projet est considéré livré quand :
 
-1. `yunopack run <url> --host=dell` produit, pour au moins **trois applications réelles de stacks
+1. `yunopack run <url> --host=<machine-de-test>` produit, pour au moins **trois applications réelles de stacks
    différentes**, un paquet passant les gates G0 à G3 et installé sur l'instance de test.
 2. `yunopack assess` refuse, avec la règle nommée, au moins **trois applications réellement non
    packageables** (runtime Docker, base non supportée, absence de source stable).

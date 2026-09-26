@@ -4,7 +4,7 @@
 #
 # POURQUOI UNE VM plutot que l'hote directement : package_check exige Incus,
 # dont le bridge reseau reclame dnsmasq sur le port 53 — deja pris par YunoHost
-# sur `dell` comme sur `hom-e`. Le reseau Docker de `hom-e` entre en conflit
+# sur une instance YunoHost. Un reseau Docker sur la meme machine entre aussi en conflit
 # supplementaire. Une VM isole les deux problemes d'un coup.
 #
 # ATTENTION : ce script n'a pas encore ete execute. Il transcrit le runbook
@@ -16,7 +16,8 @@
 # (`!testme` sur une pull request) mesure le niveau sans aucune infrastructure.
 set -euo pipefail
 
-HOTE="${1:-hom-e}"
+HOTE="${1:-${YUNOPACK_HOTE_VM:-}}"
+[ -n "$HOTE" ] || { echo "usage : $0 <alias ssh de la machine hote>" >&2; exit 2; }
 NOM_VM="${NOM_VM:-yunopack-runner}"
 VCPU="${VCPU:-4}"
 RAM_MO="${RAM_MO:-8192}"

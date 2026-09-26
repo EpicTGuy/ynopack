@@ -510,7 +510,7 @@ mod tests {
 
     fn rapport(etapes: Vec<Etape>) -> Rapport {
         Rapport {
-            hote: "dell".into(),
+            hote: "machine-de-test".into(),
             app: "demo".into(),
             url: "https://x/demo/".into(),
             etapes,
@@ -573,7 +573,7 @@ mod serialisation {
         // Le rapport est relu par `publish` pour decider du niveau a publier :
         // une relecture qui echoue fait annoncer un niveau 0 a tort.
         let r = Rapport {
-            hote: "dell".into(),
+            hote: "machine-de-test".into(),
             app: "demo".into(),
             url: "https://x/demo/".into(),
             etapes: vec![
@@ -608,7 +608,7 @@ mod controles_probants {
     /// un endpoint qui rend 302, et une application qui ne tourne pas.
     fn rapport_trompeur() -> Rapport {
         Rapport {
-            hote: "dell".into(),
+            hote: "machine-de-test".into(),
             app: "demo".into(),
             url: "https://test.local/demo/".into(),
             etapes: vec![
@@ -671,7 +671,7 @@ mod binaires {
         // Le service demarrait — l'un des deux binaires suffisait — et rien
         // ne signalait que l'autre etait inutilisable.
         let r = Rapport {
-            hote: "dell".into(),
+            hote: "machine-de-test".into(),
             app: "demo".into(),
             url: "https://x/demo/".into(),
             etapes: vec![

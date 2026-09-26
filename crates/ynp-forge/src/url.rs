@@ -161,7 +161,7 @@ mod tests {
         // Une instance auto-hebergee reste inconnue jusqu'a ce qu'on
         // l'interroge : son nom de domaine n'apprend rien.
         assert_eq!(
-            parse("https://git.hom-e.fr/a/b").unwrap().forge,
+            parse("https://git.exemple.fr/a/b").unwrap().forge,
             Forge::Inconnue
         );
         assert_eq!(parse("https://gitea.com/a/b").unwrap().forge, Forge::Gitea);

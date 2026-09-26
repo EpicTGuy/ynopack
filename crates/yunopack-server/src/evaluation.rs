@@ -152,6 +152,28 @@ fn quota_epuise(fiche: &Fiche) -> bool {
     }
 }
 
+/// Telecharge un lot d'evaluations deja faites ailleurs et le verse au cache.
+///
+/// Une evaluation est le meme calcul, sur le meme depot, avec les memes
+/// regles : la refaire sur chaque instance depense du quota et du courant pour
+/// arriver au meme resultat. Elle est verifiable — n'importe qui peut la
+/// rejouer — donc la partager ne demande pas de faire confiance a qui l'a
+/// produite. Les fiches deja connues localement ne sont pas ecrasees.
+pub async fn verser_le_partage(cache: &Cache, url: &str) -> Result<usize, String> {
+    let client = reqwest::Client::builder()
+        .user_agent(concat!("yunopack/", env!("CARGO_PKG_VERSION")))
+        .timeout(std::time::Duration::from_secs(60))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let r = client.get(url).send().await.map_err(|e| e.to_string())?;
+    if !r.status().is_success() {
+        return Err(format!("{} a repondu {}", url, r.status()));
+    }
+    let fiches: Vec<Fiche> = r.json().await.map_err(|e| e.to_string())?;
+    Ok(cache.verser(fiches))
+}
+
 /// Deroule la moitie amont du pipeline : recuperation, analyse, regles.
 ///
 /// C'est exactement ce que fait `yunopack assess`. Le score et les motifs
@@ -198,6 +220,10 @@ pub async fn evaluer(url: &str) -> Fiche {
         fourche_de: recupere.forge.meta.fourche_de.clone(),
         proprietaire_collectif: recupere.forge.meta.proprietaire_collectif,
         chartes,
+        // Un appel de plus, mis en cache comme le reste. Le service ne couvre
+        // que GitHub, et seulement une partie de ses depots : une absence
+        // n'est pas un mauvais signe, c'est une absence.
+        scorecard: ynp_forge::scorecard::pour(&depot).await,
     };
     let faits = ynp_analyze::analyze(recupere.forge, &recupere.tree);
     let technologie = faits.stack.primary.to_string();

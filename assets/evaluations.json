@@ -1,0 +1,892 @@
+[
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "activepieces/activepieces",
+  "etat": "evaluee",
+  "etoiles": 24729,
+  "evalue_le": "1790371644",
+  "gouvernance": {},
+  "pushed_at": "2026-09-25T19:13:45Z",
+  "reference": "0.92.0",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "BUILD001",
+    "remede": "Chercher une release contenant les assets deja construits, ce qui evite le build sur la machine cible. A defaut, renseigner `ram.build` honnetement.",
+    "titre": "Build de frontal JavaScript"
+   },
+   {
+    "id": "PORT001",
+    "remede": "Verifier si le port est configurable, typiquement par une variable d'environnement. Si l'application exige le port 80, elle est incompatible.",
+    "titre": "Port privilegie expose : [80]"
+   }
+  ],
+  "score": 60,
+  "technologie": "Node.js",
+  "url": "https://github.com/activepieces/activepieces",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "ajenti/ajenti",
+  "etat": "evaluee",
+  "etoiles": 7968,
+  "evalue_le": "1790371679",
+  "gouvernance": {},
+  "pushed_at": "2026-09-12T15:51:04Z",
+  "reference": "v2.2.15",
+  "remarques": [],
+  "reserves": [],
+  "score": 100,
+  "technologie": "Node.js",
+  "url": "https://github.com/ajenti/ajenti/",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [
+   {
+    "id": "LIC001",
+    "remede": "Ouvrir le fichier LICENSE du depot. S'il porte bien une licence libre que la forge n'a pas su reconnaitre, renseigner `upstream.license` a la main dans appspec.toml.",
+    "titre": "Licence non identifiable"
+   }
+  ],
+  "depot": "akaunting/akaunting",
+  "etat": "evaluee",
+  "etoiles": 10138,
+  "evalue_le": "1790371684",
+  "gouvernance": {},
+  "pushed_at": "2026-09-24T11:23:43Z",
+  "reference": "3.2.4",
+  "remarques": [],
+  "reserves": [],
+  "score": 0,
+  "technologie": "PHP",
+  "url": "https://github.com/akaunting/akaunting",
+  "verdict": "NON FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "aliasvault/aliasvault",
+  "etat": "evaluee",
+  "etoiles": 3142,
+  "evalue_le": "1790371690",
+  "gouvernance": {},
+  "pushed_at": "2026-09-25T17:10:30Z",
+  "reference": "0.30.7",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "PORT001",
+    "remede": "Verifier si le port est configurable, typiquement par une variable d'environnement. Si l'application exige le port 80, elle est incompatible.",
+    "titre": "Port privilegie expose : [80]"
+   }
+  ],
+  "score": 80,
+  "technologie": "fichiers statiques",
+  "url": "https://github.com/aliasvault/aliasvault",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "altcha-org/altcha",
+  "etat": "evaluee",
+  "etoiles": 2779,
+  "evalue_le": "1790371694",
+  "gouvernance": {},
+  "pushed_at": "2026-09-20T09:08:03Z",
+  "reference": "v3.2.3",
+  "remarques": [],
+  "reserves": [],
+  "score": 100,
+  "technologie": "Node.js",
+  "url": "https://github.com/altcha-org/altcha",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "amnezia-vpn/amneziawg-go",
+  "etat": "evaluee",
+  "etoiles": 1883,
+  "evalue_le": "1790371696",
+  "gouvernance": {},
+  "pushed_at": "2026-09-20T08:43:42Z",
+  "reference": "v3.1.20260828",
+  "remarques": [
+   {
+    "id": "APK001",
+    "remede": "Chercher l'equivalent Debian et l'ajouter a assets/knowledge/apk-to-deb.toml, pour que le cas suivant soit traite automatiquement.",
+    "titre": "2 paquet(s) Alpine sans equivalent connu"
+   }
+  ],
+  "reserves": [],
+  "score": 95,
+  "technologie": "Go",
+  "url": "https://github.com/amnezia-vpn/amneziawg-go",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "ankicommunity/anki-sync-server",
+  "etat": "evaluee",
+  "etoiles": 954,
+  "evalue_le": "1790371712",
+  "gouvernance": {},
+  "pushed_at": "2024-09-25T12:28:20Z",
+  "reference": "v2.4.0",
+  "remarques": [],
+  "reserves": [],
+  "score": 100,
+  "technologie": "Python",
+  "url": "https://github.com/ankicommunity/anki-sync-server",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "anonaddy/anonaddy",
+  "etat": "evaluee",
+  "etoiles": 4863,
+  "evalue_le": "1790371715",
+  "gouvernance": {},
+  "pushed_at": "2026-09-02T10:06:36Z",
+  "reference": "v1.7.2",
+  "remarques": [],
+  "reserves": [],
+  "score": 100,
+  "technologie": "PHP",
+  "url": "https://github.com/anonaddy/anonaddy",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "apache/airflow",
+  "etat": "evaluee",
+  "etoiles": 46972,
+  "evalue_le": "1790371675",
+  "gouvernance": {},
+  "pushed_at": "2026-09-25T20:51:01Z",
+  "reference": "3.3.2",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "PY001",
+    "remede": "Verifier si l'application tourne reellement sur Python 3.11 — c'est souvent le cas malgre la contrainte declaree. Sinon, prevoir du travail manuel.",
+    "titre": "Python 3.10 exige, bookworm fournit 3.11"
+   }
+  ],
+  "score": 80,
+  "technologie": "Python",
+  "url": "https://github.com/apache/airflow/",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "artefactual/atom",
+  "etat": "evaluee",
+  "etoiles": 299,
+  "evalue_le": "1790371522",
+  "gouvernance": {},
+  "pushed_at": "2026-09-24T15:34:56Z",
+  "reference": "v2.10.2",
+  "remarques": [
+   {
+    "id": "APK001",
+    "remede": "Chercher l'equivalent Debian et l'ajouter a assets/knowledge/apk-to-deb.toml, pour que le cas suivant soit traite automatiquement.",
+    "titre": "14 paquet(s) Alpine sans equivalent connu"
+   }
+  ],
+  "reserves": [
+   {
+    "id": "BUILD001",
+    "remede": "Chercher une release contenant les assets deja construits, ce qui evite le build sur la machine cible. A defaut, renseigner `ram.build` honnetement.",
+    "titre": "Build de frontal JavaScript"
+   }
+  ],
+  "score": 75,
+  "technologie": "PHP",
+  "url": "https://github.com/artefactual/atom",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [
+   {
+    "id": "BUILD002",
+    "remede": "Chercher la recette ailleurs : instructions de construction de l'amont, definition de la chaine d'integration, ou Dockerfile de developpement. Renseigner ensuite `runtime.build_steps` a la main dans appspec.toml. Si l'amont ne publie aucune procedure native, l'application sort du modele YunoHost.",
+    "titre": "Recette de construction introuvable"
+   }
+  ],
+  "depot": "athou/commafeed",
+  "etat": "evaluee",
+  "etoiles": 3626,
+  "evalue_le": "1790405828",
+  "gouvernance": {
+   "chartes": [
+    "SECURITY.md"
+   ],
+   "proprietaire_collectif": false
+  },
+  "pushed_at": "2026-09-24T22:52:25Z",
+  "reference": "7.3.2",
+  "remarques": [],
+  "reserves": [],
+  "score": 0,
+  "technologie": "Java",
+  "url": "https://github.com/Athou/commafeed",
+  "verdict": "NON FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "bewcloud/bewcloud",
+  "etat": "evaluee",
+  "etoiles": 0,
+  "evalue_le": "1790346700",
+  "gouvernance": {},
+  "pushed_at": "2026-08-20T13:13:16Z",
+  "reference": "v4.15.0",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "STACK001",
+    "remede": "Renseigner `runtime.technology`, `runtime.build_steps` et `runtime.execstart` a la main dans appspec.toml, en s'appuyant sur les instructions d'installation de l'amont.",
+    "titre": "Technologie non identifiee"
+   }
+  ],
+  "score": 80,
+  "technologie": "non identifiee",
+  "url": "https://github.com/bewcloud/bewcloud",
+  "verdict": "FAISABLE"
+ },
+ {
+  "depot": "bigbluebutton/bigbluebutton",
+  "erreur": "quota d'API epuise sur github.com — definir GITHUB_TOKEN pour le relever",
+  "etat": "echouee",
+  "evalue_le": "1790374831",
+  "url": "https://github.com/bigbluebutton/bigbluebutton"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "blazer82/analytodon",
+  "etat": "evaluee",
+  "etoiles": 25,
+  "evalue_le": "1790371709",
+  "gouvernance": {},
+  "pushed_at": "2026-09-14T14:28:52Z",
+  "reference": "v2.4.2",
+  "remarques": [],
+  "reserves": [],
+  "score": 100,
+  "technologie": "Node.js",
+  "url": "https://github.com/blazer82/analytodon",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [
+   {
+    "id": "DB002",
+    "remede": "Verifier si l'application peut fonctionner sans ce service, ce que certaines permettent au prix d'une fonctionnalite. Sinon, hors perimetre.",
+    "titre": "Service sans equivalent YunoHost : minio (minio/minio:RELEASE.2025-04-08T15-41-24Z)"
+   }
+  ],
+  "depot": "colanode/colanode",
+  "etat": "evaluee",
+  "etoiles": 5151,
+  "evalue_le": "1790371609",
+  "gouvernance": {},
+  "pushed_at": "2026-04-03T14:23:17Z",
+  "reference": "v0.4.7",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "BUILD001",
+    "remede": "Chercher une release contenant les assets deja construits, ce qui evite le build sur la machine cible. A defaut, renseigner `ram.build` honnetement.",
+    "titre": "Build de frontal JavaScript"
+   },
+   {
+    "id": "PORT001",
+    "remede": "Verifier si le port est configurable, typiquement par une variable d'environnement. Si l'application exige le port 80, elle est incompatible.",
+    "titre": "Port privilegie expose : [80]"
+   }
+  ],
+  "score": 0,
+  "technologie": "fichiers statiques",
+  "url": "https://github.com/colanode/colanode",
+  "verdict": "NON FAISABLE"
+ },
+ {
+  "depot": "dani-garcia/vaultwarden",
+  "erreur": "quota d'API epuise sur github.com — definir GITHUB_TOKEN pour le relever",
+  "etat": "echouee",
+  "evalue_le": "1790374405",
+  "url": "https://github.com/dani-garcia/vaultwarden"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "diygod/rsshub",
+  "etat": "evaluee",
+  "etoiles": 46332,
+  "evalue_le": "1790405799",
+  "gouvernance": {
+   "chartes": [
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md"
+   ],
+   "proprietaire_collectif": false
+  },
+  "pushed_at": "2026-09-25T20:20:09Z",
+  "reference": "master",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "BUILD001",
+    "remede": "Chercher une release contenant les assets deja construits, ce qui evite le build sur la machine cible. A defaut, renseigner `ram.build` honnetement.",
+    "titre": "Build de frontal JavaScript"
+   },
+   {
+    "id": "SRC002",
+    "remede": "Verifier si l'amont publie ses versions ailleurs. A defaut, accepter `autoupdate.strategy = \"latest_github_commit\"` en connaissance de cause.",
+    "titre": "Ni release ni tag de version"
+   }
+  ],
+  "score": 60,
+  "technologie": "Node.js",
+  "url": "https://github.com/DIYgod/RSSHub",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "docmost/docmost",
+  "etat": "evaluee",
+  "etoiles": 21791,
+  "evalue_le": "1790371602",
+  "gouvernance": {},
+  "pushed_at": "2026-09-22T02:23:21Z",
+  "reference": "v0.96.0",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "BUILD001",
+    "remede": "Chercher une release contenant les assets deja construits, ce qui evite le build sur la machine cible. A defaut, renseigner `ram.build` honnetement.",
+    "titre": "Build de frontal JavaScript"
+   }
+  ],
+  "score": 80,
+  "technologie": "Node.js",
+  "url": "https://github.com/docmost/docmost",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "glanceapp/glance",
+  "etat": "evaluee",
+  "etoiles": 37213,
+  "evalue_le": "1790405812",
+  "gouvernance": {
+   "chartes": [
+    "CODE_OF_CONDUCT.md",
+    "SECURITY.md"
+   ],
+   "proprietaire_collectif": true
+  },
+  "pushed_at": "2026-09-05T12:22:32Z",
+  "reference": "v0.8.6",
+  "remarques": [],
+  "reserves": [],
+  "score": 100,
+  "technologie": "Go",
+  "url": "https://github.com/glanceapp/glance",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [
+   {
+    "id": "DB002",
+    "remede": "Verifier si l'application peut fonctionner sans ce service, ce que certaines permettent au prix d'une fonctionnalite. Sinon, hors perimetre.",
+    "titre": "Service sans equivalent YunoHost : cockroach (cockroachdb/cockroach:latest-v24.3), minio (minio/minio), elastic (elasticsearch:7.14.2)"
+   }
+  ],
+  "depot": "hcengineering/platform",
+  "etat": "evaluee",
+  "etoiles": 27774,
+  "evalue_le": "1790371546",
+  "gouvernance": {},
+  "pushed_at": "2026-09-25T16:44:36Z",
+  "reference": "v0.7.426",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "LIC001",
+    "remede": "Verifier la licence a la main, et la politique du catalogue (docs/yunohost/90-policy.md) si une publication officielle est visee.",
+    "titre": "Licence « EPL-2.0 » a verifier"
+   },
+   {
+    "id": "STACK001",
+    "remede": "Renseigner `runtime.technology`, `runtime.build_steps` et `runtime.execstart` a la main dans appspec.toml, en s'appuyant sur les instructions d'installation de l'amont.",
+    "titre": "Technologie non identifiee"
+   }
+  ],
+  "score": 0,
+  "technologie": "non identifiee",
+  "url": "https://github.com/hcengineering/platform",
+  "verdict": "NON FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "httpjamesm/anonymousoverflow",
+  "etat": "evaluee",
+  "etoiles": 381,
+  "evalue_le": "1790371719",
+  "gouvernance": {},
+  "pushed_at": "2026-08-25T21:09:31Z",
+  "reference": "v1.14.1",
+  "remarques": [],
+  "reserves": [],
+  "score": 100,
+  "technologie": "Go",
+  "url": "https://github.com/httpjamesm/AnonymousOverflow",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "johnwarne/upvote-rss",
+  "etat": "evaluee",
+  "etoiles": 0,
+  "evalue_le": "1790346715",
+  "gouvernance": {},
+  "pushed_at": "2026-03-13T19:04:31Z",
+  "reference": "v1.8.1",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "PORT001",
+    "remede": "Verifier si le port est configurable, typiquement par une variable d'environnement. Si l'application exige le port 80, elle est incompatible.",
+    "titre": "Port privilegie expose : [80]"
+   }
+  ],
+  "score": 80,
+  "technologie": "PHP",
+  "url": "https://github.com/johnwarne/upvote-rss",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "lemon24/reader",
+  "etat": "evaluee",
+  "etoiles": 0,
+  "evalue_le": "1790346707",
+  "gouvernance": {},
+  "pushed_at": "2026-09-19T07:08:30Z",
+  "reference": "3.26",
+  "remarques": [],
+  "reserves": [],
+  "score": 100,
+  "technologie": "Python",
+  "url": "https://github.com/lemon24/reader",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [
+   {
+    "id": "LIC001",
+    "remede": "Ouvrir le fichier LICENSE du depot. S'il porte bien une licence libre que la forge n'a pas su reconnaitre, renseigner `upstream.license` a la main dans appspec.toml.",
+    "titre": "Licence non identifiable"
+   }
+  ],
+  "depot": "melmothx/amusewiki",
+  "etat": "evaluee",
+  "etoiles": 220,
+  "evalue_le": "1790371706",
+  "gouvernance": {},
+  "pushed_at": "2026-09-23T11:25:30Z",
+  "reference": "master",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "SRC002",
+    "remede": "Verifier si l'amont publie ses versions ailleurs. A defaut, accepter `autoupdate.strategy = \"latest_github_commit\"` en connaissance de cause.",
+    "titre": "Ni release ni tag de version"
+   },
+   {
+    "id": "STACK001",
+    "remede": "Renseigner `runtime.technology`, `runtime.build_steps` et `runtime.execstart` a la main dans appspec.toml, en s'appuyant sur les instructions d'installation de l'amont.",
+    "titre": "Technologie non identifiee"
+   }
+  ],
+  "score": 0,
+  "technologie": "non identifiee",
+  "url": "https://github.com/melmothx/amusewiki",
+  "verdict": "NON FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "mhsanaei/3x-ui",
+  "etat": "evaluee",
+  "etoiles": 46958,
+  "evalue_le": "1790371513",
+  "gouvernance": {},
+  "pushed_at": "2026-09-25T19:25:58Z",
+  "reference": "v3.8.5",
+  "remarques": [
+   {
+    "id": "APK001",
+    "remede": "Chercher l'equivalent Debian et l'ajouter a assets/knowledge/apk-to-deb.toml, pour que le cas suivant soit traite automatiquement.",
+    "titre": "2 paquet(s) Alpine sans equivalent connu"
+   }
+  ],
+  "reserves": [
+   {
+    "id": "BUILD001",
+    "remede": "Chercher une release contenant les assets deja construits, ce qui evite le build sur la machine cible. A defaut, renseigner `ram.build` honnetement.",
+    "titre": "Build de frontal JavaScript"
+   }
+  ],
+  "score": 75,
+  "technologie": "Go",
+  "url": "https://github.com/MHSanaei/3x-ui",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "miniflux/v2",
+  "etat": "evaluee",
+  "etoiles": 9739,
+  "evalue_le": "1790405700",
+  "gouvernance": {
+   "chartes": [
+    "CONTRIBUTING.md",
+    "SECURITY.md"
+   ],
+   "proprietaire_collectif": true,
+   "scorecard": {
+    "criteres": [
+     {
+      "nom": "entretenu",
+      "note": 10
+     },
+     {
+      "nom": "changements relus",
+      "note": 3
+     },
+     {
+      "nom": "politique de securite",
+      "note": 10
+     },
+     {
+      "nom": "versions signees",
+      "note": 0
+     },
+     {
+      "nom": "licence declaree",
+      "note": 10
+     }
+    ],
+    "date": "2026-09-21",
+    "dixiemes": 67
+   }
+  },
+  "pushed_at": "2026-09-23T22:32:27Z",
+  "reference": "2.3.3",
+  "remarques": [],
+  "reserves": [],
+  "score": 100,
+  "technologie": "Go",
+  "url": "https://github.com/miniflux/v2",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "nkanaev/yarr",
+  "etat": "evaluee",
+  "etoiles": 4055,
+  "evalue_le": "1790405825",
+  "gouvernance": {
+   "proprietaire_collectif": false,
+   "scorecard": {
+    "criteres": [
+     {
+      "nom": "entretenu",
+      "note": 10
+     },
+     {
+      "nom": "changements relus",
+      "note": 0
+     },
+     {
+      "nom": "politique de securite",
+      "note": 0
+     },
+     {
+      "nom": "versions signees",
+      "note": 0
+     },
+     {
+      "nom": "licence declaree",
+      "note": 10
+     }
+    ],
+    "date": "2026-09-21",
+    "dixiemes": 39
+   }
+  },
+  "pushed_at": "2026-09-23T08:20:32Z",
+  "reference": "v2.9",
+  "remarques": [],
+  "reserves": [],
+  "score": 100,
+  "technologie": "Go",
+  "url": "https://github.com/nkanaev/yarr",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "ontola/atomic-server",
+  "etat": "evaluee",
+  "etoiles": 1609,
+  "evalue_le": "1790371626",
+  "gouvernance": {},
+  "pushed_at": "2026-09-25T21:25:29Z",
+  "reference": "v0.40.4",
+  "remarques": [],
+  "reserves": [],
+  "score": 100,
+  "technologie": "Rust",
+  "url": "https://github.com/ontola/atomic-server",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "pietheinstrengholt/rssmonster",
+  "etat": "evaluee",
+  "etoiles": 0,
+  "evalue_le": "1790346712",
+  "gouvernance": {},
+  "pushed_at": "2026-09-25T09:33:13Z",
+  "reference": "v2.3.0",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "BUILD001",
+    "remede": "Chercher une release contenant les assets deja construits, ce qui evite le build sur la machine cible. A defaut, renseigner `ram.build` honnetement.",
+    "titre": "Build de frontal JavaScript"
+   }
+  ],
+  "score": 80,
+  "technologie": "Node.js",
+  "url": "https://github.com/pietheinstrengholt/rssmonster",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "probesys/agentj",
+  "etat": "evaluee",
+  "etoiles": 33,
+  "evalue_le": "1790371649",
+  "gouvernance": {},
+  "pushed_at": "2026-09-25T16:08:58Z",
+  "reference": "2.7.5",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "STACK001",
+    "remede": "Renseigner `runtime.technology`, `runtime.build_steps` et `runtime.execstart` a la main dans appspec.toml, en s'appuyant sur les instructions d'installation de l'amont.",
+    "titre": "Technologie non identifiee"
+   }
+  ],
+  "score": 80,
+  "technologie": "non identifiee",
+  "url": "https://github.com/Probesys/agentj",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "renovatebot/renovate",
+  "etat": "evaluee",
+  "etoiles": 22591,
+  "evalue_le": "1790373052",
+  "gouvernance": {},
+  "pushed_at": "2026-09-25T21:12:02Z",
+  "reference": "44.115.9",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "BUILD001",
+    "remede": "Chercher une release contenant les assets deja construits, ce qui evite le build sur la machine cible. A defaut, renseigner `ram.build` honnetement.",
+    "titre": "Build de frontal JavaScript"
+   },
+   {
+    "id": "PY001",
+    "remede": "Verifier si l'application tourne reellement sur Python 3.11 — c'est souvent le cas malgre la contrainte declaree. Sinon, prevoir du travail manuel.",
+    "titre": "Python 3.14 exige, bookworm fournit 3.11"
+   }
+  ],
+  "score": 60,
+  "technologie": "Python",
+  "url": "https://github.com/renovatebot/renovate",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "rss-bridge/rss-bridge",
+  "etat": "evaluee",
+  "etoiles": 9250,
+  "evalue_le": "1790405815",
+  "gouvernance": {
+   "proprietaire_collectif": true
+  },
+  "pushed_at": "2026-08-28T16:45:53Z",
+  "reference": "v0.2",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "STACK001",
+    "remede": "Renseigner `runtime.technology`, `runtime.build_steps` et `runtime.execstart` a la main dans appspec.toml, en s'appuyant sur les instructions d'installation de l'amont.",
+    "titre": "Technologie non identifiee"
+   }
+  ],
+  "score": 80,
+  "technologie": "non identifiee",
+  "url": "https://github.com/RSS-Bridge/rss-bridge",
+  "verdict": "FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [
+   {
+    "id": "DB002",
+    "remede": "Verifier si l'application peut fonctionner sans ce service, ce que certaines permettent au prix d'une fonctionnalite. Sinon, hors perimetre.",
+    "titre": "Service sans equivalent YunoHost : newsblur_db_elasticsearch (docker.elastic.co/elasticsearch/elasticsearch:8.17.0), newsblur_db_mongo (mongo:4.0) : seconde base"
+   }
+  ],
+  "depot": "samuelclay/newsblur",
+  "etat": "evaluee",
+  "etoiles": 0,
+  "evalue_le": "1790346695",
+  "gouvernance": {},
+  "pushed_at": "2026-09-24T16:54:15Z",
+  "reference": "v0.2.2",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "PY001",
+    "remede": "Verifier si l'application tourne reellement sur Python 3.11 — c'est souvent le cas malgre la contrainte declaree. Sinon, prevoir du travail manuel.",
+    "titre": "Python 3.12 exige, bookworm fournit 3.11"
+   }
+  ],
+  "score": 0,
+  "technologie": "Python",
+  "url": "https://github.com/samuelclay/NewsBlur",
+  "verdict": "NON FAISABLE"
+ },
+ {
+  "depot": "simple-login/app",
+  "erreur": "quota d'API epuise sur github.com — definir GITHUB_TOKEN pour le relever",
+  "etat": "echouee",
+  "evalue_le": "1790374960",
+  "url": "https://github.com/simple-login/app"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "stringer-rss/stringer",
+  "etat": "evaluee",
+  "etoiles": 0,
+  "evalue_le": "1790346698",
+  "gouvernance": {},
+  "pushed_at": "2026-09-24T04:33:59Z",
+  "reference": "main",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "SRC002",
+    "remede": "Verifier si l'amont publie ses versions ailleurs. A defaut, accepter `autoupdate.strategy = \"latest_github_commit\"` en connaissance de cause.",
+    "titre": "Ni release ni tag de version"
+   }
+  ],
+  "score": 80,
+  "technologie": "Ruby",
+  "url": "https://github.com/stringer-rss/stringer",
+  "verdict": "FAISABLE"
+ },
+ {
+  "depot": "techarohq/anubis",
+  "erreur": "quota d'API GitHub epuise — definir GITHUB_TOKEN pour le relever",
+  "etat": "echouee",
+  "evalue_le": "1790371719",
+  "url": "https://github.com/TecharoHQ/anubis"
+ },
+ {
+  "archive": false,
+  "bloquants": [
+   {
+    "id": "BUILD002",
+    "remede": "Chercher la recette ailleurs : instructions de construction de l'amont, definition de la chaine d'integration, ou Dockerfile de developpement. Renseigner ensuite `runtime.build_steps` a la main dans appspec.toml. Si l'amont ne publie aucune procedure native, l'application sort du modele YunoHost.",
+    "titre": "Recette de construction introuvable"
+   }
+  ],
+  "depot": "toeverything/affine",
+  "etat": "evaluee",
+  "etoiles": 0,
+  "evalue_le": "1790346490",
+  "gouvernance": {},
+  "pushed_at": "2026-09-25T13:15:37Z",
+  "reference": "v0.27.4",
+  "remarques": [],
+  "reserves": [],
+  "score": 0,
+  "technologie": "Node.js",
+  "url": "https://github.com/toeverything/AFFiNE",
+  "verdict": "NON FAISABLE"
+ },
+ {
+  "archive": false,
+  "bloquants": [],
+  "depot": "tt-rss/tt-rss",
+  "etat": "evaluee",
+  "etoiles": 0,
+  "evalue_le": "1790346704",
+  "gouvernance": {},
+  "pushed_at": "2026-09-25T01:52:04Z",
+  "reference": "main",
+  "remarques": [],
+  "reserves": [
+   {
+    "id": "SRC002",
+    "remede": "Verifier si l'amont publie ses versions ailleurs. A defaut, accepter `autoupdate.strategy = \"latest_github_commit\"` en connaissance de cause.",
+    "titre": "Ni release ni tag de version"
+   }
+  ],
+  "score": 75,
+  "technologie": "PHP",
+  "url": "https://github.com/tt-rss/tt-rss",
+  "verdict": "FAISABLE"
+ }
+]

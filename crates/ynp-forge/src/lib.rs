@@ -12,6 +12,7 @@ pub mod github;
 pub mod gitlab;
 pub mod prebuilt;
 pub mod recherche;
+pub mod scorecard;
 pub mod sources;
 pub mod url;
 pub mod wishlist;

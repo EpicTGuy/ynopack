@@ -10,9 +10,9 @@ qui rend `Pass`, `Fail` ou `Skipped`. Le pipeline s'arrête à la première qui 
 | G0 | Légal & policy | Licence SPDX libre, pas de cryptomonnaie, dépôt non archivé | Local | Quelques secondes |
 | G1 | Faisabilité | Aucun constat bloquant, score ≥ seuil | Local | Quelques secondes |
 | G2 | Conformité statique | Manifest valide, linter propre, `bash -n`, aucun `FIXME` résiduel | Local | Quelques secondes |
-| G3 | Installabilité | Install → HTTP 200 → backup/restore → remove sans résidu | `dell` en SSH | 2 à 10 min |
-| G4 | Qualité *(optionnelle)* | `package_check` niveau ≥ 4 | VM sur `hom-e` | 10 à 30 min |
-| G5 | Publication | Poussé, catalogué, réinstallable depuis le catalogue | Forgejo + `dell` | 1 à 2 min |
+| G3 | Installabilité | Install → HTTP 200 → backup/restore → remove sans résidu | `<machine-de-test>` en SSH | 2 à 10 min |
+| G4 | Qualité *(optionnelle)* | `package_check` niveau ≥ 4 | VM sur `<machine-hote>` | 10 à 30 min |
+| G5 | Publication | Poussé, catalogué, réinstallable depuis le catalogue | Forgejo + `<machine-de-test>` | 1 à 2 min |
 
 L'ordre suit le coût croissant : on refuse pour une question de licence avant de dépenser trente
 minutes de CPU.
@@ -76,7 +76,7 @@ l'installation depuis un répertoire local.
 Un script appelant sait ainsi *où* ça a cassé sans analyser la sortie :
 
 ```bash
-yunopack run "$url" --host=dell
+yunopack run "$url" --host=<machine-de-test>
 case $? in
   0)  echo "publié" ;;
   11) echo "non packageable — voir report.json" ;;

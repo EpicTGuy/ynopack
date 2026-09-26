@@ -82,8 +82,12 @@ enum Command {
 
     /// Installe reellement le paquet sur un hote YunoHost et verifie qu'il tourne.
     Test {
-        /// Alias SSH de l'hote, tel que declare dans ~/.ssh/config.
-        #[arg(long, default_value = "dell")]
+        /// Alias SSH de la machine de test, tel que declare dans ~/.ssh/config.
+        ///
+        /// Aucune valeur par defaut : cette machine va installer un paquet non
+        /// relu, dont les scripts tournent en root. Elle doit etre designee,
+        /// jamais supposee.
+        #[arg(long, env = "YUNOPACK_HOTE_TEST")]
         host: String,
 
         /// Domaine d'installation. A defaut, le domaine principal de l'hote.

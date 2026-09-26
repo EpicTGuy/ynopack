@@ -35,7 +35,7 @@ la spécification reste à compléter, `1` pour une panne de l'outil. Un script
 appelant sait *où* ça a cassé sans analyser la sortie :
 
 ```bash
-yunopack run "$url" --host=dell
+yunopack run "$url" --host=<machine-de-test>
 case $? in
   0)  echo "publié" ;;
   11) echo "non packageable" ;;

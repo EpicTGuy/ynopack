@@ -18,7 +18,7 @@ transforme « ce champ peut manquer » en contrainte vérifiée à la compilatio
 à respecter — c'est exactement ce que fait `Known<T>`, et c'est le mécanisme central du projet.
 En Python, le même mécanisme reposerait sur la discipline du développeur.
 
-Un binaire unique se copie sur l'hôte de test sans installer d'interpréteur : `dell` n'a ni cargo,
+Un binaire unique se copie sur l'hôte de test sans installer d'interpréteur : `<machine-de-test>` n'a ni cargo,
 ni shellcheck, et ne doit rien recevoir d'autre que le paquet à tester.
 
 L'exhaustivité des `match` fait échouer la compilation quand une variante est ajoutée — ajouter une
