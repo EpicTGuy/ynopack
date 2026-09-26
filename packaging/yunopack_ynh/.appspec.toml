@@ -4,7 +4,7 @@ schema_version = 1
 id = "yunopack"
 name = "Yunopack"
 description_en = "Transforme un depot Git en application YunoHost installable : analyse, faisabilite, generation, verification et installation reelle."
-version = "0.6.0"
+version = "0.7.0"
 
 [upstream]
 license = "AGPL-3.0-only"
@@ -37,8 +37,8 @@ ports = true
 database = "none"
 
 [resources.sources]
-url = "https://github.com/EpicTGuy/yunopack/archive/v0.6.0.tar.gz"
-sha256 = "66c6e86617ae8ae3724db01a80f6e95d18383ff17d9bbeea578e2dea69df4d45"
+url = "https://github.com/EpicTGuy/yunopack/archive/v0.7.0.tar.gz"
+sha256 = "1b7152c9b01b681b5aa3b3696e3914e9722df0cff9acc592a30b01c705d7dcc1"
 autoupdate_strategy = "latest_github_release"
 in_subdir = false
 extract = true
@@ -46,16 +46,16 @@ extract = true
 [[resources.sources.per_arch]]
 arch = "arm64"
 name = "yunopack-linux-arm64.tar.gz"
-url = "https://github.com/EpicTGuy/yunopack/releases/download/v0.6.0/yunopack-linux-arm64.tar.gz"
-sha256 = "7e3d15098cabf7efe9ae40cf33e2831b2e128d2a0c2e8ff41640125e0a6794e2"
+url = "https://github.com/EpicTGuy/yunopack/releases/download/v0.7.0/yunopack-linux-arm64.tar.gz"
+sha256 = "e38d481628bbdebf07b65ae7f694f46dd7759ab1aec7baa2fe1e89979f4dfa7f"
 pattern = '^yunopack-linux-arm64\.tar\.gz$'
 extract = true
 
 [[resources.sources.per_arch]]
 arch = "amd64"
 name = "yunopack-linux-amd64.tar.gz"
-url = "https://github.com/EpicTGuy/yunopack/releases/download/v0.6.0/yunopack-linux-amd64.tar.gz"
-sha256 = "eb03a34ff1dd36f5abe5a10f12de3310ef923c235a46a4a678d54aef1ece05ab"
+url = "https://github.com/EpicTGuy/yunopack/releases/download/v0.7.0/yunopack-linux-amd64.tar.gz"
+sha256 = "64822722291bd19a67a686fae974142ccb4be04e01b7358e68dfc50876fb3962"
 pattern = '^yunopack-linux-amd64\.tar\.gz$'
 extract = true
 
