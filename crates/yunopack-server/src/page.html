@@ -22,8 +22,10 @@ header{border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none}
 .brand svg{width:24px;height:24px;color:var(--acc);display:block;flex:none}
 .brand b{font:600 17px/1 var(--mono);letter-spacing:-.01em}
-.bascule{margin-left:auto;display:flex;align-items:center;gap:6px;color:var(--mute);font:13px var(--sans);cursor:pointer;white-space:nowrap}
-.bascule input{width:auto;height:auto;min-width:0;padding:0;margin:0;flex:none}
+.tag{margin-left:auto;color:var(--mute);font:13px var(--mono)}
+.bascule{appearance:none;background:none;border:0;padding:0;color:var(--mute);font:12px var(--sans);
+  text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.bascule:hover{color:var(--fg)}
 nav{display:flex;gap:24px;overflow-x:auto;scrollbar-width:none}
 nav button{appearance:none;background:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:8px 0 10px;font:14px var(--sans);color:var(--mute);cursor:pointer;white-space:nowrap}
 nav button:hover{color:var(--fg)}
@@ -71,7 +73,12 @@ ol.steps{list-style:none;margin:0;padding:0}
 .step[data-s=waiting] .mk{border-color:var(--acc);color:var(--acc)}
 .step[data-s=fail] .mk{background:var(--err);border-color:var(--err);color:var(--bg)}
 .step[data-s=skipped] .mk{border-style:dashed}
-.hd{display:flex;align-items:baseline;gap:10px;min-height:24px;flex-wrap:wrap}
+.hd{display:flex;align-items:baseline;gap:10px;min-height:24px;flex-wrap:wrap;cursor:pointer;border-radius:4px}
+.hd:hover .nm{text-decoration:underline;text-underline-offset:3px;text-decoration-style:dotted}
+.hd:focus-visible{outline:2px solid var(--acc);outline-offset:3px}
+.expl{margin:6px 0 2px;padding:10px 12px;background:var(--panel);border-radius:6px}
+.expl ul{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.expl li{font-size:13px;line-height:1.55;color:var(--fg);text-wrap:pretty}
 .nm{font-weight:600}
 .step[data-s=pending] .nm,.step[data-s=skipped] .nm{color:var(--mute);font-weight:500}
 .sub{color:var(--mute);font-size:13px}
@@ -173,6 +180,13 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
 .pourquoi .quand{color:var(--mute);font-size:12px;margin:10px 0 0;display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between}
 .lic{border:1px solid var(--line);border-radius:4px;padding:0 5px}
 .votes{margin-left:8px;font:12px var(--mono);color:var(--acc);font-weight:400}
+.niv{margin-left:8px;font:11px var(--mono);font-weight:400;border:1px solid currentColor;border-radius:4px;padding:0 5px;white-space:nowrap}
+.niv[data-e=bon]{color:var(--acc)}
+.niv[data-e=moyen]{color:#8a6d1f}
+.niv[data-e=faible]{color:var(--err)}
+.niv[data-e=inconnu]{color:var(--mute)}
+@media (prefers-color-scheme:dark){.niv[data-e=moyen]{color:#e3c05c}}
+.item .mt .lien{height:26px;padding:0 9px;font-size:12px;font-weight:500}
 .etiq{border-radius:4px;padding:0 6px;border:1px solid currentColor;font-size:11px;white-space:nowrap}
 .etiq.pack{color:var(--acc)}
 .etiq.mort{color:var(--err)}
@@ -184,10 +198,10 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
 .liste-sug button{display:block;width:100%;text-align:left;appearance:none;border:0;background:none;color:var(--fg);
   font:14px var(--sans);padding:6px 10px;border-radius:4px;cursor:pointer}
 .liste-sug button:hover,.liste-sug button[aria-selected=true]{background:var(--acc-bg);color:var(--fg)}
-.secours{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--mute);font-size:13px}
+
 .empty{color:var(--mute);padding:18px 0;font-size:14px}
 .more{margin-top:16px}
-@media (max-width:520px){.wrap{padding:0 16px}.bascule{font-size:0;gap:0}.sub{display:none}.item{grid-template-columns:minmax(0,1fr)}.item .btn{justify-self:start;margin-top:6px}.btn.go{padding:0 14px}}
+@media (max-width:520px){.wrap{padding:0 16px}.tag,.sub{display:none}.item{grid-template-columns:minmax(0,1fr)}.item .btn{justify-self:start;margin-top:6px}.btn.go{padding:0 14px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
@@ -199,9 +213,7 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="M5 0H19L24 5V19L19 24H5L0 19V5Z M5.5 8.2L7.5 6.2L13.3 12L7.5 17.8L5.5 15.8L9.3 12Z M14 15.4H19V18.2H14Z"/></svg>
         <b>yunopack</b>
       </a>
-      <label class="bascule" title="affiche les noms de champs et les codes de règle">
-        <input type="checkbox" id="tech"> détails techniques
-      </label>
+      <span class="tag">dépôt git → paquet YunoHost</span>
     </div>
     <nav role="tablist" aria-label="Sections">
       <button role="tab" data-tab="run" aria-selected="true">Empaqueter</button>
@@ -257,10 +269,11 @@ ul.items{list-style:none;margin:18px 0 0;padding:0;border-top:1px solid var(--li
                placeholder="Nextcloud, Miniflux, Grafana…">
         <div class="liste-sug" id="alt-sug" role="listbox" hidden></div>
         <button class="btn" type="submit">Chercher</button>
+        <a class="btn plain" id="alt-ailleurs" target="_blank" rel="noopener noreferrer"
+           href="https://alternativeto.net/" title="chercher le même terme sur AlternativeTo">AlternativeTo</a>
       </div>
     </form>
     <ul class="items" id="alt-list" hidden></ul>
-    <div class="secours" id="alt-secours" hidden></div>
   </section>
 </main>
 
@@ -291,6 +304,35 @@ const STAGES = [
   ['generation', 'Écriture', 'fabrication du paquet'],
   ['verification', 'Contrôles', 'le paquet est-il correct ?']
 ];
+
+/* Ce que fait chaque étape, en clair. Un outil qui produit un paquet à
+   installer sur sa propre machine doit pouvoir dire ce qu'il a fait ; sans
+   cela il faut le croire sur parole. */
+const EXPLICATIONS = {
+  analyse: [
+    "Le contenu du projet est téléchargé, puis lu. Rien n'est exécuté : aucun script du projet ne tourne sur ce serveur.",
+    "yunopack cherche ce que le projet dit déjà de lui-même — son Dockerfile, son docker-compose.yml, ses fichiers de langage, son exemple de configuration.",
+    "Il en tire le langage employé, la version à empaqueter, les dépendances système, le port d'écoute et la commande de démarrage."
+  ],
+  faisabilite: [
+    "Une douzaine de règles sont appliquées aux informations recueillies.",
+    "Certaines arrêtent tout : une licence que le catalogue n'accepte pas, un logiciel qui ne fonctionne qu'en conteneur Docker, une base de données que YunoHost ne sait pas fournir.",
+    "D'autres signalent un surcroît de travail sans l'interdire : un projet abandonné, un langage dont la version ne correspond pas à celle de Debian."
+  ],
+  specification: [
+    "Toutes les décisions d'empaquetage sont rassemblées dans un seul fichier, lisible et modifiable.",
+    "Ce que le projet ne dit nulle part n'est pas deviné. yunopack le demande, en proposant les valeurs les plus plausibles et en disant sur quoi chacune repose.",
+    "Rien ne s'applique sans votre accord, et vous pouvez toujours écrire votre propre valeur."
+  ],
+  generation: [
+    "Le paquet est écrit à partir de ces décisions : le manifeste, la configuration du serveur web, le service système, et les scripts d'installation, de mise à jour, de sauvegarde et de suppression.",
+    "Cette étape ne décide de rien : elle met en forme ce qui a été tranché juste avant."
+  ],
+  verification: [
+    "Le paquet produit est relu : conformité au format officiel de YunoHost, syntaxe des scripts, absence de valeur laissée en suspens.",
+    "Un paquet qui passe ces contrôles est correct sur le papier. Il n'a pas encore été installé — c'est l'étape suivante, et elle se fait sur une machine jetable, jamais ici."
+  ]
+};
 
 /* Les chemins de champs et les codes de règle sont précis et utiles à qui va
    éditer le fichier ; ils n'apprennent rien aux autres. Un seul interrupteur
@@ -376,8 +418,18 @@ const refs = STAGES.map(([k, name, sub], i) => {
   const logOl = h('ol');
   const log = h('details', {class: 'log', hidden: true}, h('summary', {}, 'journal', logN), logOl);
   const why = h('div');
+  const explication = h('div', {class: 'expl', hidden: true},
+    h('ul', {}, (EXPLICATIONS[k] || []).map(t => h('li', {text: t}))));
+  const hd = h('div', {class: 'hd', role: 'button', tabindex: '0',
+                       title: 'ce que fait cette étape'},
+    h('span', {class: 'nm', text: name}), h('span', {class: 'sub', text: sub}), st);
+  const ouvrir = () => { explication.hidden = !explication.hidden; };
+  hd.addEventListener('click', ouvrir);
+  hd.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrir(); }
+  });
   const li = h('li', {class: 'step', 'data-s': 'pending'}, mk,
-    h('div', {}, h('div', {class: 'hd'}, h('span', {class: 'nm', text: name}), h('span', {class: 'sub', text: sub}), st), sum, why, log));
+    h('div', {}, hd, explication, sum, why, log));
   stepsEl.append(li);
   return {li, mk, st, sum, log, logN, logOl, why};
 });
@@ -433,6 +485,7 @@ function renderFailure(i, msg) {
 
 /* ——— Arbitrages ——— */
 function renderAsk(arbitrages) {
+  if (run) run.arbitrages = arbitrages;
   const i = stageIndex('specification');
   setState(i, 'waiting');
   const r = refs[i];
@@ -447,7 +500,7 @@ function renderAsk(arbitrages) {
 
   const envoyer = h('button', {class: 'btn sm', type: 'submit', text: 'Continuer'});
   const erreur = h('p', {class: 'hint err', hidden: true, role: 'alert'});
-  form.append(h('div', {class: 'acts'}, envoyer), erreur);
+  form.append(h('div', {class: 'acts'}, envoyer, lienTechnique()), erreur);
 
   form.addEventListener('submit', async e => {
     e.preventDefault();
@@ -768,13 +821,14 @@ async function chercherDepot(terme) {
         h('div', {class: 'mt'},
           t.etoiles ? h('span', {text: '★ ' + nf.format(t.etoiles)}) : null,
           h('span', {class: 'lic', text: t.origine}),
-          t.deja_package ? h('span', {class: 'etiq pack', text: 'déjà au catalogue'}) : null,
-          repoLink(t.depot))),
+          t.deja_package ? h('span', {class: 'etiq pack', text: 'déjà au catalogue'}) : null),
+        h('div', {class: 'mt'}, ...liens(t))),
       b || h('span'),
       choisir);
     if (b) observer(b, t.depot);
     return li;
   }));
+  remplirDepuisLeCache(list.map(t => t.depot));
 }
 
 /* ——— Faisabilite : cache cote serveur, demande a la demande ———
@@ -904,13 +958,14 @@ function basculerDetail(b, f) {
         body: JSON.stringify({url: b.dataset.repo, refaire: true})}).catch(() => {});
       planifier();
     }});
-  item.append(h('div', {class: 'pourquoi'},
+  const panneau = h('div', {class: 'pourquoi'},
     h('ul', {}, f.bloquants.map(motif), f.reserves.map(motif), (f.remarques || []).map(motif)),
     gouvernance(f),
     h('div', {class: 'quand'},
-      h('span', {text: 'évalué sur ' + (f.reference || 'la source retenue') +
-        (f.evalue_le ? ', ' + age(f.evalue_le) : '')}),
-      refaire)));
+      h('span', {}, 'examiné sur ' + (f.reference || 'la source retenue') +
+        (f.evalue_le ? ', ' + age(f.evalue_le) : ''), ' · ', lienTechnique()),
+      refaire));
+  item.append(panneau);
 }
 
 /* Ne demande que ce qui entre dans le champ de vision, et s'arrete des que la
@@ -935,6 +990,20 @@ function observer(b, repo) {
   b.dataset.repo = repo;
   if (fiches.has(b.dataset.depot)) { majBadge(b); return; }
   vue.observe(b);
+}
+
+/* Ce que le serveur sait déjà, en une seule requête, dès l'affichage.
+   Attendre le cycle de scrutation laissait les badges à « … » une dizaine de
+   secondes alors que la réponse était immédiate. */
+async function remplirDepuisLeCache(depots) {
+  const inconnus = depots.filter(d => d && !fiches.has(depotDe(d) || ''));
+  if (!inconnus.length) return;
+  try {
+    const d = await (await fetch(RACINE + 'evaluations?depots=' +
+      encodeURIComponent(inconnus.slice(0, 80).join(',')))).json();
+    for (const f of d.fiches || []) fiches.set(f.depot, f);
+  } catch (e) { return; }
+  document.querySelectorAll('.fais[data-depot]').forEach(majBadge);
 }
 
 function planifier() {
@@ -971,10 +1040,36 @@ function packBtn(repo, analysable) {
     text: ok ? 'Empaqueter' : u ? 'forge non prise en charge' : 'dépôt inconnu',
     onclick: () => { show('run', true); window.scrollTo(0, 0); start(u); }});
 }
-function repoLink(repo) {
-  const s = safeUrl(repo);
-  const label = String(repo || '').replace(/^https?:\/\//, '').replace(/\/$/, '');
-  return s ? h('a', {href: s, target: '_blank', rel: 'noopener noreferrer', text: label}) : repo ? h('span', {text: label}) : null;
+/* Un lien devient un bouton : plus facile à viser, et le nom dit où il mène
+   mieux qu'une adresse tronquée. */
+function lienBouton(url, texte, titre) {
+  const u = safeUrl(url);
+  if (!u) return null;
+  return h('a', {class: 'btn sm plain lien', href: u, target: '_blank',
+                 rel: 'noopener noreferrer', title: titre || u, text: texte});
+}
+
+function liens(o) {
+  return [
+    lienBouton(o.repo || o.depot, 'Code source'),
+    lienBouton(o.site, 'Site web'),
+    o.qualite && o.qualite.id
+      ? lienBouton('https://apps.yunohost.org/app/' + encodeURIComponent(o.qualite.id), 'Fiche YunoHost')
+      : null
+  ].filter(Boolean);
+}
+
+/* Ce que le catalogue YunoHost dit de la qualité du paquet : de 0, qui ne
+   s'installe pas, à 8, qui s'installe, se met à jour et se sauvegarde sans
+   reproche. Savoir qu'une application existe ne dit pas si elle est bien
+   empaquetée. */
+function niveauPaquet(q) {
+  if (!q) return null;
+  const n = q.niveau;
+  const etat = n == null ? 'inconnu' : q.solide ? 'bon' : n >= 2 ? 'moyen' : 'faible';
+  return h('span', {class: 'niv', 'data-e': etat,
+                    title: 'paquet YunoHost : ' + q.ce_que_dit_le_niveau},
+    n == null ? 'non noté' : 'niveau ' + n + '/8');
 }
 function loadWish() {
   if (wish) return;
@@ -1000,16 +1095,15 @@ function renderWish() {
       a.repo ? icone(a.repo) : h('span', {class: 'ico'}),
       h('div', {},
         h('div', {class: 'nm'}, a.name || '—',
-          a.votes ? h('span', {class: 'votes', text: '♥ ' + a.votes}) : null),
+          a.votes ? h('span', {class: 'votes', text: '♥ ' + a.votes}) : null,
+          a.deja_package ? h('span', {class: 'etiq pack', text: 'déjà au catalogue',
+                                      title: 'la demande peut être retirée de la liste'}) : null,
+          niveauPaquet(a.qualite)),
         a.description ? h('div', {class: 'ds', text: a.description}) : null,
-        h('div', {class: 'mt'}, repoLink(a.repo) || h('span', {text: 'pas de dépôt'}),
-          a.en_cours ? h('span', {text: 'paquet en cours ailleurs'}) : null,
-          a.deja_package
-            ? h('a', {class: 'etiq pack', target: '_blank', rel: 'noopener noreferrer',
-                      href: 'https://apps.yunohost.org/app/' + encodeURIComponent(a.id_yunohost),
-                      title: 'la demande peut être retirée de la liste',
-                      text: 'déjà au catalogue'})
-            : null)),
+        h('div', {class: 'mt'},
+          ...liens(a),
+          a.repo ? null : h('span', {text: 'pas de dépôt'}),
+          a.en_cours ? h('span', {text: 'paquet en cours ailleurs'}) : null)),
       b || h('span'),
       a.deja_package
         ? h('button', {class: 'btn sm plain', type: 'button', text: 'déjà disponible', disabled: true})
@@ -1017,6 +1111,7 @@ function renderWish() {
     if (b) observer(b, a.repo);
     return li;
   }));
+  remplirDepuisLeCache(f.slice(0, wishLimit).map(a => a.repo));
   if (!f.length) ul.append(h('li', {class: 'empty', text: 'Aucune application ne correspond à « ' + $('#wish-q').value + ' ».'}));
   const more = $('#wish-more'); more.textContent = '';
   if (f.length > wishLimit) more.append(h('button', {class: 'btn plain sm', type: 'button', text: 'Afficher les ' + Math.min(50, f.length - wishLimit) + ' suivantes', onclick: () => { wishLimit += 50; renderWish(); }}));
@@ -1092,13 +1187,7 @@ brancherSuggestions($('#url'), $('#url-sug'), () => $('#form').requestSubmit());
 
 function etiquettes(a) {
   const e = [];
-  if (a.deja_package) {
-    const id = a.id_yunohost || '';
-    e.push(id
-      ? h('a', {class: 'etiq pack', href: 'https://apps.yunohost.org/app/' + encodeURIComponent(id),
-                target: '_blank', rel: 'noopener noreferrer', text: 'déjà au catalogue'})
-      : h('span', {class: 'etiq pack', text: 'déjà au catalogue'}));
-  }
+  if (a.deja_package) e.push(h('span', {class: 'etiq pack', text: 'déjà au catalogue'}));
   if (a.abandonne) {
     const j = a.jours_sans_activite;
     e.push(h('span', {class: 'etiq mort', text: 'sans activité depuis ' + Math.floor(j / 365) + ' ans',
@@ -1109,33 +1198,37 @@ function etiquettes(a) {
   return e;
 }
 
+/* Le bouton suit ce qui est tapé : si nos résultats ne conviennent pas, un
+   clic relance la même recherche ailleurs. */
+function majAilleurs() {
+  const q = altQ.value.trim();
+  $('#alt-ailleurs').href = q
+    ? 'https://alternativeto.net/browse/search/?q=' + encodeURIComponent(q)
+    : 'https://alternativeto.net/';
+}
+altQ.addEventListener('input', majAilleurs);
+
 function chercherAlt() {
   const q = altQ.value.trim(); if (!q) return;
-  fermerSug();
-  const ul = $('#alt-list'), secours = $('#alt-secours');
-  ul.hidden = false; secours.hidden = true;
+  fermerSug(); majAilleurs();
+  const ul = $('#alt-list');
+  ul.hidden = false;
   ul.replaceChildren(h('li', {class: 'empty', text: 'recherche…'}));
-
-  /* Quand nos résultats ne conviennent pas, autant envoyer chercher ailleurs
-     plutôt que de laisser l'utilisateur sans rien. */
-  secours.replaceChildren(
-    h('span', {text: 'Ailleurs :'}),
-    h('a', {class: 'btn sm plain', target: '_blank', rel: 'noopener noreferrer',
-            href: 'https://alternativeto.net/browse/search/?q=' + encodeURIComponent(q),
-            text: 'AlternativeTo'}));
 
   fetch(API.alternatives(q)).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(d => {
     const list = Array.isArray(d) ? d : [];
-    secours.hidden = false;
     if (!list.length) { ul.replaceChildren(h('li', {class: 'empty', text: 'Aucune alternative connue pour « ' + q + ' ».'})); return; }
     ul.replaceChildren(...list.map(a => {
       const b = badge(a.repo, a.deja_package);
       const li = h('li', {class: 'item'},
         a.repo ? icone(a.repo) : h('span', {class: 'ico'}),
-        h('div', {}, h('div', {class: 'nm', text: a.name || '—'}), a.description ? h('div', {class: 'ds', text: a.description}) : null,
+        h('div', {},
+          h('div', {class: 'nm'}, a.name || '—', niveauPaquet(a.qualite)),
+          a.description ? h('div', {class: 'ds', text: a.description}) : null,
           h('div', {class: 'mt'}, a.stars ? h('span', {text: '★ ' + nf.format(a.stars)}) : null,
-            a.license ? h('span', {class: 'lic', text: a.license}) : null, ...etiquettes(a), repoLink(a.repo))),
+            a.license ? h('span', {class: 'lic', text: a.license}) : null, ...etiquettes(a)),
+          h('div', {class: 'mt'}, ...liens(a))),
         b || h('span'),
         a.deja_package
           ? h('button', {class: 'btn sm plain', type: 'button', text: 'déjà disponible', disabled: true})
@@ -1143,26 +1236,37 @@ function chercherAlt() {
       observer(b, a.repo);
       return li;
     }));
-  }).catch(() => { secours.hidden = false; ul.replaceChildren(h('li', {class: 'empty', text: "Recherche indisponible : le serveur n'a pas répondu."})); });
+    remplirDepuisLeCache(list.map(a => a.repo));
+  }).catch(() => ul.replaceChildren(h('li', {class: 'empty', text: "Recherche indisponible : le serveur n'a pas répondu."})));
 }
 
 $('#alt-form').addEventListener('submit', e => { e.preventDefault(); chercherAlt(); });
 
-/* L'interrupteur des détails techniques. Un seul état, mémorisé, plutôt que
-   deux versions de chaque texte : deux versions finissent par diverger. */
-const bascule = $('#tech');
-bascule.checked = technique;
-bascule.addEventListener('change', () => {
-  technique = bascule.checked;
-  try { localStorage.setItem('yunopack:technique', technique ? 'oui' : 'non'); } catch (e) {}
-  /* Les détails déjà dépliés se redessinent ; le reste se fera au prochain
-     affichage. Rien n'est rechargé depuis le serveur. */
+/* Le lien qui montre ou cache les identifiants techniques. Il apparaît là où
+   ces identifiants servent — dans un panneau de détail, dans le formulaire —
+   plutôt qu'isolé en haut de page où il ne veut rien dire. L'état est unique
+   et mémorisé : un seul texte à maintenir, pas deux versions qui divergent. */
+function lienTechnique() {
+  const a = h('button', {class: 'bascule', type: 'button',
+    text: technique ? 'masquer les identifiants techniques' : 'afficher les identifiants techniques'});
+  a.onclick = () => {
+    technique = !technique;
+    try { localStorage.setItem('yunopack:technique', technique ? 'oui' : 'non'); } catch (e) {}
+    redessiner();
+  };
+  return a;
+}
+
+/* Redessine ce qui est ouvert. Rien n'est rechargé depuis le serveur. */
+function redessiner() {
   document.querySelectorAll('.pourquoi').forEach(d => {
     const b = d.closest('.item').querySelector('.fais[data-depot]');
     d.remove();
     if (b) { const f = fiches.get(b.dataset.depot); if (f) basculerDetail(b, f); }
   });
-});
+  const ask = document.querySelector('form.ask');
+  if (ask && run && run.arbitrages) { ask.remove(); renderAsk(run.arbitrages); }
+}
 
 window.addEventListener('hashchange', fromHash);
 fromHash();

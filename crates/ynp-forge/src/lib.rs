@@ -6,6 +6,7 @@
 
 pub mod alternatives;
 pub mod archive;
+pub mod catalogue;
 pub mod client;
 pub mod gitea;
 pub mod github;

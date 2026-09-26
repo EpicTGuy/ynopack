@@ -63,7 +63,7 @@ impl Rule for PasDeReperePourLesMisesAJour {
                      modifications.",
                 )
                 .remediation(
-                    "Verifier si l'amont publie ses versions ailleurs. A defaut, accepter \
+                    "Verifier si le projet publie ses versions ailleurs. A defaut, accepter \
                      `autoupdate.strategy = \"latest_github_commit\"` en connaissance de cause.",
                 )
                 .evidence(Evidence {

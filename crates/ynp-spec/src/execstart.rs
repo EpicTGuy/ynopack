@@ -37,7 +37,7 @@ pub fn derive(facts: &RepoFacts, app_id: &str) -> Known<String> {
             &[
                 "README.md",
                 "Procfile",
-                "documentation d'installation de l'amont",
+                "la documentation du projet d'origine",
             ],
         );
     };
@@ -54,7 +54,7 @@ pub fn derive(facts: &RepoFacts, app_id: &str) -> Known<String> {
             format!("commande « {commande} » non transposable automatiquement"),
             &[
                 &build.dockerfile_path,
-                "documentation d'installation de l'amont",
+                "la documentation du projet d'origine",
             ],
         ),
     }

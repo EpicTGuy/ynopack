@@ -212,7 +212,7 @@ fn runtime(facts: &RepoFacts, app_id: &str) -> Runtime {
         technology: match facts.stack.primary {
             Technology::Unknown => Known::unresolved(
                 "aucun Dockerfile exploitable ni fichier de projet reconnu",
-                &["README.md", "documentation d'installation de l'amont"],
+                &["README.md", "la documentation du projet d'origine"],
             ),
             t => Known::resolved(t),
         },
@@ -257,7 +257,7 @@ fn liaison_port(facts: &RepoFacts) -> Known<String> {
             "on ignore sous quel nom l'application attend son port d'ecoute ; la forme varie \
              d'une application a l'autre (PORT=__PORT__, LISTEN_ADDR=127.0.0.1:__PORT__...)",
             &[
-                "documentation de configuration de l'amont",
+                "la documentation du projet d'origine",
                 "sortie de --help du binaire",
             ],
             candidats_port(facts),
@@ -284,7 +284,7 @@ fn candidats_port(facts: &RepoFacts) -> Vec<Candidate> {
         let nom = v.name.to_ascii_uppercase();
         if nom.contains("PORT") || nom.contains("LISTEN") || nom.contains("BIND") {
             let source = if v.source.is_empty() {
-                "nommee dans la configuration de l'amont".to_string()
+                "nommee dans la configuration du projet".to_string()
             } else {
                 format!("nommee dans {}", v.source)
             };
@@ -375,8 +375,8 @@ fn liaison_base(facts: &RepoFacts) -> Known<String> {
              adresse ; la valeur a transmettre est « {adresse} »"
         ),
         &[
-            "documentation de configuration de l'amont",
-            "aucun .env.example dans le depot",
+            "la documentation du projet d'origine",
+            "le depot ne publie aucun exemple de configuration",
         ],
         candidats_base(facts, adresse),
     )
@@ -403,7 +403,7 @@ fn candidats_base(facts: &RepoFacts, adresse: &str) -> Vec<Candidate> {
         let nom = v.name.to_ascii_uppercase();
         if nom.contains("DATABASE") || nom.contains("_DB") || nom.starts_with("DB") {
             let source = if v.source.is_empty() {
-                "nommee dans la configuration de l'amont".to_string()
+                "nommee dans la configuration du projet".to_string()
             } else {
                 format!("nommee dans {}", v.source)
             };

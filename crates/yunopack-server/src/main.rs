@@ -26,6 +26,9 @@ struct Etat {
     racine: PathBuf,
     evaluateur: yunopack_server::evaluation::Evaluateur,
     catalogue: Arc<std::sync::Mutex<Option<Arc<ynp_forge::alternatives::Catalogue>>>>,
+    /// Le catalogue officiel de YunoHost : ce qui est disponible, et a quel
+    /// niveau de qualite. Charge une fois.
+    officiel: Arc<std::sync::Mutex<Option<Arc<ynp_forge::catalogue::Catalogue>>>>,
 }
 
 #[derive(Deserialize)]
@@ -107,6 +110,7 @@ async fn main() -> anyhow::Result<()> {
         racine: options.out.clone(),
         evaluateur: yunopack_server::evaluation::Evaluateur::new(cache),
         catalogue: Arc::new(std::sync::Mutex::new(None)),
+        officiel: Arc::new(std::sync::Mutex::new(None)),
     };
 
     // Les chemins sont ecrits en entier plutot que montes avec `nest` : celui-ci
@@ -203,7 +207,8 @@ async fn lister(State(etat): State<Etat>) -> Json<serde_json::Value> {
 ///
 /// L'interet de l'exposer ici est de supprimer une etape : plutot que de
 /// chercher quoi packager puis de recopier une URL, on clique sur une demande.
-async fn souhaits() -> (StatusCode, Json<serde_json::Value>) {
+async fn souhaits(State(etat): State<Etat>) -> (StatusCode, Json<serde_json::Value>) {
+    let officiel = catalogue_officiel(&etat).await;
     match ynp_forge::wishlist::recuperer().await {
         Ok(liste) => {
             let items: Vec<_> = liste
@@ -213,11 +218,13 @@ async fn souhaits() -> (StatusCode, Json<serde_json::Value>) {
                         "name": s.name,
                         "description": s.description,
                         "repo": s.upstream,
+                        "site": s.website,
                         "analysable": s.analysable(),
                         "en_cours": s.en_cours(),
                         "votes": s.votes,
                         "deja_package": s.deja_package,
                         "id_yunohost": s.id_yunohost,
+                        "qualite": qualite(officiel.as_ref(), &s.id_yunohost),
                     })
                 })
                 .collect();
@@ -254,6 +261,53 @@ fn verrou_catalogue<T>(m: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, T> 
     m.lock().unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
+/// Le catalogue officiel de YunoHost, charge une fois.
+///
+/// Il porte le niveau de qualite de chaque paquet. Savoir qu'une application
+/// existe deja ne suffit pas : encore faut-il savoir si elle est bien
+/// empaquetee.
+async fn catalogue_officiel(etat: &Etat) -> Option<Arc<ynp_forge::catalogue::Catalogue>> {
+    if let Some(c) = verrou_catalogue(&etat.officiel).clone() {
+        return Some(c);
+    }
+    let client = reqwest::Client::builder()
+        .user_agent(concat!("yunopack/", env!("CARGO_PKG_VERSION")))
+        .build()
+        .ok()?;
+    let c = match ynp_forge::catalogue::Catalogue::charger(&client).await {
+        Ok(c) => Arc::new(c),
+        Err(e) => {
+            tracing::warn!("catalogue officiel indisponible : {e}");
+            return None;
+        }
+    };
+    tracing::info!("catalogue officiel : {} paquets", c.nombre());
+    *verrou_catalogue(&etat.officiel) = Some(c.clone());
+    Some(c)
+}
+
+/// Ce que le catalogue officiel dit d'une application, s'il la connait.
+fn qualite(
+    officiel: Option<&Arc<ynp_forge::catalogue::Catalogue>>,
+    cle: &str,
+) -> serde_json::Value {
+    if cle.is_empty() {
+        return serde_json::Value::Null;
+    }
+    let Some(p) = officiel.and_then(|c| c.trouver(cle)) else {
+        return serde_json::Value::Null;
+    };
+    serde_json::json!({
+        "id": p.id,
+        "niveau": p.niveau,
+        "ce_que_dit_le_niveau": p.ce_que_dit_le_niveau(),
+        "etat": p.etat,
+        "solide": p.solide(),
+        "reserves": p.reserves,
+        "retire": p.retire_le.is_some(),
+    })
+}
+
 /// Les logiciels auto-hebergeables proches d'un autre.
 ///
 /// Ceux deja au catalogue YunoHost ne sont plus ecartes mais signales : savoir
@@ -268,6 +322,7 @@ async fn alternatives(
         Ok(c) => c,
         Err(e) => return refus(StatusCode::BAD_GATEWAY, &e),
     };
+    let officiel = catalogue_officiel(&etat).await;
 
     // Les alternatives d'abord ; a defaut, une recherche par nom, pour que
     // saisir un terme approximatif rende quelque chose plutot que rien.
@@ -293,6 +348,7 @@ async fn alternatives(
                 "analysable": l.analysable(),
                 "deja_package": l.deja_package,
                 "id_yunohost": l.id_yunohost,
+                "qualite": qualite(officiel.as_ref(), &l.id_yunohost),
                 "abandonne": l.abandonne(),
                 "jours_sans_activite": l.jours_sans_activite(),
                 "derniere_activite": l.updated_at,
@@ -317,6 +373,7 @@ async fn recherche(
         return Json(serde_json::json!([]));
     }
 
+    let officiel = catalogue_officiel(&etat).await;
     let mut out: Vec<serde_json::Value> = Vec::new();
     let mut vus: Vec<String> = Vec::new();
 
@@ -330,10 +387,12 @@ async fn recherche(
                 "nom": l.name,
                 "description": l.description,
                 "depot": l.source_code_url,
+                "site": l.website_url,
                 "origine": "catalogue",
                 "etoiles": l.stargazers_count,
                 "deja_package": l.deja_package,
                 "id_yunohost": l.id_yunohost,
+                "qualite": qualite(officiel.as_ref(), &l.id_yunohost),
             }));
         }
     }

@@ -33,7 +33,7 @@ impl Rule for ConteneurRequis {
                      fichiers de projet a construire.",
             )
             .remediation(
-                "Chercher si l'amont documente une installation native. A defaut, \
+                "Chercher si le projet documente une installation sans conteneur. A defaut, \
                      l'application sort du modele YunoHost.",
             ),
         )
@@ -103,7 +103,7 @@ impl Rule for BaseNonSupportee {
                      que l'application en a besoin pour tourner.",
                 )
                 .remediation(
-                    "Lire la documentation de deploiement de l'amont pour savoir si ce service \
+                    "Lire la documentation d'installation du projet pour savoir si ce service \
                      est reellement exige. S'il l'est, le refus devient definitif.",
                 ),
             );
@@ -268,7 +268,7 @@ impl Rule for RecetteIntrouvable {
                      dont le seul chemin d'auto-hebergement documente est une image publiee."
             ))
             .remediation(
-                "Chercher la recette ailleurs : instructions de construction de l'amont, \
+                "Chercher la recette ailleurs : instructions de construction du projet, \
                      definition de la chaine d'integration, ou Dockerfile de developpement. \
                      Renseigner ensuite `runtime.build_steps` a la main dans appspec.toml. Si \
                      l'amont ne publie aucune procedure native, l'application sort du modele \
@@ -371,7 +371,7 @@ impl Rule for StackInconnue {
                 .remediation(
                     "Renseigner `runtime.technology`, `runtime.build_steps` et \
                      `runtime.execstart` a la main dans appspec.toml, en s'appuyant sur les \
-                     instructions d'installation de l'amont.",
+                     instructions d'installation du projet.",
                 ),
         )
     }
@@ -738,7 +738,7 @@ mod compose_de_developpement {
             .remediation
             .as_deref()
             .unwrap()
-            .contains("documentation de deploiement"));
+            .contains("documentation d'installation du projet"));
     }
 
     #[test]
