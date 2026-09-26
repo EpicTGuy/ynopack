@@ -39,7 +39,17 @@ yunohost service add "$app" --description="Yunopack" --log="/var/log/$app/$app.l
 # Cree aussi a la mise a jour : une instance installee avant l'apparition du
 # panneau de configuration n'aurait sinon nulle part ou ecrire ses reglages.
 mkdir -p /etc/yunopack
-touch /etc/yunopack/env
+# Les cles doivent exister pour que le panneau de configuration sache ou
+# ecrire ; il ne les cree pas lui-meme.
+if [ ! -s /etc/yunopack/env ]; then
+    cat > /etc/yunopack/env <<'REGLAGES'
+GITHUB_TOKEN=
+GITLAB_TOKEN=
+YUNOPACK_CACHE_PARTAGE=https://raw.githubusercontent.com/EpicTGuy/yunopack/main/assets/evaluations.json
+YUNOPACK_HOTE_TEST=
+REGLAGES
+fi
+# Les jetons y figurent : lisible par le service, par personne d'autre.
 chown root:"$app" /etc/yunopack/env
 chmod 640 /etc/yunopack/env
 

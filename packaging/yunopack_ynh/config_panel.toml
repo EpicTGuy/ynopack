@@ -16,14 +16,14 @@ name.en = "Forge access"
     help.fr = "Sans jeton, GitHub n'accorde que soixante requetes par heure, ce qui limite fortement le nombre d'evaluations. Un jeton en lecture seule suffit."
     type = "password"
     optional = true
-    bind = ":/etc/yunopack/env"
+    bind = "GITHUB_TOKEN:/etc/yunopack/env"
 
     [main.forges.gitlab_token]
     ask.fr = "Jeton GitLab"
     help.fr = "Facultatif. Utile seulement pour les depots prives."
     type = "password"
     optional = true
-    bind = ":/etc/yunopack/env"
+    bind = "GITLAB_TOKEN:/etc/yunopack/env"
 
 [main.partage]
 name.fr = "Evaluations partagees"
@@ -34,7 +34,7 @@ name.fr = "Evaluations partagees"
     type = "url"
     optional = true
     default = "https://raw.githubusercontent.com/EpicTGuy/yunopack/main/assets/evaluations.json"
-    bind = ":/etc/yunopack/env"
+    bind = "YUNOPACK_CACHE_PARTAGE:/etc/yunopack/env"
 
 [main.test]
 name.fr = "Machine de test"
@@ -45,4 +45,4 @@ help.fr = "Installer un paquet non relu execute ses scripts en root. Cette machi
     help.fr = "Tel que declare dans le ~/.ssh/config de l'utilisateur systeme. Laisser vide desactive les tests reels."
     type = "string"
     optional = true
-    bind = ":/etc/yunopack/env"
+    bind = "YUNOPACK_HOTE_TEST:/etc/yunopack/env"
